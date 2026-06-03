@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MembershipTier {
+  FREE
+  GOLD
+  PLATINUM
+}
+
+enum Gender {
+  MAN
+  WOMAN
+  NON_BINARY
+  OTHER
+}
+
+enum LikeType {
+  LIKE
+  SUPERLIKE
+  WINK
+}
+
+enum EventCategory {
+  PARTY
+  MEETUP
+  WORKSHOP
+  TRAVEL
+  OTHER
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String?
+  username      String    @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  isActive      Boolean   @default(true)
+  isVerified    Boolean   @default(false)
+  role          String    @default("USER")
+
+  accounts        Account[]
+  sessions        Session[]
+  profile         Profile?
+  photos          Photo[]
+  likesGiven      Like[]           @relation("LikesGiven")
+  likesReceived   Like[]           @relation("LikesReceived")
+  matchesA        Match[]          @relation("MatchUser1")
+  matchesB        Match[]          @relation("MatchUser2")
+  messagesSent    Message[]
+  conversations   ConversationParticipant[]
+  events          EventAttendee[]
+  forumPosts      ForumPost[]
+  forumThreads    ForumThread[]
+  notifications   Notification[]
+  interests       UserInterest[]
+}
+
+model Profile {
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName         String?
+  bio                 String?
+  dateOfBirth         DateTime?
+  gender              Gender?
+  orientation         String?
+  relationshipStatus  String?
+  lookingFor          String[]
+  location            String?
+  city                String?
+  country             String?
+  latitude            Float?
+  longitude           Float?
+  profilePhoto        String?
+  isOnline            Boolean   @default(false)
+  lastSeen            DateTime  @default(now())
+  membershipTier      MembershipTier @default(FREE)
+  profileCompleteness Int       @default(0)
+  profileViews        Int       @default(0)
+  allowMessages       Boolean   @default(true)
+  privatePhotos       Boolean   @default(false)
+  updatedAt           DateTime  @updatedAt
+}
+
+model Photo {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url        String
+  thumbnailUrl String?
+  isProfile  Boolean  @default(false)
+  isPrivate  Boolean  @default(false)
+  caption    String?
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+}
+
+model Like {
+  id         String   @id @default(cuid())
+  fromUserId String
+  toUserId   String
+  type       LikeType @default(LIKE)
+  createdAt  DateTime @default(now())
+  fromUser   User     @relation("LikesGiven", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser     User     @relation("LikesReceived", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId])
+}
+
+model Match {
+  id        String   @id @default(cuid())
+  user1Id   String
+  user2Id   String
+  createdAt DateTime @default(now())
+  user1     User     @relation("MatchUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2     User     @relation("MatchUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+
+  @@unique([user1Id, user2Id])
+}
+
+model Conversation {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastMessage  String?
+  lastMessageAt DateTime?
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  userId         String
+  unreadCount    Int          @default(0)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model Event {
+  id           String        @id @default(cuid())
+  title        String
+  description  String
+  date         DateTime
+  endDate      DateTime?
+  location     String
+  city         String?
+  country      String?
+  maxAttendees Int?
+  imageUrl     String?
+  category     EventCategory @default(OTHER)
+  isFeatured   Boolean       @default(false)
+  isPrivate    Boolean       @default(false)
+  createdBy    String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  attendees    EventAttendee[]
+}
+
+model EventAttendee {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  status    String   @default("GOING")
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+model ForumCategory {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  slug        String        @unique
+  description String?
+  icon        String?
+  order       Int           @default(0)
+  threads     ForumThread[]
+}
+
+model ForumThread {
+  id         String        @id @default(cuid())
+  categoryId String
+  authorId   String
+  title      String
+  isPinned   Boolean       @default(false)
+  isLocked   Boolean       @default(false)
+  views      Int           @default(0)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  category   ForumCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  author     User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  posts      ForumPost[]
+}
+
+model ForumPost {
+  id        String      @id @default(cuid())
+  threadId  String
+  authorId  String
+  content   String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  thread    ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model Interest {
+  id       String         @id @default(cuid())
+  name     String         @unique
+  category String?
+  users    UserInterest[]
+}
+
+model UserInterest {
+  userId     String
+  interestId String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interest   Interest @relation(fields: [interestId], references: [id], onDelete: Cascade)
+
+  @@id([userId, interestId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  isRead    Boolean  @default(false)
+  data      Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
