@@ -10,10 +10,12 @@ export default auth((req) => {
   const isAuthPage = pathname.startsWith('/auth/')
 
   if (isProtected && !isLoggedIn) {
-    return NextResponse.redirect(new URL('/auth/signin', req.url))
+    const signinUrl = new URL('/auth/signin', req.nextUrl.origin)
+    return NextResponse.redirect(signinUrl)
   }
   if (isAuthPage && isLoggedIn) {
-    return NextResponse.redirect(new URL('/members', req.url))
+    const membersUrl = new URL('/members', req.nextUrl.origin)
+    return NextResponse.redirect(membersUrl)
   }
   return NextResponse.next()
 })
