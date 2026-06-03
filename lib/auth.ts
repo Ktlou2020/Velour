@@ -1,12 +1,11 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
-import { PrismaAdapter } from '@auth/prisma-adapter'
 import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(db),
   session: { strategy: 'jwt' },
+  secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: '/auth/signin',
     signOut: '/auth/signout',
@@ -24,29 +23,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = credentials.email as string
         const password = credentials.password as string
 
-        const user = await db.user.findUnique({
-          where: { email },
-          select: {
-            id: true,
-            email: true,
-            username: true,
-            passwordHash: true,
-            role: true,
-            isActive: true,
-          },
-        })
+        try {
+          const user = await db.user.findUnique({
+            where: { email },
+            select: {
+              id: true,
+              email: true,
+              username: true,
+              passwordHash: true,
+              role: true,
+              isActive: true,
+            },
+          })
 
-        if (!user || !user.passwordHash) return null
-        if (!user.isActive) return null
+          if (!user || !user.passwordHash) return null
+          if (!user.isActive) return null
 
-        const isValid = await bcrypt.compare(password, user.passwordHash)
-        if (!isValid) return null
+          const isValid = await bcrypt.compare(password, user.passwordHash)
+          if (!isValid) return null
 
-        return {
-          id: user.id,
-          email: user.email,
-          username: user.username,
-          role: user.role,
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.username,
+            username: user.username,
+            role: user.role,
+          }
+        } catch {
+          return null
         }
       },
     }),

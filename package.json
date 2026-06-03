@@ -13,7 +13,6 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
-    "@auth/prisma-adapter": "^2.7.2",
     "@prisma/client": "^5.22.0",
     "autoprefixer": "^10.4.21",
     "bcryptjs": "^2.4.3",
