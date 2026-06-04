@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
     const city = searchParams.get('city')
     const tier = searchParams.get('tier')
     const lookingFor = searchParams.get('lookingFor')
+    const discoverMode = searchParams.get('discover') === '1'
 
     // FREE tier: cap at 20 results total
     const effectiveLimit = rawLimit
@@ -79,6 +80,22 @@ export async function GET(req: NextRequest) {
       b.blockerId === currentUserId ? b.blockedId : b.blockerId
     )
 
+    // In discover mode, exclude already-liked/passed-within-5-days profiles
+    if (discoverMode) {
+      const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+      const existingActions = await db.like.findMany({
+        where: {
+          fromUserId: currentUserId,
+          OR: [
+            { type: { not: 'PASS' } },
+            { type: 'PASS', createdAt: { gte: fiveDaysAgo } },
+          ],
+        },
+        select: { toUserId: true },
+      })
+      excludedIds.push(...existingActions.map((l) => l.toUserId))
+    }
+
     const users = await db.user.findMany({
       where: {
         id: { not: session.user.id, notIn: excludedIds },
@@ -124,8 +141,26 @@ export async function GET(req: NextRequest) {
       },
     })
 
+    const members = discoverMode
+      ? users.map((u) => ({
+          id: u.id,
+          username: u.username,
+          displayName: u.profile?.displayName,
+          age: u.profile?.dateOfBirth
+            ? Math.floor((Date.now() - new Date(u.profile.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+            : undefined,
+          city: u.profile?.city,
+          country: u.profile?.country,
+          bio: u.profile?.bio,
+          interests: [],
+          profilePhotoUrl: u.photos[0]?.url ?? u.profile?.profilePhoto ?? null,
+          isOnline: u.profile?.isOnline,
+          membershipTier: u.profile?.membershipTier,
+        }))
+      : users
+
     return NextResponse.json({
-      members: users,
+      members,
       pagination: {
         page,
         limit: effectiveLimit,

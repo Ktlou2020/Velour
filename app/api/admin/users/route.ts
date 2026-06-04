@@ -74,11 +74,26 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const body = await req.json() as { userId: string; action: 'ban' | 'unban' | 'verify' | 'promote' }
-    const { userId, action } = body
+    const body = await req.json() as {
+      userId: string
+      action: 'ban' | 'unban' | 'verify' | 'promote' | 'setTier'
+      tier?: 'FREE' | 'GOLD' | 'PLATINUM'
+    }
+    const { userId, action, tier } = body
 
     if (!userId || !action) {
       return NextResponse.json({ error: 'userId and action are required' }, { status: 400 })
+    }
+
+    if (action === 'setTier') {
+      if (!tier || !['FREE', 'GOLD', 'PLATINUM'].includes(tier)) {
+        return NextResponse.json({ error: 'Valid tier required: FREE, GOLD, PLATINUM' }, { status: 400 })
+      }
+      await db.profile.updateMany({
+        where: { userId },
+        data: { membershipTier: tier },
+      })
+      return NextResponse.json({ ok: true })
     }
 
     let updateData: Record<string, unknown> = {}

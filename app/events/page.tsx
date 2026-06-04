@@ -1,6 +1,8 @@
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import EventsClient from './EventsClient';
+import { auth } from '@/auth';
+import { db } from '@/lib/db';
 
 interface Event {
   id: string;
@@ -39,7 +41,25 @@ interface SearchParams { category?: string }
 
 export default async function EventsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
-  const { events, featured } = await getEvents(params.category);
+  const [{ events, featured }, session] = await Promise.all([
+    getEvents(params.category),
+    auth(),
+  ]);
+
+  let canCreate = false;
+  const userId = (session?.user as { id?: string })?.id;
+  const userRole = (session?.user as { role?: string })?.role;
+  if (userId) {
+    if (userRole === 'ADMIN') {
+      canCreate = true;
+    } else {
+      const profile = await db.profile.findUnique({
+        where: { userId },
+        select: { membershipTier: true },
+      });
+      canCreate = profile?.membershipTier === 'GOLD' || profile?.membershipTier === 'PLATINUM';
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#0A0A0F]">
@@ -51,7 +71,7 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
             <p className="text-white/50">Exclusive gatherings, experiences and adventures for Velour members</p>
           </div>
         </div>
-        <EventsClient events={events} featured={featured} activeCategory={params.category || 'All'} />
+        <EventsClient events={events} featured={featured} activeCategory={params.category || 'All'} canCreate={canCreate} />
       </main>
       <Footer />
     </div>

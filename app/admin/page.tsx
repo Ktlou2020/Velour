@@ -130,7 +130,7 @@ export default async function AdminDashboard() {
                       </div>
                     </td>
                     <td className="py-2.5">
-                      <AdminActions userId={u.id} isVerified={u.isVerified} isActive={u.isActive} />
+                      <AdminActions userId={u.id} isVerified={u.isVerified} isActive={u.isActive} currentTier={u.profile?.membershipTier} />
                     </td>
                   </tr>
                 ))}

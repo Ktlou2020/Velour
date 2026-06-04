@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Calendar, MapPin, Users, Clock, ArrowRight, Lock } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, ArrowRight, Lock, Plus } from 'lucide-react';
+import CreateEventModal from './CreateEventModal';
 
 interface Event {
   id: string;
@@ -24,6 +25,7 @@ interface Props {
   events: Event[];
   featured: Event | null;
   activeCategory: string;
+  canCreate?: boolean;
 }
 
 const TABS = ['All', 'Party', 'Meetup', 'Workshop', 'Travel'];
@@ -47,11 +49,12 @@ const DEFAULT_GRADIENTS = [
   'from-blue-900 to-cyan-800',
 ];
 
-export default function EventsClient({ events, featured, activeCategory }: Props) {
+export default function EventsClient({ events, featured, activeCategory, canCreate }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [rsvpLoading, setRsvpLoading] = useState<string | null>(null);
   const [rsvpDone, setRsvpDone] = useState<Set<string>>(new Set());
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   function setCategory(cat: string) {
     const params = new URLSearchParams();
@@ -161,7 +164,17 @@ export default function EventsClient({ events, featured, activeCategory }: Props
         </div>
       )}
 
-      {/* Category Filter Tabs */}
+      {/* Category Filter + Create Button */}
+      <div className="flex items-center justify-between gap-4 mb-8">
+        {canCreate && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shrink-0"
+          >
+            <Plus size={16} /> Create Event
+          </button>
+        )}
+      </div>
       <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
         {TABS.map((tab) => (
           <button
@@ -263,6 +276,12 @@ export default function EventsClient({ events, featured, activeCategory }: Props
             );
           })}
         </div>
+      )}
+      {showCreateModal && (
+        <CreateEventModal
+          onClose={() => setShowCreateModal(false)}
+          onCreated={() => { setShowCreateModal(false); router.refresh(); }}
+        />
       )}
     </div>
   );

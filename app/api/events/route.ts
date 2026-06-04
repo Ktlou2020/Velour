@@ -40,14 +40,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Admin only
+    // Admin OR paying members can create events
     const user = await db.user.findUnique({
       where: { id: session.user.id },
-      select: { role: true },
+      select: { role: true, profile: { select: { membershipTier: true } } },
     })
 
-    if (!user || user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const isPaying = user?.profile?.membershipTier === 'GOLD' || user?.profile?.membershipTier === 'PLATINUM'
+    if (!user || (user.role !== 'ADMIN' && !isPaying)) {
+      return NextResponse.json({ error: 'Upgrade to Gold or Platinum to create events' }, { status: 403 })
     }
 
     const body = await req.json()

@@ -71,26 +71,29 @@ export default function DiscoverPage() {
     actionInProgress.current = true;
     setAnimDir(dir);
 
-    // Post to API
-    if (type !== 'PASS') {
-      try {
-        const res = await fetch('/api/likes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ targetUsername: profile.username, type }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.isMatch) {
-            // Show match overlay after animation
-            setTimeout(() => setMatchProfile(profile), 350);
-          }
+    try {
+      const res = await fetch('/api/likes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toUserId: profile.id, type }),
+      });
+      if (res.ok && type !== 'PASS') {
+        const data = await res.json();
+        if (data.matched) {
+          setTimeout(() => setMatchProfile(profile), 350);
         }
-      } catch { /* ignore */ }
-    }
+      }
+    } catch { /* ignore */ }
 
     setTimeout(() => {
-      setCurrentIndex((i) => i + 1);
+      setCurrentIndex((i) => {
+        const next = i + 1;
+        // Auto-reload when we're near the end
+        if (next >= profiles.length - 2) {
+          loadProfiles();
+        }
+        return next;
+      });
       setAnimDir(null);
       actionInProgress.current = false;
     }, 300);

@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { toUserId, type = 'LIKE' } = body as {
       toUserId?: string
-      type?: 'LIKE' | 'SUPERLIKE' | 'WINK'
+      type?: 'LIKE' | 'SUPERLIKE' | 'WINK' | 'PASS'
     }
 
     if (!toUserId) {
@@ -23,47 +23,40 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Cannot like yourself' }, { status: 400 })
     }
 
-    const validTypes = ['LIKE', 'SUPERLIKE', 'WINK']
+    const validTypes = ['LIKE', 'SUPERLIKE', 'WINK', 'PASS']
     if (!validTypes.includes(type)) {
       return NextResponse.json({ error: 'Invalid like type' }, { status: 400 })
     }
 
-    // Upsert like to avoid duplicates
+    // Upsert to avoid duplicates
     await db.like.upsert({
-      where: {
-        fromUserId_toUserId: {
-          fromUserId: session.user.id,
-          toUserId,
-        },
-      },
-      update: { type },
-      create: {
-        fromUserId: session.user.id,
-        toUserId,
-        type,
-      },
+      where: { fromUserId_toUserId: { fromUserId: session.user.id, toUserId } },
+      update: { type, createdAt: new Date() },
+      create: { fromUserId: session.user.id, toUserId, type },
     })
 
+    // Passes don't create matches
+    if (type === 'PASS') {
+      return NextResponse.json({ passed: true, matched: false })
+    }
+
     // Check for mutual like
-    const mutualLike = await db.like.findUnique({
+    const mutualLike = await db.like.findFirst({
       where: {
-        fromUserId_toUserId: {
-          fromUserId: toUserId,
-          toUserId: session.user.id,
-        },
+        fromUserId: toUserId,
+        toUserId: session.user.id,
+        type: { not: 'PASS' },
       },
     })
 
     let matched = false
 
     if (mutualLike) {
-      // Ensure consistent ordering for the unique constraint
       const [user1Id, user2Id] =
         session.user.id < toUserId
           ? [session.user.id, toUserId]
           : [toUserId, session.user.id]
 
-      // Create match (ignore if already exists)
       const existingMatch = await db.match.findUnique({
         where: { user1Id_user2Id: { user1Id, user2Id } },
       })
@@ -71,7 +64,6 @@ export async function POST(req: NextRequest) {
       if (!existingMatch) {
         await db.match.create({ data: { user1Id, user2Id } })
 
-        // Notify both users
         await db.notification.createMany({
           data: [
             {

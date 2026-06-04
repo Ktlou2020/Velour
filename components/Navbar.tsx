@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { href: '/members', label: 'Members' },
   { href: '/discover', label: 'Discover' },
   { href: '/messages', label: 'Messages', showBadge: true },
+  { href: '/gallery', label: 'Gallery' },
   { href: '/events', label: 'Events' },
   { href: '/forums', label: 'Forums' },
 ];
