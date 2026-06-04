@@ -40,18 +40,18 @@ export default function SignupPage() {
       const data = await res.json() as { success?: boolean; error?: string }
       if (!res.ok) {
         setError(data.error ?? 'Registration failed. Please try again.')
-        setLoading(false)
         return
       }
       const result = await signIn('credentials', { email, password, redirect: false })
       if (result?.error) {
-        setError('Account created! Please sign in.')
+        setError('Account created! Please sign in manually.')
         router.push('/auth/signin')
         return
       }
       router.push('/onboarding')
     } catch {
       setError('An unexpected error occurred. Please try again.')
+    } finally {
       setLoading(false)
     }
   }
