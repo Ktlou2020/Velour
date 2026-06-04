@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { db } from '@/lib/db'
 import { sendPasswordResetEmail } from '@/lib/email'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,6 +11,13 @@ export async function POST(req: NextRequest) {
 
     if (!email) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+    }
+
+    if (!rateLimit(email, 3, 60 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: 'Too many reset attempts. Please try again in an hour.' },
+        { status: 429 }
+      )
     }
 
     const user = await db.user.findUnique({

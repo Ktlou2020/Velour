@@ -3,9 +3,22 @@ import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
 import { sendVerificationEmail } from '@/lib/email'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
+    const ip =
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      req.headers.get('x-real-ip') ||
+      '127.0.0.1';
+
+    if (!rateLimit(ip, 5, 15 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: 'Too many registration attempts. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json()
     const { username, email, password, dateOfBirth } = body as {
       username?: string

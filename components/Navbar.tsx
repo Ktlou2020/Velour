@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Menu, X, ChevronDown, LogOut, User, Crown, MessageCircle } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, Crown, MessageCircle, Eye, Shield, CreditCard } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 
 interface NavConversationCount {
@@ -30,6 +30,7 @@ export default function Navbar() {
 
   const username = (session?.user as { username?: string })?.username ?? session?.user?.email ?? '';
   const initials = username.slice(0, 2).toUpperCase() || 'U';
+  const userRole = (session?.user as { role?: string })?.role;
 
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -136,6 +137,29 @@ export default function Navbar() {
                       >
                         <Crown size={14} />Upgrade
                       </Link>
+                      <Link
+                        href="/subscription"
+                        className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <CreditCard size={14} />Subscription
+                      </Link>
+                      <Link
+                        href="/views"
+                        className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Eye size={14} />Who Viewed Me
+                      </Link>
+                      {userRole === 'ADMIN' && (
+                        <Link
+                          href="/admin"
+                          className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          <Shield size={14} />Admin Dashboard
+                        </Link>
+                      )}
                       <div className="my-1 border-t border-white/10" />
                       <Link
                         href="/auth/signout"
@@ -215,6 +239,29 @@ export default function Navbar() {
                 >
                   Upgrade
                 </Link>
+                <Link
+                  href="/subscription"
+                  className="flex items-center gap-2 px-4 py-2 glass border border-white/10 rounded-lg text-white/70 text-sm"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <CreditCard size={14} />Subscription
+                </Link>
+                <Link
+                  href="/views"
+                  className="flex items-center gap-2 px-4 py-2 glass border border-white/10 rounded-lg text-white/70 text-sm"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <Eye size={14} />Who Viewed Me
+                </Link>
+                {userRole === 'ADMIN' && (
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-2 px-4 py-2 glass border border-white/10 rounded-lg text-white/70 text-sm"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <Shield size={14} />Admin Dashboard
+                  </Link>
+                )}
                 <Link
                   href="/auth/signout"
                   className="text-[#DC143C] text-sm py-2 text-center"

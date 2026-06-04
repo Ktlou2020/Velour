@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  MapPin, Shield, Eye, Heart, MessageCircle, Flag, Crown, Star, Camera, X
+  MapPin, Shield, Eye, Heart, MessageCircle, Flag, Crown, Star, Camera, X, Check
 } from 'lucide-react';
 import type { Session } from 'next-auth';
 
@@ -24,6 +24,7 @@ interface Profile {
   country?: string;
   bio?: string;
   isOnline?: boolean;
+  isVerified?: boolean;
   membershipTier?: 'FREE' | 'GOLD' | 'PLATINUM';
   orientation?: string;
   lookingFor?: string[];
@@ -187,10 +188,17 @@ export default function MemberProfileClient({ username, profile, session }: Prop
                     <span className="text-purple-400 text-xs font-bold">Platinum Member</span>
                   </div>
                 )}
-                <div className="flex items-center gap-1 glass px-3 py-1 rounded-full">
-                  <Shield size={12} className="text-emerald-400" />
-                  <span className="text-emerald-400 text-xs font-semibold">Verified</span>
-                </div>
+                {p.isVerified && (
+                  <div
+                    className="flex items-center gap-1 bg-blue-500/20 border border-blue-500/40 px-3 py-1 rounded-full"
+                    title="Verified Member"
+                  >
+                    <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                      <Check size={9} className="text-white" strokeWidth={3} />
+                    </div>
+                    <span className="text-blue-400 text-xs font-semibold">Verified</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-4 text-white/60 text-sm mb-4">

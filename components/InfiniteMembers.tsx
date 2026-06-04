@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { MapPin } from 'lucide-react';
+import { MapPin, Check } from 'lucide-react';
 import type { MemberData } from '@/app/members/page';
 
 type FilterState = Record<string, string | undefined> & {
@@ -96,6 +96,8 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
           const tier = member.membershipTier ?? 'FREE';
           const initials = (member.displayName || member.username || '?').slice(0, 2).toUpperCase();
 
+          const isVerified = (member as MemberData & { isVerified?: boolean }).isVerified;
+
           return (
             <Link
               key={`${member.username}-${idx}`}
@@ -124,6 +126,16 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
                 {tier !== 'FREE' && (
                   <div className={`absolute top-2 left-2 text-xs font-bold px-1.5 py-0.5 rounded-md glass ${TIER_COLORS[tier]}`}>
                     {tier === 'GOLD' ? '✦ GOLD' : '◆ PLAT'}
+                  </div>
+                )}
+
+                {/* Verified badge */}
+                {isVerified && (
+                  <div
+                    className="absolute bottom-2 right-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center border-2 border-[#0A0A0F]"
+                    title="Verified Member"
+                  >
+                    <Check size={10} className="text-white" strokeWidth={3} />
                   </div>
                 )}
 
