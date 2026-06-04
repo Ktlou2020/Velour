@@ -176,6 +176,18 @@ export async function POST(
       }).catch(() => {})
     }
 
+    // Extend match expiry — once conversation is active the match never expires
+    const otherUserId = otherParticipants[0]?.userId
+    if (otherUserId) {
+      const [u1, u2] = session.user.id < otherUserId
+        ? [session.user.id, otherUserId]
+        : [otherUserId, session.user.id]
+      db.match.updateMany({
+        where: { user1Id: u1, user2Id: u2 },
+        data: { expiresAt: null },
+      }).catch(() => {})
+    }
+
     return NextResponse.json({ message }, { status: 201 })
   } catch (error) {
     console.error('POST /api/conversations/[id]/messages error:', error)

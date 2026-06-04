@@ -62,6 +62,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id
         token.username = (user as { username?: string }).username ?? ''
         token.role = (user as { role?: string }).role ?? 'USER'
+
+        // Update login streak on every new sign-in
+        try {
+          const dbUser = await db.user.findUnique({
+            where: { id: user.id as string },
+            select: { loginStreak: true, lastLoginDate: true, superLikeCredits: true },
+          })
+          if (dbUser) {
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            const last = dbUser.lastLoginDate ? new Date(dbUser.lastLoginDate) : null
+            if (last) last.setHours(0, 0, 0, 0)
+
+            const isToday = last && last.getTime() === today.getTime()
+            const isYesterday = last && (today.getTime() - last.getTime() === 86400000)
+
+            if (!isToday) {
+              const newStreak = isYesterday ? (dbUser.loginStreak + 1) : 1
+              // Milestone rewards: every 7 days streak → +1 super like credit
+              const milestone = newStreak % 7 === 0
+              await db.user.update({
+                where: { id: user.id as string },
+                data: {
+                  loginStreak: newStreak,
+                  lastLoginDate: new Date(),
+                  ...(milestone ? { superLikeCredits: { increment: 1 } } : {}),
+                },
+              })
+            }
+          }
+        } catch { /* non-critical */ }
       }
       return token
     },

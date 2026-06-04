@@ -29,6 +29,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid like type' }, { status: 400 })
     }
 
+    // Enforce super like credit limit
+    if (type === 'SUPERLIKE') {
+      const dbUser = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { superLikeCredits: true, role: true },
+      })
+      if (!dbUser || (dbUser.role !== 'ADMIN' && (dbUser.superLikeCredits ?? 0) < 1)) {
+        return NextResponse.json({ error: 'No super like credits remaining. Earn more by logging in daily!' }, { status: 403 })
+      }
+      await db.user.update({
+        where: { id: session.user.id },
+        data: { superLikeCredits: { decrement: 1 } },
+      })
+    }
+
     // Upsert to avoid duplicates
     await db.like.upsert({
       where: { fromUserId_toUserId: { fromUserId: session.user.id, toUserId } },
@@ -63,7 +78,8 @@ export async function POST(req: NextRequest) {
       })
 
       if (!existingMatch) {
-        await db.match.create({ data: { user1Id, user2Id } })
+        const sevenDays = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        await db.match.create({ data: { user1Id, user2Id, expiresAt: sevenDays } })
 
         await db.notification.createMany({
           data: [

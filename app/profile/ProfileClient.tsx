@@ -7,7 +7,8 @@ import Link from 'next/link';
 import ProtectedImage from '@/components/ProtectedImage';
 import {
   Camera, Eye, Heart, MessageCircle, Users, Crown, Shield,
-  Edit2, Check, X, Trash2, Lock, Plus, Star, Link2, Link2Off
+  Edit2, Check, X, Trash2, Lock, Plus, Star, Link2, Link2Off,
+  Globe, Upload
 } from 'lucide-react';
 import type { Session } from 'next-auth';
 
@@ -57,7 +58,9 @@ const TIER_COLORS = {
 
 export default function ProfileClient({ session, initialProfile }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const privateFileInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState<Profile>(initialProfile || {});
+  const [photoTab, setPhotoTab] = useState<'public' | 'private'>('public');
   const [editingBio, setEditingBio] = useState(false);
   const [bio, setBio] = useState(initialProfile?.bio || '');
   const [editingFields, setEditingFields] = useState(false);
@@ -134,7 +137,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
     }
   }
 
-  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>, isPrivate = false) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingPhoto(true);
@@ -143,20 +146,22 @@ export default function ProfileClient({ session, initialProfile }: Props) {
       formData.append('file', file);
       const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
       if (!uploadRes.ok) throw new Error('Upload failed');
-      const { url } = await uploadRes.json();
+      const { url } = await uploadRes.json() as { url: string };
 
       const photoRes = await fetch('/api/photos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, filename: file.name }),
+        body: JSON.stringify({ url, isPrivate }),
       });
       if (photoRes.ok) {
-        const newPhoto = await photoRes.json();
+        const { photo: newPhoto } = await photoRes.json() as { photo: Photo };
         setProfile((p) => ({ ...p, photos: [...(p.photos || []), newPhoto] }));
+        setPhotoTab(isPrivate ? 'private' : 'public');
       }
     } finally {
       setUploadingPhoto(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+      if (privateFileInputRef.current) privateFileInputRef.current.value = '';
     }
   }
 
@@ -279,7 +284,6 @@ export default function ProfileClient({ session, initialProfile }: Props) {
               >
                 <Camera size={14} className="text-white" />
               </button>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
             </div>
 
             <div className="flex-1 text-center sm:text-left">
@@ -405,59 +409,88 @@ export default function ProfileClient({ session, initialProfile }: Props) {
               <span className="text-white/30 text-xs">{photos.length}/9 photos</span>
             </div>
 
+            {/* Folder tabs */}
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setPhotoTab('public')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${photoTab === 'public' ? 'bg-[#DC143C] text-white' : 'glass text-white/50 hover:text-white'}`}
+              >
+                <Globe size={14} />
+                Public ({photos.filter(p => !p.isPrivate).length})
+              </button>
+              <button
+                onClick={() => setPhotoTab('private')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${photoTab === 'private' ? 'bg-white/10 text-white' : 'glass text-white/50 hover:text-white'}`}
+              >
+                <Lock size={14} />
+                Private ({photos.filter(p => p.isPrivate).length})
+              </button>
+            </div>
+
+            {photoTab === 'private' && (
+              <p className="text-white/30 text-xs mb-3 flex items-center gap-1.5">
+                <Lock size={10} />
+                Private photos are only visible to you and people you choose to share them with.
+              </p>
+            )}
+
             <div className="grid grid-cols-3 gap-3">
-              {photos.map((photo) => (
+              {photos.filter(p => photoTab === 'public' ? !p.isPrivate : p.isPrivate).map((photo) => (
                 <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden group">
                   <ProtectedImage src={photo.url} alt="Photo" className="w-full h-full" />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
-                    <button
-                      onClick={() => setAsProfile(photo.id)}
-                      className={`text-xs px-2 py-1 rounded-lg font-medium transition-colors w-full text-center ${photo.isProfile ? 'bg-[#DC143C] text-white' : 'glass text-white/70 hover:text-white'}`}
-                    >
-                      {photo.isProfile ? '✓ Profile' : 'Set Profile'}
-                    </button>
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-2">
+                    {!photo.isPrivate && (
+                      <button
+                        onClick={() => setAsProfile(photo.id)}
+                        className={`text-xs px-2 py-1 rounded-lg font-medium transition-colors w-full text-center ${photo.isProfile ? 'bg-[#DC143C] text-white' : 'glass text-white/70 hover:text-white'}`}
+                      >
+                        {photo.isProfile ? '✓ Profile Photo' : 'Set as Profile'}
+                      </button>
+                    )}
                     <button
                       onClick={() => togglePrivate(photo.id, photo.isPrivate)}
-                      className="text-xs glass px-2 py-1 rounded-lg text-white/70 hover:text-white w-full text-center"
+                      className="text-xs glass px-2 py-1 rounded-lg text-white/70 hover:text-white w-full text-center flex items-center justify-center gap-1"
                     >
-                      {photo.isPrivate ? '🔓 Make Public' : '🔒 Make Private'}
+                      {photo.isPrivate ? <><Globe size={10} /> Move to Public</> : <><Lock size={10} /> Move to Private</>}
                     </button>
                     <button
                       onClick={() => deletePhoto(photo.id)}
-                      className="text-xs bg-red-500/20 hover:bg-red-500/40 text-red-400 px-2 py-1 rounded-lg w-full text-center"
+                      className="text-xs bg-red-500/20 hover:bg-red-500/40 text-red-400 px-2 py-1 rounded-lg w-full text-center flex items-center justify-center gap-1"
                     >
-                      Delete
+                      <Trash2 size={10} /> Remove
                     </button>
                   </div>
                   {photo.isProfile && (
                     <div className="absolute bottom-2 left-2 bg-[#DC143C]/80 px-1.5 py-0.5 rounded text-xs text-white font-semibold">Main</div>
                   )}
-                  {photo.isPrivate && (
-                    <div className="absolute top-2 right-2 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center">
-                      <Lock size={10} className="text-white/70" />
-                    </div>
-                  )}
                 </div>
               ))}
 
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingPhoto}
-                className="aspect-square rounded-xl border-2 border-dashed border-white/10 hover:border-[#DC143C]/40 flex flex-col items-center justify-center gap-2 transition-all hover:bg-white/5"
-                aria-label="Add photo"
-              >
-                {uploadingPhoto ? (
-                  <div className="w-6 h-6 border-2 border-[#DC143C] border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <Plus size={20} className="text-white/20" />
-                    <span className="text-white/20 text-xs">Add Photo</span>
-                  </>
-                )}
-              </button>
+              {/* Add to current folder */}
+              {photos.length < 9 && (
+                <button
+                  type="button"
+                  onClick={() => photoTab === 'private' ? privateFileInputRef.current?.click() : fileInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="aspect-square rounded-xl border-2 border-dashed border-white/10 hover:border-[#DC143C]/40 flex flex-col items-center justify-center gap-2 transition-all hover:bg-white/5"
+                  aria-label={`Add ${photoTab} photo`}
+                >
+                  {uploadingPhoto ? (
+                    <div className="w-6 h-6 border-2 border-[#DC143C] border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Upload size={20} className="text-white/20" />
+                      <span className="text-white/20 text-xs">Add to {photoTab === 'private' ? 'Private' : 'Public'}</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
-            <p className="text-white/30 text-xs mt-3">JPEG, PNG, WEBP accepted. Max 10MB each. Hover a photo to manage it.</p>
+
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload(e, false)} />
+            <input ref={privateFileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload(e, true)} />
+
+            <p className="text-white/30 text-xs mt-3">JPEG, PNG, WEBP accepted. Hover a photo to manage it.</p>
           </div>
 
           {/* Membership Tier */}
