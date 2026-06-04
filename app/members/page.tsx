@@ -2,6 +2,8 @@ import { Suspense } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import MembersContent from './MembersContent';
+import { auth } from '@/auth';
+import { db } from '@/lib/db';
 
 type SearchParams = Record<string, string | undefined> & {
   gender?: string;
@@ -16,11 +18,37 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const params = await searchParams;
   const page = parseInt(params.page || '1', 10);
 
+  const session = await auth();
+  const userId = (session?.user as { id?: string })?.id;
+  const userRole = (session?.user as { role?: string })?.role;
+
+  let membershipTier: 'FREE' | 'GOLD' | 'PLATINUM' = 'FREE';
+  let profileCity = '';
+  let profileCountry = '';
+
+  if (userId) {
+    const profile = await db.profile.findUnique({
+      where: { userId },
+      select: { membershipTier: true, city: true, country: true },
+    });
+    if (profile) {
+      membershipTier = profile.membershipTier as 'FREE' | 'GOLD' | 'PLATINUM';
+      profileCity = profile.city ?? '';
+      profileCountry = profile.country ?? '';
+    }
+    if (userRole === 'ADMIN') membershipTier = 'PLATINUM';
+  }
+
+  const canChangeCity = membershipTier === 'GOLD' || membershipTier === 'PLATINUM';
+
+  // FREE users are locked to their own city
+  const effectiveCity = canChangeCity ? (params.city ?? '') : profileCity;
+
   const qs = new URLSearchParams({
     ...(params.gender && params.gender !== 'ALL' ? { gender: params.gender } : {}),
     ...(params.ageMin ? { ageMin: params.ageMin } : {}),
     ...(params.ageMax ? { ageMax: params.ageMax } : {}),
-    ...(params.city ? { city: params.city } : {}),
+    ...(effectiveCity ? { city: effectiveCity } : {}),
     ...(params.online === '1' ? { online: '1' } : {}),
     page: String(page),
     limit: '12',
@@ -35,8 +63,8 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
       { cache: 'no-store' }
     );
     if (res.ok) {
-      const data = await res.json();
-      members = data.members || data || [];
+      const data = await res.json() as { members?: MemberData[]; total?: number };
+      members = data.members || [];
       total = data.total || members.length;
     }
   } catch {
@@ -58,7 +86,15 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
           </div>
         </div>
         <Suspense fallback={<div className="text-white/30 text-center py-20">Loading members...</div>}>
-          <MembersContent members={members} total={total} currentPage={page} searchParams={params} />
+          <MembersContent
+            members={members}
+            total={total}
+            currentPage={page}
+            searchParams={{ ...params, city: effectiveCity }}
+            canChangeCity={canChangeCity}
+            profileCity={profileCity}
+            profileCountry={profileCountry}
+          />
         </Suspense>
       </main>
       <Footer />

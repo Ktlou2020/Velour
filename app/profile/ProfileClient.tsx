@@ -11,6 +11,7 @@ import {
   Globe, Upload
 } from 'lucide-react';
 import type { Session } from 'next-auth';
+import { CITIES_BY_COUNTRY, COUNTRIES } from '@/lib/cities';
 
 interface Photo {
   id: string;
@@ -310,9 +311,24 @@ export default function ProfileClient({ session, initialProfile }: Props) {
 
               <div className="flex items-center gap-2 mb-4">
                 {editingFields ? (
-                  <div className="flex items-center gap-2">
-                    <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="input-dark text-sm px-3 py-1.5 rounded-lg w-32" />
-                    <input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Country" className="input-dark text-sm px-3 py-1.5 rounded-lg w-24" />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <select
+                      value={country}
+                      onChange={(e) => { setCountry(e.target.value); setCity(''); }}
+                      className="input-dark text-sm px-3 py-1.5 rounded-lg"
+                    >
+                      <option value="">Country</option>
+                      {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <select
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      className="input-dark text-sm px-3 py-1.5 rounded-lg"
+                      disabled={!country}
+                    >
+                      <option value="">City</option>
+                      {(CITIES_BY_COUNTRY[country] ?? []).map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
                     <button onClick={saveFields} disabled={saving} className="w-8 h-8 bg-[#DC143C] rounded-lg flex items-center justify-center hover:bg-[#FF1744] transition-colors">
                       <Check size={14} className="text-white" />
                     </button>

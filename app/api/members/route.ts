@@ -16,12 +16,25 @@ export async function GET(req: NextRequest) {
     const gender = searchParams.get('gender')
     const minAge = searchParams.get('minAge')
     const maxAge = searchParams.get('maxAge')
-    const city = searchParams.get('city')
     const tier = searchParams.get('tier')
     const lookingFor = searchParams.get('lookingFor')
     const discoverMode = searchParams.get('discover') === '1'
 
-    // FREE tier: cap at 20 results total
+    // Check caller's membership to enforce city restriction
+    const callerProfile = await db.profile.findUnique({
+      where: { userId: session.user.id },
+      select: { membershipTier: true, city: true },
+    })
+    const callerRole = (session.user as { role?: string }).role
+    const canChangeCity =
+      callerRole === 'ADMIN' ||
+      callerProfile?.membershipTier === 'GOLD' ||
+      callerProfile?.membershipTier === 'PLATINUM'
+
+    // FREE users are locked to their own city regardless of query param
+    const requestedCity = searchParams.get('city')
+    const city = canChangeCity ? requestedCity : (callerProfile?.city ?? null)
+
     const effectiveLimit = rawLimit
 
     const profileWhere: Prisma.ProfileWhereInput = {}
