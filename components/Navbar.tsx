@@ -163,7 +163,7 @@ export default function Navbar() {
                       <div className="my-1 border-t border-white/10" />
                       <button
                         className="w-full flex items-center gap-2 px-4 py-2 text-[#DC143C] hover:bg-[#DC143C]/10 text-sm transition-colors"
-                        onClick={() => { setUserMenuOpen(false); signOut({ callbackUrl: '/' }) }}
+                        onClick={() => { setUserMenuOpen(false); window.location.href = '/api/logout' }}
                       >
                         <LogOut size={14} />Sign Out
                       </button>
