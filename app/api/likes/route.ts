@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
+import { sendPushToUser } from '@/lib/push'
 
 export async function POST(req: NextRequest) {
   try {
@@ -83,10 +84,24 @@ export async function POST(req: NextRequest) {
           ],
         })
 
+        // Push to both users on new match
+        sendPushToUser(session.user.id, { title: "It's a Match! 🎉", body: "You have a new match on Velour!", url: '/messages', tag: `match-${user1Id}-${user2Id}` }).catch(() => {})
+        sendPushToUser(toUserId, { title: "It's a Match! 🎉", body: "You have a new match on Velour!", url: '/messages', tag: `match-${user1Id}-${user2Id}` }).catch(() => {})
         matched = true
       } else {
         matched = true
       }
+    }
+
+    // Push notification for a plain like/wink
+    if (!matched) {
+      const labels: Record<string, string> = { LIKE: 'liked', SUPERLIKE: 'super liked', WINK: 'winked at' }
+      sendPushToUser(toUserId, {
+        title: 'New Activity — Velour',
+        body: `Someone ${labels[type] ?? 'liked'} you!`,
+        url: '/members',
+        tag: `like-${session.user.id}`,
+      }).catch(() => {})
     }
 
     return NextResponse.json({ liked: true, matched })

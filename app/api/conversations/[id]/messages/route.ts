@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
+import { sendPushToUser } from '@/lib/push'
 
 export async function GET(
   req: NextRequest,
@@ -167,6 +168,12 @@ export async function POST(
           data: { conversationId, senderId: session.user.id },
         },
       })
+      sendPushToUser(participant.userId, {
+        title: 'New Message — Velour',
+        body: content.trim().slice(0, 100),
+        url: `/messages`,
+        tag: `message-${conversationId}`,
+      }).catch(() => {})
     }
 
     return NextResponse.json({ message }, { status: 201 })

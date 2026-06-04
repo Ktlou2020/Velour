@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
+import { sendPushToUser } from '@/lib/push'
 
 export async function GET(
   _req: NextRequest,
@@ -79,6 +80,12 @@ export async function GET(
               data: { viewerId: session.user.id, viewerUsername: viewerUser.username },
             },
           })
+          sendPushToUser(user.id, {
+            title: 'Profile View — Velour',
+            body: `@${viewerUser.username} viewed your profile`,
+            url: '/views',
+            tag: `view-${session.user.id}`,
+          }).catch(() => {})
         }
       }
     }

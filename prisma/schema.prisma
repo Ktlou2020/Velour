@@ -100,8 +100,9 @@ model User {
   forumThreads    ForumThread[]
   notifications   Notification[]
   interests       UserInterest[]
-  blocksGiven     Block[]          @relation("BlocksGiven")
-  blocksReceived  Block[]          @relation("BlocksReceived")
+  blocksGiven       Block[]          @relation("BlocksGiven")
+  blocksReceived    Block[]          @relation("BlocksReceived")
+  pushSubscriptions PushSubscription[]
 }
 
 model Profile {
@@ -307,6 +308,16 @@ model Notification {
   body      String
   isRead    Boolean  @default(false)
   data      Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
