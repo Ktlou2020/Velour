@@ -7,6 +7,7 @@ import {
   MapPin, Shield, Eye, Heart, MessageCircle, Flag, Crown, Star, Camera, X, Check
 } from 'lucide-react';
 import type { Session } from 'next-auth';
+import ProtectedImage from '@/components/ProtectedImage';
 
 interface Photo {
   id: string;
@@ -154,11 +155,11 @@ export default function MemberProfileClient({ username, profile, session }: Prop
             <div className="relative flex-shrink-0">
               <div className="w-36 h-36 md:w-48 md:h-48 rounded-2xl overflow-hidden bg-gradient-to-br from-rose-900 to-red-700 flex items-center justify-center">
                 {photos.find((ph) => ph.isProfile)?.url || photos[0]?.url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <ProtectedImage
                     src={(photos.find((ph) => ph.isProfile) || photos[0]).url}
                     alt={displayName}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full"
+                    watermark={session?.user?.email ?? 'velour'}
                   />
                 ) : (
                   <span className="text-white text-5xl md:text-6xl font-bold font-serif">{initials}</span>
@@ -337,8 +338,7 @@ export default function MemberProfileClient({ username, profile, session }: Prop
                     tabIndex={0}
                     aria-label={`View photo ${i + 1}`}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photo.url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                    <ProtectedImage src={photo.url} alt={`Photo ${i + 1}`} className="w-full h-full" watermark={session?.user?.email ?? 'velour'} />
                   </div>
                 ))}
               </div>
@@ -472,8 +472,7 @@ export default function MemberProfileClient({ username, profile, session }: Prop
           <button className="absolute top-4 right-4 text-white/60 hover:text-white" aria-label="Close lightbox">
             <X size={28} />
           </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lightboxPhoto} alt="Full size" className="max-w-full max-h-full object-contain rounded-lg" onClick={(e) => e.stopPropagation()} />
+          <ProtectedImage src={lightboxPhoto} alt="Full size" className="max-w-[90vw] max-h-[85vh] rounded-lg" watermark={session?.user?.email ?? 'velour'} />
         </div>
       )}
     </>

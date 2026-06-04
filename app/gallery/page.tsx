@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Navbar from '@/components/Navbar';
+import ProtectedImage from '@/components/ProtectedImage';
 import { Images, X, ChevronLeft, ChevronRight, User } from 'lucide-react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 interface GalleryPhoto {
   id: string;
@@ -21,6 +23,8 @@ interface GalleryPhoto {
 }
 
 export default function GalleryPage() {
+  const { data: session } = useSession();
+  const watermark = (session?.user as { username?: string })?.username ?? session?.user?.email ?? 'velour';
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -104,13 +108,13 @@ export default function GalleryPage() {
                     className="aspect-square rounded-xl overflow-hidden cursor-pointer group relative bg-white/5"
                     onClick={() => openLightbox(idx)}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <ProtectedImage
                       src={photo.thumbnailUrl ?? photo.url}
                       alt={photo.caption || photo.user.username}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full group-hover:scale-105 transition-transform duration-300"
+                      watermark={watermark}
                     />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors pointer-events-none" />
                     <div className="absolute bottom-0 left-0 right-0 p-2 translate-y-full group-hover:translate-y-0 transition-transform">
                       <p className="text-white text-xs font-medium truncate">
                         @{photo.user.username}
@@ -171,11 +175,11 @@ export default function GalleryPage() {
             className="max-w-4xl max-h-[85vh] flex flex-col items-center gap-4"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <ProtectedImage
               src={current.url}
               alt={current.caption || current.user.username}
-              className="max-h-[75vh] max-w-full rounded-2xl object-contain"
+              className="max-h-[75vh] max-w-[90vw] rounded-2xl"
+              watermark={watermark}
             />
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-[#DC143C]/30 flex items-center justify-center">

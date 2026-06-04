@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { MapPin, Check } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import ProtectedImage from '@/components/ProtectedImage';
 import type { MemberData } from '@/app/members/page';
 
 type FilterState = Record<string, string | undefined> & {
@@ -35,6 +37,8 @@ const TIER_COLORS: Record<string, string> = {
 };
 
 export default function InfiniteMembers({ initialMembers, filters }: Props) {
+  const { data: session } = useSession();
+  const watermark = (session?.user as { username?: string })?.username ?? session?.user?.email ?? 'velour';
   const [members, setMembers] = useState<MemberData[]>(initialMembers);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(initialMembers.length >= 12);
@@ -107,11 +111,11 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
               {/* Photo */}
               <div className="aspect-[3/4] relative bg-gradient-to-br from-rose-950 to-[#0A0A0F] flex items-center justify-center overflow-hidden">
                 {member.profilePhotoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <ProtectedImage
                     src={member.profilePhotoUrl}
                     alt={member.username}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full group-hover:scale-105 transition-transform duration-300"
+                    watermark={watermark}
                   />
                 ) : (
                   <span className="text-white/30 text-4xl font-bold font-serif">{initials}</span>

@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import Navbar from '@/components/Navbar';
 import EmptyState from '@/components/EmptyState';
 import MatchOverlay from '@/components/MatchOverlay';
+import ProtectedImage from '@/components/ProtectedImage';
+import { useSession } from 'next-auth/react';
 import { X, Heart, Star, MapPin, Zap } from 'lucide-react';
 
 interface Profile {
@@ -24,6 +26,8 @@ type ActionType = 'LIKE' | 'SUPER_LIKE' | 'WINK' | 'PASS';
 type AnimDir = 'left' | 'right' | 'up' | null;
 
 export default function DiscoverPage() {
+  const { data: session } = useSession();
+  const watermark = (session?.user as { username?: string })?.username ?? session?.user?.email ?? 'velour';
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -186,8 +190,7 @@ export default function DiscoverPage() {
                   {/* Photo Area */}
                   <div className="h-96 flex items-center justify-center relative bg-gradient-to-br from-rose-900 via-red-900 to-[#0A0A0F] overflow-hidden">
                     {current.profilePhotoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={current.profilePhotoUrl} alt={current.username} className="w-full h-full object-cover" />
+                      <ProtectedImage src={current.profilePhotoUrl} alt={current.username} className="w-full h-full" watermark={watermark} />
                     ) : (
                       <span className="text-white text-8xl font-bold font-serif opacity-60">{initials}</span>
                     )}

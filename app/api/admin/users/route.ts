@@ -89,9 +89,10 @@ export async function PATCH(req: NextRequest) {
       if (!tier || !['FREE', 'GOLD', 'PLATINUM'].includes(tier)) {
         return NextResponse.json({ error: 'Valid tier required: FREE, GOLD, PLATINUM' }, { status: 400 })
       }
-      await db.profile.updateMany({
+      await db.profile.upsert({
         where: { userId },
-        data: { membershipTier: tier },
+        update: { membershipTier: tier },
+        create: { userId, membershipTier: tier },
       })
       return NextResponse.json({ ok: true })
     }

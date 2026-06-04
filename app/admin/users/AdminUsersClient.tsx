@@ -54,6 +54,28 @@ export default function AdminUsersClient({ initialUsers }: Props) {
     }
   }
 
+  async function setTier(userId: string, tier: 'FREE' | 'GOLD' | 'PLATINUM') {
+    setActionLoading(`${userId}-tier`);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, action: 'setTier', tier }),
+      });
+      if (res.ok) {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === userId
+              ? { ...u, profile: { ...u.profile, membershipTier: tier } }
+              : u
+          )
+        );
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   async function handleSearch(q: string) {
     setSearch(q);
     if (q.length > 2) {
@@ -140,13 +162,20 @@ export default function AdminUsersClient({ initialUsers }: Props) {
                     </td>
                     <td className="px-4 py-3 text-white/50 truncate max-w-[180px]">{u.email}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        u.profile?.membershipTier === 'PLATINUM' ? 'bg-purple-500/20 text-purple-400' :
-                        u.profile?.membershipTier === 'GOLD' ? 'bg-[#D4AF37]/20 text-[#D4AF37]' :
-                        'bg-white/10 text-white/40'
-                      }`}>
-                        {u.profile?.membershipTier ?? 'FREE'}
-                      </span>
+                      <select
+                        value={u.profile?.membershipTier ?? 'FREE'}
+                        disabled={actionLoading === `${u.id}-tier`}
+                        onChange={(e) => setTier(u.id, e.target.value as 'FREE' | 'GOLD' | 'PLATINUM')}
+                        className={`text-xs px-2 py-1 rounded-lg border bg-transparent cursor-pointer transition-colors ${
+                          u.profile?.membershipTier === 'PLATINUM' ? 'border-purple-500/40 text-purple-400' :
+                          u.profile?.membershipTier === 'GOLD' ? 'border-[#D4AF37]/40 text-[#D4AF37]' :
+                          'border-white/10 text-white/40'
+                        }`}
+                      >
+                        <option value="FREE" className="bg-[#0A0A0F] text-white">FREE</option>
+                        <option value="GOLD" className="bg-[#0A0A0F] text-white">GOLD</option>
+                        <option value="PLATINUM" className="bg-[#0A0A0F] text-white">PLATINUM</option>
+                      </select>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
+import ProtectedImage from '@/components/ProtectedImage';
 import {
   Camera, Eye, Heart, MessageCircle, Users, Crown, Shield,
   Edit2, Check, X, Trash2, Lock, Plus, Star, Link2, Link2Off
@@ -263,8 +264,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
               <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-rose-900 to-red-700 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-90 transition-opacity group"
                 onClick={() => fileInputRef.current?.click()}>
                 {photos.find((p) => p.isProfile)?.url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={photos.find((p) => p.isProfile)!.url} alt="Profile" className="w-full h-full object-cover" />
+                  <ProtectedImage src={photos.find((p) => p.isProfile)!.url} alt="Profile" className="w-full h-full" />
                 ) : (
                   <span className="text-white text-4xl font-bold font-serif">{name.slice(0, 2).toUpperCase()}</span>
                 )}
@@ -408,8 +408,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
             <div className="grid grid-cols-3 gap-3">
               {photos.map((photo) => (
                 <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden group">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photo.url} alt="Photo" className="w-full h-full object-cover" />
+                  <ProtectedImage src={photo.url} alt="Photo" className="w-full h-full" />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
                     <button
                       onClick={() => setAsProfile(photo.id)}
@@ -501,8 +500,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-rose-900 to-red-700 flex items-center justify-center overflow-hidden">
                     {profile.partner.profilePhoto ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={profile.partner.profilePhoto} alt="Partner" className="w-full h-full object-cover" />
+                      <ProtectedImage src={profile.partner.profilePhoto} alt="Partner" className="w-full h-full" />
                     ) : (
                       <span className="text-white font-bold text-sm">
                         {(profile.partner.displayName || profile.partner.user?.username || '?').slice(0, 2).toUpperCase()}
