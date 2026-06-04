@@ -13,7 +13,7 @@ export default auth((req) => {
     const signinUrl = new URL('/auth/signin', req.nextUrl.origin)
     return NextResponse.redirect(signinUrl)
   }
-  if (isAuthPage && isLoggedIn) {
+  if (isAuthPage && isLoggedIn && pathname !== '/auth/signout') {
     const membersUrl = new URL('/members', req.nextUrl.origin)
     return NextResponse.redirect(membersUrl)
   }

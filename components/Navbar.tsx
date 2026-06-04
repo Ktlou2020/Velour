@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { Menu, X, ChevronDown, LogOut, User, Crown, MessageCircle, Eye, Shield, CreditCard } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 
@@ -161,13 +161,12 @@ export default function Navbar() {
                         </Link>
                       )}
                       <div className="my-1 border-t border-white/10" />
-                      <Link
-                        href="/auth/signout"
+                      <button
                         className="w-full flex items-center gap-2 px-4 py-2 text-[#DC143C] hover:bg-[#DC143C]/10 text-sm transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
+                        onClick={() => { setUserMenuOpen(false); signOut({ callbackUrl: '/' }) }}
                       >
                         <LogOut size={14} />Sign Out
-                      </Link>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -262,13 +261,12 @@ export default function Navbar() {
                     <Shield size={14} />Admin Dashboard
                   </Link>
                 )}
-                <Link
-                  href="/auth/signout"
-                  className="text-[#DC143C] text-sm py-2 text-center"
-                  onClick={() => setMobileOpen(false)}
+                <button
+                  className="text-[#DC143C] text-sm py-2 text-center w-full"
+                  onClick={() => { setMobileOpen(false); signOut({ callbackUrl: '/' }) }}
                 >
                   Sign Out
-                </Link>
+                </button>
               </>
             ) : (
               <>
