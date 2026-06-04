@@ -33,13 +33,14 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { displayName, dateOfBirth, gender, orientation, lookingFor, city, country, bio } =
+    const { displayName, dateOfBirth, gender, orientation, lookingFor, relationshipStatus, city, country, bio } =
       body as {
         displayName?: string
         dateOfBirth?: string
         gender?: string
         orientation?: string
         lookingFor?: string[]
+        relationshipStatus?: string
         city?: string
         country?: string
         bio?: string
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
     if (gender !== undefined) data.gender = gender
     if (orientation !== undefined) data.orientation = orientation
     if (lookingFor !== undefined) data.lookingFor = lookingFor
+    if (relationshipStatus !== undefined) data.relationshipStatus = relationshipStatus
     if (city !== undefined) data.city = city
     if (country !== undefined) data.country = country
     if (bio !== undefined) data.bio = bio

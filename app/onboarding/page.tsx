@@ -89,7 +89,17 @@ export default function OnboardingPage() {
       await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ step, data: form }),
+        body: JSON.stringify({
+          displayName: form.displayName,
+          dateOfBirth: form.dateOfBirth,
+          gender: form.gender || undefined,
+          orientation: form.orientation || undefined,
+          lookingFor: form.lookingFor,
+          relationshipStatus: form.relationshipStatus || undefined,
+          city: form.city,
+          country: form.country,
+          bio: form.bio,
+        }),
       });
     } catch {
       // continue even if API fails
@@ -107,7 +117,17 @@ export default function OnboardingPage() {
       await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ step, data: form, complete: true }),
+        body: JSON.stringify({
+          displayName: form.displayName,
+          dateOfBirth: form.dateOfBirth,
+          gender: form.gender || undefined,
+          orientation: form.orientation || undefined,
+          lookingFor: form.lookingFor,
+          relationshipStatus: form.relationshipStatus || undefined,
+          city: form.city,
+          country: form.country,
+          bio: form.bio,
+        }),
       });
     } catch {
       // continue
