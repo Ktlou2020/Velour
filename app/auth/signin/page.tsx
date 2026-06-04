@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
-import { Eye, EyeOff, Lock, Mail, ArrowRight, CheckCircle } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail, ArrowRight, CheckCircle, Loader2 } from 'lucide-react'
 
-export default function SigninPage() {
+function SigninContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
@@ -218,5 +218,13 @@ export default function SigninPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SigninPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center"><Loader2 className="w-8 h-8 text-[#DC143C] animate-spin" /></div>}>
+      <SigninContent />
+    </Suspense>
   )
 }
