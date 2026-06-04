@@ -2,7 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "npx prisma db push --accept-data-loss && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public; HOSTNAME=0.0.0.0 node .next/standalone/server.js"
+startCommand = "npx prisma db push --accept-data-loss && node scripts/seed-admin.mjs && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public; HOSTNAME=0.0.0.0 node .next/standalone/server.js"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 60
 restartPolicyType = "on_failure"
