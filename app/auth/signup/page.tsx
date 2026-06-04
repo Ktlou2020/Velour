@@ -88,7 +88,7 @@ export default function SignupPage() {
         setLoading(false)
         return
       }
-      router.push('/members')
+      router.push('/onboarding')
     } catch {
       setError('An unexpected error occurred. Please try again.')
       setLoading(false)

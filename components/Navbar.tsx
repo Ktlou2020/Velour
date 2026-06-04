@@ -1,14 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Menu, X, Bell, ChevronDown, LogOut, User, Crown } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, Crown, MessageCircle } from 'lucide-react';
+import NotificationBell from './NotificationBell';
+
+interface NavConversationCount {
+  unreadCount: number;
+}
 
 const NAV_LINKS = [
   { href: '/members', label: 'Members' },
   { href: '/discover', label: 'Discover' },
+  { href: '/messages', label: 'Messages', showBadge: true },
   { href: '/events', label: 'Events' },
   { href: '/forums', label: 'Forums' },
 ];
@@ -16,6 +22,7 @@ const NAV_LINKS = [
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const pathname = usePathname();
   const { data: session, status } = useSession();
 
@@ -23,6 +30,24 @@ export default function Navbar() {
 
   const username = (session?.user as { username?: string })?.username ?? session?.user?.email ?? '';
   const initials = username.slice(0, 2).toUpperCase() || 'U';
+
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    async function fetchUnread() {
+      try {
+        const res = await fetch('/api/conversations');
+        if (res.ok) {
+          const data = await res.json();
+          const conversations: NavConversationCount[] = data.conversations || data || [];
+          const total = conversations.reduce((sum: number, c: NavConversationCount) => sum + (c.unreadCount || 0), 0);
+          setUnreadMessages(total);
+        }
+      } catch { /* ignore */ }
+    }
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, [status]);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-dark border-b border-white/5" role="navigation" aria-label="Main navigation">
@@ -33,22 +58,25 @@ export default function Navbar() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center shadow-lg shadow-[#DC143C]/25">
               <span className="text-white font-bold text-lg font-serif">V</span>
             </div>
-            <span className="text-white font-bold text-xl tracking-widest">VELOUR</span>
+            <span className="text-white font-bold text-xl tracking-widest font-serif">VELOUR</span>
           </Link>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map(({ href, label }) => (
+            {NAV_LINKS.map(({ href, label, showBadge }) => (
               <Link
                 key={href}
                 href={href}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive(href)
-                    ? 'text-white bg-white/10'
-                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  isActive(href) ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'
                 }`}
               >
                 {label}
+                {showBadge && unreadMessages > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 bg-[#DC143C] rounded-full text-white text-xs font-bold flex items-center justify-center px-1">
+                    {unreadMessages > 9 ? '9+' : unreadMessages}
+                  </span>
+                )}
               </Link>
             ))}
           </div>
@@ -62,14 +90,7 @@ export default function Navbar() {
               </div>
             ) : status === 'authenticated' ? (
               <>
-                {/* Notifications */}
-                <button
-                  className="relative w-9 h-9 glass rounded-lg flex items-center justify-center text-white/60 hover:text-white transition-colors"
-                  aria-label="Notifications"
-                >
-                  <Bell size={16} />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-[#DC143C] rounded-full" />
-                </button>
+                <NotificationBell />
 
                 {/* User Menu */}
                 <div className="relative">
@@ -82,7 +103,7 @@ export default function Navbar() {
                     <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#8F0D25] to-[#DC143C] flex items-center justify-center text-white text-xs font-bold">
                       {initials}
                     </div>
-                    <span className="text-white text-sm font-medium">{username}</span>
+                    <span className="text-white text-sm font-medium max-w-24 truncate">{username}</span>
                     <ChevronDown size={14} className={`text-white/50 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                   </button>
 
@@ -100,7 +121,13 @@ export default function Navbar() {
                         className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
                         onClick={() => setUserMenuOpen(false)}
                       >
+                        <MessageCircle size={14} />
                         Messages
+                        {unreadMessages > 0 && (
+                          <span className="ml-auto min-w-5 h-5 bg-[#DC143C] rounded-full text-white text-xs font-bold flex items-center justify-center px-1">
+                            {unreadMessages}
+                          </span>
+                        )}
                       </Link>
                       <Link
                         href="/upgrade"
@@ -154,16 +181,21 @@ export default function Navbar() {
       {/* Mobile Menu */}
       {mobileOpen && (
         <div className="md:hidden glass-dark border-t border-white/5 px-4 py-4 space-y-1">
-          {NAV_LINKS.map(({ href, label }) => (
+          {NAV_LINKS.map(({ href, label, showBadge }) => (
             <Link
               key={href}
               href={href}
-              className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`relative flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive(href) ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'
               }`}
               onClick={() => setMobileOpen(false)}
             >
               {label}
+              {showBadge && unreadMessages > 0 && (
+                <span className="ml-2 min-w-5 h-5 bg-[#DC143C] rounded-full text-white text-xs font-bold flex items-center justify-center px-1">
+                  {unreadMessages}
+                </span>
+              )}
             </Link>
           ))}
           <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
@@ -175,6 +207,13 @@ export default function Navbar() {
                   onClick={() => setMobileOpen(false)}
                 >
                   My Profile
+                </Link>
+                <Link
+                  href="/upgrade"
+                  className="block text-center glass border border-[#D4AF37]/20 px-4 py-2 rounded-lg text-[#D4AF37] text-sm"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Upgrade
                 </Link>
                 <Link
                   href="/auth/signout"

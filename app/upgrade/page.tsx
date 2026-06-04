@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Check, Crown, Star, Zap, Shield, MessageCircle, Eye, Heart, Calendar, Users, ChevronDown } from 'lucide-react'
+import { Check, Crown, Star, Zap, Shield, MessageCircle, Eye, Heart, ChevronDown, Loader2 } from 'lucide-react'
 
 const FREE_FEATURES = [
   'Browse up to 20 profiles per day',
@@ -41,18 +41,55 @@ const PLATINUM_FEATURES = [
 
 const FAQS = [
   { q: 'Can I cancel anytime?', a: 'Yes, you can cancel your subscription at any time. Your premium access continues until the end of your billing period.' },
-  { q: 'Is my payment information secure?', a: 'Absolutely. We use industry-standard SSL encryption and partner with Stripe for secure payment processing. We never store your card details.' },
+  { q: 'Is my payment information secure?', a: 'Absolutely. We use industry-standard SSL encryption and partner with PayFast for secure payment processing. We never store your card details.' },
   { q: 'What happens to my profile if I downgrade?', a: 'Your profile and all messages are preserved. You simply revert to the free tier feature set.' },
   { q: 'Do you offer refunds?', a: 'We offer a 3-day money-back guarantee on new subscriptions if you are not satisfied.' },
   { q: 'Can I upgrade or downgrade mid-cycle?', a: 'Yes. Upgrades take effect immediately with prorated billing. Downgrades take effect at the next billing cycle.' },
 ]
 
+type Tier = 'GOLD' | 'PLATINUM'
+
 export default function UpgradePage() {
   const [annual, setAnnual] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const [loadingTier, setLoadingTier] = useState<Tier | null>(null)
 
   const goldPrice = annual ? '139' : '199'
   const platinumPrice = annual ? '249' : '349'
+
+  async function handleUpgrade(tier: Tier) {
+    setLoadingTier(tier)
+    try {
+      const res = await fetch('/api/payment/payfast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier, billing: annual ? 'annual' : 'monthly' }),
+      })
+
+      if (!res.ok) throw new Error('Payment initiation failed')
+
+      const data = await res.json()
+
+      // PayFast requires a form submission to their endpoint
+      const form = document.createElement('form')
+      form.method = 'POST'
+      form.action = 'https://www.payfast.co.za/eng/process'
+
+      Object.entries(data as Record<string, string>).forEach(([key, value]) => {
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = key
+        input.value = String(value)
+        form.appendChild(input)
+      })
+
+      document.body.appendChild(form)
+      form.submit()
+    } catch (err) {
+      console.error('Payment error:', err)
+      setLoadingTier(null)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#0A0A0F]">
@@ -141,8 +178,16 @@ export default function UpgradePage() {
                 <span className="text-gray-400 text-sm">/month</span>
                 {annual && <p className="text-green-400 text-xs mt-1">Billed annually — save R720/yr</p>}
               </div>
-              <button className="w-full py-3 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B8960C] text-[#0A0A0F] font-bold hover:from-[#F4D03F] hover:to-[#D4AF37] transition-all mb-6">
-                Upgrade to Gold
+              <button
+                onClick={() => handleUpgrade('GOLD')}
+                disabled={loadingTier !== null}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B8960C] text-[#0A0A0F] font-bold hover:from-[#F4D03F] hover:to-[#D4AF37] transition-all mb-6 flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {loadingTier === 'GOLD' ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" />Processing...</>
+                ) : (
+                  'Upgrade to Gold'
+                )}
               </button>
               <ul className="space-y-3">
                 {GOLD_FEATURES.map(f => (
@@ -169,8 +214,16 @@ export default function UpgradePage() {
               <span className="text-gray-500 text-sm">/month</span>
               {annual && <p className="text-green-400 text-xs mt-1">Billed annually — save R1 200/yr</p>}
             </div>
-            <button className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-800 text-white font-semibold hover:from-purple-500 hover:to-purple-700 transition-all mb-6">
-              Upgrade to Platinum
+            <button
+              onClick={() => handleUpgrade('PLATINUM')}
+              disabled={loadingTier !== null}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-800 text-white font-semibold hover:from-purple-500 hover:to-purple-700 transition-all mb-6 flex items-center justify-center gap-2 disabled:opacity-70"
+            >
+              {loadingTier === 'PLATINUM' ? (
+                <><Loader2 className="w-4 h-4 animate-spin" />Processing...</>
+              ) : (
+                'Upgrade to Platinum'
+              )}
             </button>
             <ul className="space-y-3">
               {PLATINUM_FEATURES.map(f => (
