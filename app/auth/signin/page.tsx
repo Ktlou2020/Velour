@@ -38,7 +38,14 @@ function SigninContent() {
       })
 
       if (result?.error) {
-        setError('Invalid email or password. Please try again.')
+        // Show specific error for debugging
+        if (result.error === 'CredentialsSignin') {
+          setError('Incorrect email or password. Please check your details and try again.')
+        } else {
+          setError(`Sign in failed: ${result.error}. Check that NEXTAUTH_SECRET is set in Railway.`)
+        }
+      } else if (!result?.ok) {
+        setError('Sign in failed. Please try again.')
       } else {
         router.push('/members')
         router.refresh()
