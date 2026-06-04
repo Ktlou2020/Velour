@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
+import { sendVerificationEmail } from '@/lib/email'
 
 export async function POST(req: NextRequest) {
   try {
@@ -80,6 +82,19 @@ export async function POST(req: NextRequest) {
         profileCompleteness: 20,
       },
     })
+
+    // Send verification email (non-blocking)
+    try {
+      const verifyToken = crypto.randomBytes(32).toString('hex')
+      const verifyExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      await db.user.update({
+        where: { id: user.id },
+        data: { emailVerifyToken: verifyToken, emailVerifyExpiry: verifyExpiry },
+      })
+      await sendVerificationEmail(email, verifyToken)
+    } catch (emailError) {
+      console.error('Failed to send verification email after registration:', emailError)
+    }
 
     return NextResponse.json(
       { success: true, message: 'Account created' },

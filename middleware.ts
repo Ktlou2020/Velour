@@ -5,7 +5,7 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth
   const { pathname } = req.nextUrl
 
-  const protectedPaths = ['/members', '/discover', '/messages', '/events', '/forums', '/profile', '/upgrade', '/onboarding']
+  const protectedPaths = ['/members', '/discover', '/messages', '/events', '/forums', '/profile', '/upgrade', '/onboarding', '/admin', '/views']
   const isProtected = protectedPaths.some(p => pathname.startsWith(p))
   const isAuthPage = pathname.startsWith('/auth/')
 
@@ -17,6 +17,15 @@ export default auth((req) => {
     const membersUrl = new URL('/members', req.nextUrl.origin)
     return NextResponse.redirect(membersUrl)
   }
+
+  // Admin-only paths
+  if (pathname.startsWith('/admin')) {
+    const role = (req.auth?.user as { role?: string } | undefined)?.role
+    if (role !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/members', req.nextUrl.origin))
+    }
+  }
+
   return NextResponse.next()
 })
 

@@ -253,3 +253,9 @@ body {
   background: rgba(220, 20, 60, 0.3);
   color: white;
 }
+
+/* Skeleton shimmer animation */
+@keyframes velour-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}

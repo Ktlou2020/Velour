@@ -1,6 +1,14 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
+import MobileNav from "@/components/MobileNav";
+import PageTransition from "@/components/PageTransition";
+import { ToastProvider } from "@/lib/toast-context";
+import { ToastContainer } from "@/components/Toast";
+import PWAInstall from "@/components/PWAInstall";
+import AgeGate from "@/components/AgeGate";
+import CookieBanner from "@/components/CookieBanner";
+import OnlineTracker from "@/components/OnlineTracker";
 
 export const metadata: Metadata = {
   title: "Velour — Where Connections Become Extraordinary",
@@ -80,9 +88,21 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="bg-[#0A0A0F] text-white antialiased">
-          <SessionProvider>{children}</SessionProvider>
-        </body>
+      <body className="bg-[#0A0A0F] text-white antialiased pb-16 md:pb-0">
+        <AgeGate />
+        <CookieBanner />
+        <SessionProvider>
+          <ToastProvider>
+            <OnlineTracker />
+            <PageTransition>
+              {children}
+            </PageTransition>
+            <ToastContainer />
+            <MobileNav />
+            <PWAInstall />
+          </ToastProvider>
+        </SessionProvider>
+      </body>
     </html>
   );
 }

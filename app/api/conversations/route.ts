@@ -86,6 +86,20 @@ export async function POST(req: NextRequest) {
 
     const currentUserId = session.user.id
 
+    // Check for block between either user
+    const block = await db.block.findFirst({
+      where: {
+        OR: [
+          { blockerId: currentUserId, blockedId: otherUserId },
+          { blockerId: otherUserId, blockedId: currentUserId },
+        ],
+      },
+    })
+
+    if (block) {
+      return NextResponse.json({ error: 'Cannot start a conversation with this user' }, { status: 403 })
+    }
+
     // Check if conversation already exists between these two users
     const existing = await db.conversation.findFirst({
       where: {

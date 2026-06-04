@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Navbar from '@/components/Navbar';
-import { Search, Send, MoreVertical, Phone, Video } from 'lucide-react';
+import EmptyState from '@/components/EmptyState';
+import { Search, Send, MoreVertical, Phone, Video, Heart } from 'lucide-react';
 
 interface Conversation {
   id: string;
@@ -21,6 +22,7 @@ interface Message {
   content: string;
   senderId?: string;
   isSent?: boolean;
+  isRead?: boolean;
   createdAt?: string;
   time?: string;
 }
@@ -168,10 +170,16 @@ export default function MessagesPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {filteredConvs.length === 0 ? (
+            {conversations.length === 0 ? (
+              <EmptyState
+                icon={Heart}
+                title="No conversations yet"
+                description="Start connecting with members to begin chatting"
+                action={{ label: 'Browse Members', href: '/members' }}
+              />
+            ) : filteredConvs.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-white/30 text-sm">No conversations yet</p>
-                <p className="text-white/20 text-xs mt-1">Like someone to start chatting</p>
+                <p className="text-white/30 text-sm">No conversations match your search</p>
               </div>
             ) : (
               filteredConvs.map((conv) => {
@@ -270,7 +278,17 @@ export default function MessagesPage() {
                       }`}>
                         {msg.content}
                       </div>
-                      {time && <span className="text-white/30 text-xs px-1">{time}</span>}
+                      <div className="flex items-center gap-1">
+                        {time && <span className="text-white/30 text-xs px-1">{time}</span>}
+                        {isSent && (
+                          <span
+                            className={`text-xs font-bold ${msg.isRead ? 'text-[#DC143C]' : 'text-white/30'}`}
+                            title={msg.isRead ? 'Read' : 'Delivered'}
+                          >
+                            {msg.isRead ? '✓✓' : '✓'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

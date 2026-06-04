@@ -63,9 +63,25 @@ export async function GET(req: NextRequest) {
 
     const skip = (page - 1) * effectiveLimit
 
+    // Collect block relationships
+    const blocks = await db.block.findMany({
+      where: {
+        OR: [
+          { blockerId: session.user.id },
+          { blockedId: session.user.id },
+        ],
+      },
+      select: { blockerId: true, blockedId: true },
+    })
+
+    const currentUserId = session.user.id
+    const excludedIds = blocks.map((b) =>
+      b.blockerId === currentUserId ? b.blockedId : b.blockerId
+    )
+
     const users = await db.user.findMany({
       where: {
-        id: { not: session.user.id },
+        id: { not: session.user.id, notIn: excludedIds },
         isActive: true,
         profile: profileWhere,
       },
@@ -102,7 +118,7 @@ export async function GET(req: NextRequest) {
 
     const total = await db.user.count({
       where: {
-        id: { not: session.user.id },
+        id: { not: session.user.id, notIn: excludedIds },
         isActive: true,
         profile: profileWhere,
       },

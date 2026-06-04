@@ -1,19 +1,29 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
-import { Eye, EyeOff, Lock, Mail, ArrowRight } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail, ArrowRight, CheckCircle } from 'lucide-react'
 
 export default function SigninPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [successMsg, setSuccessMsg] = useState('')
+
+  useEffect(() => {
+    if (searchParams.get('reset') === '1') {
+      setSuccessMsg('Password updated! Please sign in.')
+    } else if (searchParams.get('verified') === '1') {
+      setSuccessMsg('Email verified! Welcome to Velour.')
+    }
+  }, [searchParams])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -42,10 +52,39 @@ export default function SigninPage() {
 
   return (
     <div className="min-h-screen animated-gradient flex items-center justify-center px-4">
+      {/* Animated floating circles */}
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
         <div className="absolute top-1/4 -left-32 w-96 h-96 bg-[#DC143C]/8 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-purple-800/8 rounded-full blur-3xl" />
+        <div
+          className="absolute w-48 h-48 rounded-full bg-[#DC143C]/5 blur-2xl"
+          style={{ animation: 'floatA 18s ease-in-out infinite', top: '15%', left: '10%' }}
+        />
+        <div
+          className="absolute w-32 h-32 rounded-full bg-[#DC143C]/6 blur-xl"
+          style={{ animation: 'floatB 22s ease-in-out infinite', top: '65%', left: '75%' }}
+        />
+        <div
+          className="absolute w-64 h-64 rounded-full bg-[#8F0D25]/5 blur-3xl"
+          style={{ animation: 'floatC 26s ease-in-out infinite', top: '40%', left: '55%' }}
+        />
       </div>
+      <style jsx global>{`
+        @keyframes floatA {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(30px, -40px) scale(1.05); }
+          66% { transform: translate(-20px, 20px) scale(0.97); }
+        }
+        @keyframes floatB {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          40% { transform: translate(-40px, 30px) scale(1.08); }
+          70% { transform: translate(20px, -20px) scale(0.95); }
+        }
+        @keyframes floatC {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(-30px, -50px) scale(1.04); }
+        }
+      `}</style>
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
@@ -60,6 +99,12 @@ export default function SigninPage() {
         </div>
 
         <div className="glass rounded-2xl p-8">
+          {successMsg && (
+            <div className="mb-5 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 flex-shrink-0" />
+              {successMsg}
+            </div>
+          )}
           {error && (
             <div className="mb-5 p-3 rounded-lg bg-[#DC143C]/10 border border-[#DC143C]/30 text-[#DC143C] text-sm">
               {error}

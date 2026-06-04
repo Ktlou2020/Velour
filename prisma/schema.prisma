@@ -79,6 +79,11 @@ model User {
   isVerified    Boolean   @default(false)
   role          String    @default("USER")
 
+  emailVerifyToken    String?
+  emailVerifyExpiry   DateTime?
+  passwordResetToken  String?
+  passwordResetExpiry DateTime?
+
   accounts        Account[]
   sessions        Session[]
   profile         Profile?
@@ -94,6 +99,8 @@ model User {
   forumThreads    ForumThread[]
   notifications   Notification[]
   interests       UserInterest[]
+  blocksGiven     Block[]          @relation("BlocksGiven")
+  blocksReceived  Block[]          @relation("BlocksReceived")
 }
 
 model Profile {
@@ -121,6 +128,11 @@ model Profile {
   allowMessages       Boolean   @default(true)
   privatePhotos       Boolean   @default(false)
   updatedAt           DateTime  @updatedAt
+
+  partnerId           String?   @unique
+  partner             Profile?  @relation("CoupleLink", fields: [partnerId], references: [id])
+  partnerOf           Profile?  @relation("CoupleLink")
+  isCouple            Boolean   @default(false)
 }
 
 model Photo {
@@ -273,6 +285,17 @@ model UserInterest {
   interest   Interest @relation(fields: [interestId], references: [id], onDelete: Cascade)
 
   @@id([userId, interestId])
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocker   User     @relation("BlocksGiven", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("BlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
 }
 
 model Notification {

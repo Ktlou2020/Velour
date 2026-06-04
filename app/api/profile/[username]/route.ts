@@ -44,6 +44,43 @@ export async function GET(
         where: { userId: user.id },
         data: { profileViews: { increment: 1 } },
       })
+
+      // Create PROFILE_VIEW notification for GOLD/PLATINUM users only, deduplicated per 24h
+      const ownerProfile = user.profile
+      if (
+        ownerProfile &&
+        (ownerProfile.membershipTier === 'GOLD' || ownerProfile.membershipTier === 'PLATINUM')
+      ) {
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+        const viewerUser = await db.user.findUnique({
+          where: { id: session.user.id },
+          select: { username: true },
+        })
+
+        const existingView = await db.notification.findFirst({
+          where: {
+            userId: user.id,
+            type: 'PROFILE_VIEW',
+            createdAt: { gte: oneDayAgo },
+            data: {
+              path: ['viewerId'],
+              equals: session.user.id,
+            },
+          },
+        })
+
+        if (!existingView && viewerUser) {
+          await db.notification.create({
+            data: {
+              userId: user.id,
+              type: 'PROFILE_VIEW',
+              title: 'Someone viewed your profile',
+              body: `@${viewerUser.username} viewed your profile`,
+              data: { viewerId: session.user.id, viewerUsername: viewerUser.username },
+            },
+          })
+        }
+      }
     }
 
     return NextResponse.json({ user })

@@ -2,17 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { searchParams } = new URL(req.url)
+    const type = searchParams.get('type')
+
     const notifications = await db.notification.findMany({
-      where: { userId: session.user.id },
+      where: {
+        userId: session.user.id,
+        ...(type ? { type } : {}),
+      },
       orderBy: [{ isRead: 'asc' }, { createdAt: 'desc' }],
-      take: 20,
+      take: 50,
     })
 
     return NextResponse.json({ notifications })

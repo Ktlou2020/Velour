@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Navbar from '@/components/Navbar';
-import { X, Heart, Star, MapPin, RefreshCw } from 'lucide-react';
+import EmptyState from '@/components/EmptyState';
+import MatchOverlay from '@/components/MatchOverlay';
+import { X, Heart, Star, MapPin, Zap } from 'lucide-react';
 
 interface Profile {
   id?: string;
@@ -27,11 +29,25 @@ export default function DiscoverPage() {
   const [loading, setLoading] = useState(true);
   const [animDir, setAnimDir] = useState<AnimDir>(null);
   const [matchProfile, setMatchProfile] = useState<Profile | null>(null);
+  const [dragHint, setDragHint] = useState<'PASS' | 'LIKE' | null>(null);
   const actionInProgress = useRef(false);
+  const dragStartX = useRef<number | null>(null);
 
   useEffect(() => {
     loadProfiles();
   }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'ArrowLeft') doAction('PASS', 'left');
+      if (e.key === 'ArrowRight') doAction('LIKE', 'right');
+      if (e.key === 'ArrowUp') doAction('SUPER_LIKE', 'up');
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profiles, currentIndex]);
 
   async function loadProfiles() {
     setLoading(true);
@@ -118,29 +134,51 @@ export default function DiscoverPage() {
             </div>
           ) : current ? (
             <div className="w-full max-w-sm">
+              {/* Progress */}
+              <p className="text-center text-white/30 text-xs mb-4">
+                {remaining.length} profile{remaining.length !== 1 ? 's' : ''} remaining
+              </p>
+
               {/* Card Stack */}
               <div className="relative">
-                {/* Back cards */}
-                {remaining.slice(1, 4).map((_, i) => (
+                {/* Third card */}
+                {remaining[2] && (
                   <div
-                    key={i}
                     className="absolute inset-0 glass rounded-3xl"
-                    style={{
-                      transform: `scale(${1 - (i + 1) * 0.04}) translateY(${(i + 1) * 12}px)`,
-                      zIndex: -i - 1,
-                      opacity: 1 - (i + 1) * 0.2,
-                    }}
+                    style={{ transform: 'scale(0.90) translateY(16px)', zIndex: -2, opacity: 0.5 }}
                   />
-                ))}
+                )}
+                {/* Second card */}
+                {remaining[1] && (
+                  <div
+                    className="absolute inset-0 glass rounded-3xl"
+                    style={{ transform: 'scale(0.95) translateY(8px)', zIndex: -1, opacity: 0.75 }}
+                  />
+                )}
 
                 {/* Main Card */}
                 <div
-                  className="relative glass rounded-3xl overflow-hidden shadow-2xl transition-all duration-300"
+                  className="relative glass rounded-3xl overflow-hidden shadow-2xl transition-all duration-300 cursor-grab active:cursor-grabbing"
                   style={{
                     zIndex: 1,
                     transform: cardTransform || undefined,
                     opacity: animDir ? 0 : 1,
                   }}
+                  onMouseDown={(e) => { dragStartX.current = e.clientX; }}
+                  onMouseMove={(e) => {
+                    if (dragStartX.current === null) return;
+                    const delta = e.clientX - dragStartX.current;
+                    if (delta > 40) setDragHint('LIKE');
+                    else if (delta < -40) setDragHint('PASS');
+                    else setDragHint(null);
+                  }}
+                  onMouseUp={() => {
+                    if (dragHint === 'LIKE') doAction('LIKE', 'right');
+                    else if (dragHint === 'PASS') doAction('PASS', 'left');
+                    dragStartX.current = null;
+                    setDragHint(null);
+                  }}
+                  onMouseLeave={() => { dragStartX.current = null; setDragHint(null); }}
                 >
                   {/* Photo Area */}
                   <div className="h-96 flex items-center justify-center relative bg-gradient-to-br from-rose-900 via-red-900 to-[#0A0A0F] overflow-hidden">
@@ -149,6 +187,18 @@ export default function DiscoverPage() {
                       <img src={current.profilePhotoUrl} alt={current.username} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-white text-8xl font-bold font-serif opacity-60">{initials}</span>
+                    )}
+
+                    {/* Drag hint overlays */}
+                    {dragHint === 'LIKE' && (
+                      <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center pointer-events-none">
+                        <span className="text-emerald-400 font-black text-4xl tracking-widest border-4 border-emerald-400 rounded-xl px-4 py-1 rotate-[-15deg]">LIKE</span>
+                      </div>
+                    )}
+                    {dragHint === 'PASS' && (
+                      <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center pointer-events-none">
+                        <span className="text-red-400 font-black text-4xl tracking-widest border-4 border-red-400 rounded-xl px-4 py-1 rotate-[15deg]">PASS</span>
+                      </div>
                     )}
 
                     {current.isOnline && (
@@ -222,71 +272,33 @@ export default function DiscoverPage() {
                 </button>
               </div>
 
-              <p className="text-center text-white/30 text-xs mt-4">
-                {remaining.length - 1} more profiles to discover
+              {/* Desktop keyboard hint */}
+              <p className="hidden md:block text-center text-white/25 text-xs mt-4 tracking-wide">
+                ← Pass &nbsp;&nbsp; ❤ Like → &nbsp;&nbsp; ↑ Super Like
               </p>
+
             </div>
           ) : (
-            /* Empty State */
-            <div className="text-center max-w-sm">
-              <div className="w-24 h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-6">
-                <RefreshCw className="text-white/30" size={36} />
-              </div>
-              <h2 className="font-serif text-2xl font-bold text-white mb-3">No More Profiles</h2>
-              <p className="text-white/50 mb-6 leading-relaxed">
-                You&apos;ve gone through all available profiles. Check back later or expand your search.
-              </p>
-              <button onClick={loadProfiles} className="bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white px-8 py-3 rounded-xl font-semibold flex items-center gap-2 mx-auto transition-all">
-                <RefreshCw size={16} />
-                Refresh Profiles
-              </button>
-            </div>
+            <EmptyState
+              icon={Zap}
+              title="You've seen everyone!"
+              description="Check back tomorrow for new members or adjust your preferences"
+              action={{ label: 'Browse Members', href: '/members' }}
+            />
           )}
         </div>
       </main>
 
       {/* Match Overlay */}
-      {matchProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm">
-          <div className="glass rounded-3xl p-8 text-center max-w-sm w-full relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-b from-[#DC143C]/20 to-transparent pointer-events-none" />
-            <div className="relative z-10">
-              <div className="text-6xl mb-4">🎉</div>
-              <h2 className="font-serif text-3xl font-bold text-white mb-2">It&apos;s a Match!</h2>
-              <p className="text-white/60 mb-6">
-                You and <span className="text-white font-semibold">{matchProfile.displayName || matchProfile.username}</span> liked each other!
-              </p>
-
-              <div className="flex items-center justify-center gap-4 mb-6">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-rose-900 to-red-700 flex items-center justify-center border-4 border-[#DC143C]">
-                  <span className="text-white text-2xl font-bold font-serif">You</span>
-                </div>
-                <Heart className="text-[#DC143C] fill-current" size={28} />
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-900 to-violet-700 flex items-center justify-center border-4 border-[#D4AF37]">
-                  <span className="text-white text-lg font-bold font-serif">
-                    {(matchProfile.displayName || matchProfile.username).slice(0, 2).toUpperCase()}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <a
-                  href="/messages"
-                  className="block w-full bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white py-3 rounded-xl font-semibold text-sm transition-all"
-                >
-                  Send Message
-                </a>
-                <button
-                  onClick={() => setMatchProfile(null)}
-                  className="block w-full glass py-3 rounded-xl text-white/60 hover:text-white text-sm font-medium transition-colors"
-                >
-                  Keep Discovering
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <MatchOverlay
+        show={!!matchProfile}
+        matchedUser={{
+          name: matchProfile ? (matchProfile.displayName || matchProfile.username) : '',
+          photo: matchProfile?.profilePhotoUrl,
+        }}
+        onMessage={() => { window.location.href = '/messages'; }}
+        onClose={() => setMatchProfile(null)}
+      />
     </div>
   );
 }
