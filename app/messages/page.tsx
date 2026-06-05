@@ -64,13 +64,25 @@ export default function MessagesPage() {
 
   const activeConv = conversations.find(c => c.id === activeConvId) ?? null;
 
+  // ── Auto-open conversation from URL ?conv= ────────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const convId = params.get('conv');
+    if (convId) {
+      setActiveConvId(convId);
+      setMobileView('chat');
+      // Clean up URL without reload
+      window.history.replaceState({}, '', '/messages');
+    }
+  }, []);
+
   // ── Fetch conversations (+ poll every 15s for list updates) ───────────────
   const fetchConversations = useCallback(async () => {
     try {
       const res = await fetch('/api/conversations');
       if (res.ok) {
-        const data = await res.json();
-        setConversations(data.conversations || data || []);
+        const data = await res.json() as { conversations?: Conversation[] };
+        setConversations(data.conversations || []);
       }
     } catch { /* ignore */ }
   }, []);

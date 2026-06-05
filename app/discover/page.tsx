@@ -301,8 +301,27 @@ export default function DiscoverPage() {
         matchedUser={{
           name: matchProfile ? (matchProfile.displayName || matchProfile.username) : '',
           photo: matchProfile?.profilePhotoUrl,
+          username: matchProfile?.username,
         }}
-        onMessage={() => { window.location.href = '/messages'; }}
+        onMessage={async () => {
+          if (!matchProfile) return;
+          try {
+            const res = await fetch('/api/conversations', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ targetUsername: matchProfile.username }),
+            });
+            if (res.ok) {
+              const data = await res.json() as { conversation?: { id: string } };
+              const convId = data.conversation?.id;
+              window.location.href = convId ? `/messages?conv=${convId}` : '/messages';
+            } else {
+              window.location.href = '/messages';
+            }
+          } catch {
+            window.location.href = '/messages';
+          }
+        }}
         onClose={() => setMatchProfile(null)}
       />
     </div>

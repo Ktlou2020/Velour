@@ -119,7 +119,9 @@ export default function MemberProfileClient({ username, profile, session }: Prop
         body: JSON.stringify({ targetUsername: username }),
       });
       if (res.ok) {
-        router.push('/messages');
+        const data = await res.json() as { conversation?: { id: string } };
+        const convId = data.conversation?.id;
+        router.push(convId ? `/messages?conv=${convId}` : '/messages');
       }
     } finally {
       setMessagingLoading(false);
