@@ -11,13 +11,25 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { toUserId, type = 'LIKE' } = body as {
+    const { toUserId: rawToUserId, targetUsername, type: rawType = 'LIKE' } = body as {
       toUserId?: string
-      type?: 'LIKE' | 'SUPERLIKE' | 'WINK' | 'PASS'
+      targetUsername?: string
+      type?: string
+    }
+
+    // Normalise SUPER_LIKE → SUPERLIKE
+    const type = rawType === 'SUPER_LIKE' ? 'SUPERLIKE' : rawType as 'LIKE' | 'SUPERLIKE' | 'WINK' | 'PASS'
+
+    // Resolve targetUsername → userId if toUserId not provided
+    let toUserId = rawToUserId
+    if (!toUserId && targetUsername) {
+      const target = await db.user.findUnique({ where: { username: targetUsername }, select: { id: true } })
+      if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      toUserId = target.id
     }
 
     if (!toUserId) {
-      return NextResponse.json({ error: 'toUserId is required' }, { status: 400 })
+      return NextResponse.json({ error: 'toUserId or targetUsername is required' }, { status: 400 })
     }
 
     if (toUserId === session.user.id) {

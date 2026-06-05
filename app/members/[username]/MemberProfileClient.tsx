@@ -45,7 +45,7 @@ interface Profile {
 
 interface Props {
   username: string;
-  profile: { user?: Profile & { photos?: Photo[]; profile?: Profile } } | null;
+  profile: (Profile & { photos?: Photo[] }) | null;
   session: Session | null;
 }
 
@@ -84,9 +84,8 @@ export default function MemberProfileClient({ username, profile: raw, session }:
   const [messagingLoading, setMessagingLoading] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
-  // Profile data can come nested under `user` from the API
-  const p: Profile = (raw as { user?: Profile & { photos?: Photo[]; profile?: Profile } } | null)?.user ?? (raw as unknown as Profile) ?? {};
-  const photos: Photo[] = ((raw as { user?: { photos?: Photo[] } })?.user?.photos ?? (p.photos ?? [])).filter((ph) => !ph.isPrivate);
+  const p: Profile = raw ?? {};
+  const photos: Photo[] = (p.photos ?? []).filter((ph) => !ph.isPrivate);
 
   const displayName = p.displayName || username.replace(/_/g, ' ');
   const initials = displayName.slice(0, 2).toUpperCase();
