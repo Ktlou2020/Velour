@@ -12,7 +12,6 @@ const COMPLETENESS_FIELDS = [
   'city',
   'country',
   'profilePhoto',
-  'location',
 ] as const
 
 function calculateCompleteness(profile: Record<string, unknown>): number {

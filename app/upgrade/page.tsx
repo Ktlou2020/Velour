@@ -68,14 +68,14 @@ export default function UpgradePage() {
 
       if (!res.ok) throw new Error('Payment initiation failed')
 
-      const data = await res.json()
+      const data = await res.json() as { paymentData: Record<string, string>; payfastUrl: string }
 
       // PayFast requires a form submission to their endpoint
       const form = document.createElement('form')
       form.method = 'POST'
-      form.action = 'https://www.payfast.co.za/eng/process'
+      form.action = data.payfastUrl
 
-      Object.entries(data as Record<string, string>).forEach(([key, value]) => {
+      Object.entries(data.paymentData).forEach(([key, value]) => {
         const input = document.createElement('input')
         input.type = 'hidden'
         input.name = key
