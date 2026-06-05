@@ -43,19 +43,18 @@ export async function GET() {
     })
 
     const conversations = participations.map((p) => {
-      const otherParticipants = p.conversation.participants.filter(
-        (cp) => cp.userId !== userId
-      )
+      const other = p.conversation.participants.find((cp) => cp.userId !== userId)
       return {
         id: p.conversation.id,
         lastMessage: p.conversation.lastMessage,
         lastMessageAt: p.conversation.lastMessageAt,
         unreadCount: p.unreadCount,
-        otherParticipants: otherParticipants.map((cp) => ({
-          id: cp.user.id,
-          username: cp.user.username,
-          profile: cp.user.profile,
-        })),
+        // Flat fields the messages page expects
+        username: other?.user.username ?? '',
+        displayName: other?.user.profile?.displayName ?? other?.user.username ?? '',
+        profilePhoto: other?.user.profile?.profilePhoto ?? null,
+        isOnline: other?.user.profile?.isOnline ?? false,
+        otherUserId: other?.user.id ?? null,
       }
     })
 
@@ -73,11 +72,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json()
-    const { userId: otherUserId } = body as { userId?: string }
+    const body = await req.json() as { userId?: string; targetUsername?: string }
+    let otherUserId = body.userId
+
+    // Accept targetUsername as fallback — resolve to userId
+    if (!otherUserId && body.targetUsername) {
+      const target = await db.user.findUnique({
+        where: { username: body.targetUsername },
+        select: { id: true },
+      })
+      if (!target) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      }
+      otherUserId = target.id
+    }
 
     if (!otherUserId) {
-      return NextResponse.json({ error: 'userId is required' }, { status: 400 })
+      return NextResponse.json({ error: 'userId or targetUsername is required' }, { status: 400 })
     }
 
     if (otherUserId === session.user.id) {

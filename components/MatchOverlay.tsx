@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import Link from 'next/link';
 
 interface Props {
   show: boolean;
-  matchedUser: { name: string; photo?: string };
+  matchedUser: { name: string; photo?: string; username?: string };
   onMessage: () => void;
   onClose: () => void;
 }
@@ -115,9 +116,18 @@ export default function MatchOverlay({ show, matchedUser, onMessage, onClose }: 
             >
               Send a Message
             </button>
+            {matchedUser.username && (
+              <Link
+                href={`/members/${matchedUser.username}`}
+                onClick={onClose}
+                className="block w-full glass border border-white/10 hover:border-[#D4AF37]/40 text-white/70 hover:text-white py-3 rounded-xl text-sm font-medium transition-all"
+              >
+                View Profile
+              </Link>
+            )}
             <button
               onClick={onClose}
-              className="w-full glass py-3 rounded-xl text-white/60 hover:text-white text-sm font-medium transition-colors border border-white/10 hover:border-white/20"
+              className="w-full glass py-3 rounded-xl text-white/40 hover:text-white/70 text-sm transition-colors"
             >
               Keep Discovering
             </button>
