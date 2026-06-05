@@ -4,6 +4,7 @@ import Footer from '@/components/Footer';
 import MembersContent from './MembersContent';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 
 type SearchParams = Record<string, string | undefined> & {
   gender?: string;
@@ -16,60 +17,117 @@ type SearchParams = Record<string, string | undefined> & {
 
 export default async function MembersPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
-  const page = parseInt(params.page || '1', 10);
+  const page = Math.max(1, parseInt(params.page || '1', 10));
+  const limit = 12;
+  const skip = (page - 1) * limit;
 
   const session = await auth();
-  const userId = (session?.user as { id?: string })?.id;
+  const userId = (session?.user as { id?: string })?.id ?? '';
   const userRole = (session?.user as { role?: string })?.role;
 
-  let membershipTier: 'FREE' | 'GOLD' | 'PLATINUM' = 'FREE';
-  let profileCity = '';
-  let profileCountry = '';
+  // Get caller profile for city restriction + pass to client
+  const callerProfile = userId
+    ? await db.profile.findUnique({
+        where: { userId },
+        select: { membershipTier: true, city: true, country: true },
+      })
+    : null;
 
-  if (userId) {
-    const profile = await db.profile.findUnique({
-      where: { userId },
-      select: { membershipTier: true, city: true, country: true },
-    });
-    if (profile) {
-      membershipTier = profile.membershipTier as 'FREE' | 'GOLD' | 'PLATINUM';
-      profileCity = profile.city ?? '';
-      profileCountry = profile.country ?? '';
-    }
-    if (userRole === 'ADMIN') membershipTier = 'PLATINUM';
-  }
+  const membershipTier = (callerProfile?.membershipTier ?? 'FREE') as 'FREE' | 'GOLD' | 'PLATINUM';
+  const profileCity = callerProfile?.city ?? '';
+  const profileCountry = callerProfile?.country ?? '';
+  const canChangeCity = userRole === 'ADMIN' || membershipTier === 'GOLD' || membershipTier === 'PLATINUM';
 
-  const canChangeCity = membershipTier === 'GOLD' || membershipTier === 'PLATINUM';
-
-  // FREE users are locked to their own city
+  // City: GOLD/PLATINUM can filter; FREE are locked to their own city (or no filter if city unset)
   const effectiveCity = canChangeCity ? (params.city ?? '') : profileCity;
 
-  const qs = new URLSearchParams({
-    ...(params.gender && params.gender !== 'ALL' ? { gender: params.gender } : {}),
-    ...(params.ageMin ? { ageMin: params.ageMin } : {}),
-    ...(params.ageMax ? { ageMax: params.ageMax } : {}),
-    ...(effectiveCity ? { city: effectiveCity } : {}),
-    ...(params.online === '1' ? { online: '1' } : {}),
-    page: String(page),
-    limit: '12',
-  });
+  // Build profile filter
+  const profileWhere: Prisma.ProfileWhereInput = {};
 
-  let members: MemberData[] = [];
-  let total = 0;
-
-  try {
-    const res = await fetch(
-      `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/members?${qs.toString()}`,
-      { cache: 'no-store' }
-    );
-    if (res.ok) {
-      const data = await res.json() as { members?: MemberData[]; total?: number };
-      members = data.members || [];
-      total = data.total || members.length;
-    }
-  } catch {
-    // use empty state
+  if (params.gender && params.gender !== 'ALL') {
+    profileWhere.gender = params.gender as 'MAN' | 'WOMAN' | 'NON_BINARY' | 'OTHER';
   }
+  if (effectiveCity) {
+    profileWhere.city = { contains: effectiveCity, mode: 'insensitive' };
+  }
+  if (params.online === '1') {
+    profileWhere.isOnline = true;
+  }
+  if (params.ageMin || params.ageMax) {
+    const now = new Date();
+    if (params.ageMax) {
+      const minDob = new Date(now);
+      minDob.setFullYear(minDob.getFullYear() - parseInt(params.ageMax, 10) - 1);
+      profileWhere.dateOfBirth = { ...((profileWhere.dateOfBirth as object) ?? {}), gte: minDob };
+    }
+    if (params.ageMin) {
+      const maxDob = new Date(now);
+      maxDob.setFullYear(maxDob.getFullYear() - parseInt(params.ageMin, 10));
+      profileWhere.dateOfBirth = { ...((profileWhere.dateOfBirth as object) ?? {}), lte: maxDob };
+    }
+  }
+
+  // Exclude blocked users
+  const blocks = userId
+    ? await db.block.findMany({
+        where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
+        select: { blockerId: true, blockedId: true },
+      })
+    : [];
+  const excludedIds = blocks.map((b) => (b.blockerId === userId ? b.blockedId : b.blockerId));
+
+  const userWhere: Prisma.UserWhereInput = {
+    ...(userId ? { id: { not: userId, notIn: excludedIds.length ? excludedIds : undefined } } : {}),
+    isActive: true,
+    profile: profileWhere,
+  };
+
+  const [users, total] = await Promise.all([
+    db.user.findMany({
+      where: userWhere,
+      select: {
+        id: true,
+        username: true,
+        isVerified: true,
+        profile: {
+          select: {
+            displayName: true,
+            profilePhoto: true,
+            city: true,
+            country: true,
+            gender: true,
+            membershipTier: true,
+            isOnline: true,
+            lastSeen: true,
+            dateOfBirth: true,
+          },
+        },
+        photos: {
+          where: { isProfile: true, isPrivate: false },
+          take: 1,
+          select: { url: true },
+        },
+      },
+      skip,
+      take: limit,
+      orderBy: [{ profile: { isOnline: 'desc' } }, { profile: { lastSeen: 'desc' } }],
+    }),
+    db.user.count({ where: userWhere }),
+  ]);
+
+  const members: MemberData[] = users.map((u) => ({
+    id: u.id,
+    username: u.username,
+    displayName: u.profile?.displayName,
+    age: u.profile?.dateOfBirth
+      ? Math.floor((Date.now() - new Date(u.profile.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+      : undefined,
+    city: u.profile?.city,
+    country: u.profile?.country,
+    isOnline: u.profile?.isOnline,
+    membershipTier: u.profile?.membershipTier as MemberData['membershipTier'],
+    profilePhotoUrl: u.photos[0]?.url ?? u.profile?.profilePhoto ?? undefined,
+  }));
 
   return (
     <div className="min-h-screen bg-[#0A0A0F]">
