@@ -149,6 +149,9 @@ export async function GET(req: NextRequest) {
           take: 1,
           select: { url: true, thumbnailUrl: true },
         },
+        interests: {
+          include: { interest: { select: { name: true } } },
+        },
       },
       skip,
       take: effectiveLimit,
@@ -174,7 +177,7 @@ export async function GET(req: NextRequest) {
       city: u.profile?.city,
       country: u.profile?.country,
       bio: u.profile?.bio,
-      interests: [],
+      interests: u.interests?.map(i => i.interest?.name).filter(Boolean) as string[],
       profilePhotoUrl: u.photos[0]?.url ?? u.profile?.profilePhoto ?? null,
       isOnline: u.profile?.isOnline,
       membershipTier: u.profile?.membershipTier,

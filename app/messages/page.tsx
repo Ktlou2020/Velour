@@ -116,34 +116,49 @@ export default function MessagesPage() {
     setMessages([]);
     loadMessages(activeConvId);
 
-    // Close any existing SSE connection
-    sseRef.current?.close();
-    const sse = new EventSource(`/api/conversations/stream/${activeConvId}`);
-    sseRef.current = sse;
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
+    let attempts = 0;
 
-    sse.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'message') {
-          const msg: Message = {
-            ...data.message,
-            isSent: data.message.senderId === myId,
-          };
-          setMessages(prev => {
-            // Avoid duplicates (temp messages get replaced)
-            const filtered = prev.filter(m => !m.id.startsWith('temp-') || m.content !== msg.content);
-            if (filtered.some(m => m.id === msg.id)) return filtered;
-            return [...filtered, msg];
-          });
-          // Refresh conversation list for unread counts
-          fetchConversations();
-        }
-      } catch { /* ignore */ }
+    function connect() {
+      sseRef.current?.close();
+      const sse = new EventSource(`/api/conversations/stream/${activeConvId}`);
+      sseRef.current = sse;
+
+      sse.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'message') {
+            const msg: Message = {
+              ...data.message,
+              isSent: data.message.senderId === myId,
+            };
+            setMessages(prev => {
+              const filtered = prev.filter(m => !m.id.startsWith('temp-') || m.content !== msg.content);
+              if (filtered.some(m => m.id === msg.id)) return filtered;
+              return [...filtered, msg];
+            });
+            fetchConversations();
+          }
+          if (data.type === 'connected') attempts = 0;
+        } catch { /* ignore */ }
+      };
+
+      sse.onerror = () => {
+        sse.close();
+        // Reconnect with backoff (max 30s)
+        const delay = Math.min(1000 * 2 ** attempts, 30000);
+        attempts++;
+        retryTimeout = setTimeout(connect, delay);
+      };
+    }
+
+    connect();
+
+    return () => {
+      if (retryTimeout) clearTimeout(retryTimeout);
+      sseRef.current?.close();
+      sseRef.current = null;
     };
-
-    sse.onerror = () => { sse.close(); };
-
-    return () => { sse.close(); sseRef.current = null; };
   }, [activeConvId, loadMessages, fetchConversations, myId]);
 
   // ── Auto-scroll ───────────────────────────────────────────────────────────
