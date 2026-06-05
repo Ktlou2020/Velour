@@ -42,8 +42,8 @@ export default function ViewsPage() {
         // Get current user's tier
         const profileRes = await fetch('/api/profile');
         if (profileRes.ok) {
-          const profileData = await profileRes.json() as { profile?: { membershipTier?: string } };
-          const userTier = profileData.profile?.membershipTier ?? 'FREE';
+          const profileData = await profileRes.json() as { user?: { profile?: { membershipTier?: string } } };
+          const userTier = profileData.user?.profile?.membershipTier ?? 'FREE';
           setTier(userTier);
 
           if (userTier === 'FREE') {
