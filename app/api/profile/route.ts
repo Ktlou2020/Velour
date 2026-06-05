@@ -105,3 +105,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+// PATCH is the same as PUT — accept both so client calls work regardless of method
+export { PUT as PATCH }
