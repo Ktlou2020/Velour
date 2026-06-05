@@ -118,13 +118,13 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const members: MemberData[] = users.map((u) => ({
     id: u.id,
     username: u.username,
-    displayName: u.profile?.displayName,
+    displayName: u.profile?.displayName ?? undefined,
     age: u.profile?.dateOfBirth
       ? Math.floor((Date.now() - new Date(u.profile.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
       : undefined,
-    city: u.profile?.city,
-    country: u.profile?.country,
-    isOnline: u.profile?.isOnline,
+    city: u.profile?.city ?? undefined,
+    country: u.profile?.country ?? undefined,
+    isOnline: u.profile?.isOnline ?? undefined,
     membershipTier: u.profile?.membershipTier as MemberData['membershipTier'],
     profilePhotoUrl: u.photos[0]?.url ?? u.profile?.profilePhoto ?? undefined,
   }));
