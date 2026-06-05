@@ -37,6 +37,7 @@ export default function OnboardingPage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
+  const [saveError, setSaveError] = useState('');
 
   const [form, setForm] = useState<FormData>({
     displayName: '',
@@ -82,65 +83,57 @@ export default function OnboardingPage() {
     return Object.keys(newErrors).length === 0;
   }
 
+  async function saveProgress() {
+    const res = await fetch('/api/onboarding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        displayName: form.displayName,
+        dateOfBirth: form.dateOfBirth,
+        gender: form.gender || undefined,
+        orientation: form.orientation || undefined,
+        lookingFor: form.lookingFor,
+        relationshipStatus: form.relationshipStatus || undefined,
+        city: form.city,
+        country: form.country,
+        bio: form.bio,
+      }),
+    });
+    if (!res.ok) throw new Error('Failed to save — please try again');
+  }
+
   async function handleNext() {
     if (!validateStep()) return;
+    setSaveError('');
     setLoading(true);
     try {
-      await fetch('/api/onboarding', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          displayName: form.displayName,
-          dateOfBirth: form.dateOfBirth,
-          gender: form.gender || undefined,
-          orientation: form.orientation || undefined,
-          lookingFor: form.lookingFor,
-          relationshipStatus: form.relationshipStatus || undefined,
-          city: form.city,
-          country: form.country,
-          bio: form.bio,
-        }),
-      });
-    } catch {
-      // continue even if API fails
+      await saveProgress();
+      if (step < STEPS.length - 1) setStep((s) => s + 1);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to save — please try again');
     } finally {
       setLoading(false);
-    }
-    if (step < STEPS.length - 1) {
-      setStep((s) => s + 1);
     }
   }
 
   async function handleFinish() {
+    setSaveError('');
     setLoading(true);
     try {
-      await fetch('/api/onboarding', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          displayName: form.displayName,
-          dateOfBirth: form.dateOfBirth,
-          gender: form.gender || undefined,
-          orientation: form.orientation || undefined,
-          lookingFor: form.lookingFor,
-          relationshipStatus: form.relationshipStatus || undefined,
-          city: form.city,
-          country: form.country,
-          bio: form.bio,
-        }),
-      });
-    } catch {
-      // continue
+      await saveProgress();
+      router.push('/members');
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to save — please try again');
     } finally {
       setLoading(false);
     }
-    router.push('/members');
   }
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const file = files[0];
+    setSaveError('');
     setUploadingPhoto(true);
     try {
       const formData = new FormData();
@@ -154,10 +147,11 @@ export default function OnboardingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: uploadData.url, filename: file.name }),
       });
+      if (!photoRes.ok) throw new Error('Failed to save photo');
       const photoData = await photoRes.json();
       setPhotos((prev) => [...prev, { id: photoData.id || Date.now().toString(), url: uploadData.url, filename: file.name }]);
-    } catch {
-      // silently fail on upload errors
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Photo upload failed');
     } finally {
       setUploadingPhoto(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -480,6 +474,13 @@ export default function OnboardingPage() {
                   Members with photos get 10× more matches. Add at least one clear face photo. Max 10MB per photo.
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* Save error */}
+          {saveError && (
+            <div className="mt-4 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
+              {saveError}
             </div>
           )}
 
