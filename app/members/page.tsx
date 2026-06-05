@@ -45,7 +45,11 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const profileWhere: Prisma.ProfileWhereInput = {};
 
   if (params.gender && params.gender !== 'ALL') {
-    profileWhere.gender = params.gender as 'MAN' | 'WOMAN' | 'NON_BINARY' | 'OTHER';
+    if (params.gender === 'COUPLE') {
+      profileWhere.isCouple = true;
+    } else {
+      profileWhere.gender = params.gender as 'MAN' | 'WOMAN' | 'NON_BINARY' | 'OTHER';
+    }
   }
   if (effectiveCity) {
     profileWhere.city = { contains: effectiveCity, mode: 'insensitive' };
@@ -127,6 +131,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
     city: u.profile?.city ?? undefined,
     country: u.profile?.country ?? undefined,
     isOnline: u.profile?.isOnline ?? undefined,
+    isVerified: u.isVerified,
     membershipTier: u.profile?.membershipTier as MemberData['membershipTier'],
     profilePhotoUrl: u.photos[0]?.url ?? u.profile?.profilePhoto ?? undefined,
   }));
@@ -170,6 +175,7 @@ export interface MemberData {
   city?: string;
   country?: string;
   isOnline?: boolean;
+  isVerified?: boolean;
   membershipTier?: 'FREE' | 'GOLD' | 'PLATINUM';
   profilePhotoUrl?: string;
   interests?: string[];

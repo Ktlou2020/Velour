@@ -14,10 +14,11 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
     const rawLimit = Math.min(parseInt(searchParams.get('limit') ?? '20', 10), 100)
     const gender = searchParams.get('gender')
-    const minAge = searchParams.get('minAge')
-    const maxAge = searchParams.get('maxAge')
+    const minAge = searchParams.get('ageMin') ?? searchParams.get('minAge')
+    const maxAge = searchParams.get('ageMax') ?? searchParams.get('maxAge')
     const tier = searchParams.get('tier')
     const lookingFor = searchParams.get('lookingFor')
+    const onlineOnly = searchParams.get('online') === '1'
     const discoverMode = searchParams.get('discover') === '1'
 
     // Check caller's membership to enforce city restriction
@@ -40,7 +41,11 @@ export async function GET(req: NextRequest) {
     const profileWhere: Prisma.ProfileWhereInput = {}
 
     if (gender) {
-      profileWhere.gender = gender as 'MAN' | 'WOMAN' | 'NON_BINARY' | 'OTHER'
+      if (gender === 'COUPLE') {
+        profileWhere.isCouple = true
+      } else {
+        profileWhere.gender = gender as 'MAN' | 'WOMAN' | 'NON_BINARY' | 'OTHER'
+      }
     }
 
     if (city) {
@@ -53,6 +58,10 @@ export async function GET(req: NextRequest) {
 
     if (lookingFor) {
       profileWhere.lookingFor = { has: lookingFor }
+    }
+
+    if (onlineOnly) {
+      profileWhere.isOnline = true
     }
 
     if (minAge || maxAge) {
@@ -140,6 +149,9 @@ export async function GET(req: NextRequest) {
           take: 1,
           select: { url: true, thumbnailUrl: true },
         },
+        interests: {
+          include: { interest: { select: { name: true } } },
+        },
       },
       skip,
       take: effectiveLimit,
@@ -154,23 +166,22 @@ export async function GET(req: NextRequest) {
       },
     })
 
-    const members = discoverMode
-      ? users.map((u) => ({
-          id: u.id,
-          username: u.username,
-          displayName: u.profile?.displayName,
-          age: u.profile?.dateOfBirth
-            ? Math.floor((Date.now() - new Date(u.profile.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-            : undefined,
-          city: u.profile?.city,
-          country: u.profile?.country,
-          bio: u.profile?.bio,
-          interests: [],
-          profilePhotoUrl: u.photos[0]?.url ?? u.profile?.profilePhoto ?? null,
-          isOnline: u.profile?.isOnline,
-          membershipTier: u.profile?.membershipTier,
-        }))
-      : users
+    const members = users.map((u) => ({
+      id: u.id,
+      username: u.username,
+      isVerified: u.isVerified,
+      displayName: u.profile?.displayName,
+      age: u.profile?.dateOfBirth
+        ? Math.floor((Date.now() - new Date(u.profile.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+        : undefined,
+      city: u.profile?.city,
+      country: u.profile?.country,
+      bio: u.profile?.bio,
+      interests: u.interests?.map(i => i.interest?.name).filter(Boolean) as string[],
+      profilePhotoUrl: u.photos[0]?.url ?? u.profile?.profilePhoto ?? null,
+      isOnline: u.profile?.isOnline,
+      membershipTier: u.profile?.membershipTier,
+    }))
 
     return NextResponse.json({
       members,
