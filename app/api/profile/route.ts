@@ -82,7 +82,7 @@ export async function PUT(req: NextRequest) {
     const merged = { ...(existing ?? {}), ...updateData }
     const completenessFields = [
       'displayName', 'bio', 'dateOfBirth', 'gender', 'orientation',
-      'relationshipStatus', 'city', 'country', 'location', 'profilePhoto',
+      'relationshipStatus', 'city', 'country', 'profilePhoto',
     ]
     const filled = completenessFields.filter((f) => {
       const val = (merged as Record<string, unknown>)[f]
