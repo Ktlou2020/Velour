@@ -43,7 +43,17 @@ export default async function MemberProfilePage({ params }: PageProps) {
 
   // Track profile view (non-self, non-critical)
   if (currentUser?.id && user.id !== currentUser.id) {
+    const viewerUsername = currentUser.username ?? '';
     db.profile.update({ where: { userId: user.id }, data: { profileViews: { increment: 1 } } }).catch(() => {});
+    db.notification.create({
+      data: {
+        userId: user.id,
+        type: 'PROFILE_VIEW',
+        title: 'Someone viewed your profile',
+        body: viewerUsername ? `@${viewerUsername} visited your profile` : 'A member visited your profile',
+        data: { viewerId: currentUser.id, viewerUsername },
+      },
+    }).catch(() => {});
     sendPushToUser(user.id, {
       title: 'Someone viewed your profile',
       body: 'A member just visited your Velour profile',
