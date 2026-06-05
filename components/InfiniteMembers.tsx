@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { MapPin, Check } from 'lucide-react';
 import { useSession } from 'next-auth/react';
@@ -46,6 +46,12 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
+  // Stable filter key so fetchMore doesn't recreate on every render
+  const filterKey = useMemo(
+    () => [filters.gender, filters.ageMin, filters.ageMax, filters.city, filters.online].join('|'),
+    [filters.gender, filters.ageMin, filters.ageMax, filters.city, filters.online]
+  );
+
   const fetchMore = useCallback(async (nextPage: number) => {
     if (loading || !hasMore) return;
     setLoading(true);
@@ -72,7 +78,8 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [loading, hasMore, filters]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, hasMore, filterKey]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;

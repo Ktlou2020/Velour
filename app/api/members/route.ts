@@ -58,19 +58,19 @@ export async function GET(req: NextRequest) {
     if (minAge || maxAge) {
       const now = new Date()
       if (maxAge) {
-        const minDob = new Date(now)
-        minDob.setFullYear(minDob.getFullYear() - parseInt(maxAge, 10) - 1)
+        const oldestDob = new Date(now)
+        oldestDob.setFullYear(oldestDob.getFullYear() - parseInt(maxAge, 10))
         profileWhere.dateOfBirth = {
           ...((profileWhere.dateOfBirth as object) ?? {}),
-          gte: minDob,
+          lte: oldestDob,
         }
       }
       if (minAge) {
-        const maxDob = new Date(now)
-        maxDob.setFullYear(maxDob.getFullYear() - parseInt(minAge, 10))
+        const youngestDob = new Date(now)
+        youngestDob.setFullYear(youngestDob.getFullYear() - parseInt(minAge, 10))
         profileWhere.dateOfBirth = {
           ...((profileWhere.dateOfBirth as object) ?? {}),
-          lte: maxDob,
+          gte: youngestDob,
         }
       }
     }

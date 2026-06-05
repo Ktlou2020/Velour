@@ -55,15 +55,17 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   }
   if (params.ageMin || params.ageMax) {
     const now = new Date();
+    // ageMax=40 → must have been born at least 40 years ago → dateOfBirth <= now-40y
     if (params.ageMax) {
-      const minDob = new Date(now);
-      minDob.setFullYear(minDob.getFullYear() - parseInt(params.ageMax, 10) - 1);
-      profileWhere.dateOfBirth = { ...((profileWhere.dateOfBirth as object) ?? {}), gte: minDob };
+      const oldestDob = new Date(now);
+      oldestDob.setFullYear(oldestDob.getFullYear() - parseInt(params.ageMax, 10));
+      profileWhere.dateOfBirth = { ...((profileWhere.dateOfBirth as object) ?? {}), lte: oldestDob };
     }
+    // ageMin=20 → must have been born at most 20 years ago → dateOfBirth >= now-20y
     if (params.ageMin) {
-      const maxDob = new Date(now);
-      maxDob.setFullYear(maxDob.getFullYear() - parseInt(params.ageMin, 10));
-      profileWhere.dateOfBirth = { ...((profileWhere.dateOfBirth as object) ?? {}), lte: maxDob };
+      const youngestDob = new Date(now);
+      youngestDob.setFullYear(youngestDob.getFullYear() - parseInt(params.ageMin, 10));
+      profileWhere.dateOfBirth = { ...((profileWhere.dateOfBirth as object) ?? {}), gte: youngestDob };
     }
   }
 
