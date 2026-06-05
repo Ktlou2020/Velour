@@ -89,6 +89,7 @@ model User {
   superLikeCredits    Int       @default(1)
   verificationStatus  String    @default("NONE")
   verificationPhoto   String?
+  completionMilestone Int       @default(0)
 
   accounts        Account[]
   sessions        Session[]
