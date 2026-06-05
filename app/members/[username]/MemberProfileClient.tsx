@@ -7,6 +7,7 @@ import {
   MapPin, Shield, Eye, Heart, MessageCircle, Flag, Crown, Star, Camera, X, Check,
   Zap, Calendar, UserCheck, Flame, ChevronLeft, ChevronRight,
 } from 'lucide-react';
+import type { ReactElement } from 'react';
 import type { Session } from 'next-auth';
 import ProtectedImage from '@/components/ProtectedImage';
 
@@ -57,7 +58,7 @@ const REPORT_REASONS = [
   'Other',
 ];
 
-const TIER_BADGE: Record<string, JSX.Element> = {
+const TIER_BADGE: Record<string, ReactElement> = {
   GOLD: (
     <span className="flex items-center gap-1 bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] text-xs font-bold px-2.5 py-1 rounded-full">
       <Crown size={10} /> Gold
