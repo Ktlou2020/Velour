@@ -12,6 +12,7 @@ type SearchParams = Record<string, string | undefined> & {
   ageMax?: string;
   city?: string;
   online?: string;
+  sort?: string;
   page?: string;
 }
 
@@ -116,7 +117,11 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
       },
       skip,
       take: limit,
-      orderBy: [{ profile: { isOnline: 'desc' } }, { profile: { lastSeen: 'desc' } }],
+      orderBy: params.sort === 'new'
+        ? [{ createdAt: 'desc' as const }]
+        : params.sort === 'verified'
+          ? [{ isVerified: 'desc' as const }, { profile: { lastSeen: 'desc' as const } }]
+          : [{ profile: { isOnline: 'desc' as const } }, { profile: { lastSeen: 'desc' as const } }],
     }),
     db.user.count({ where: userWhere }),
   ]);

@@ -34,8 +34,11 @@ export default function DiscoverPage() {
   const [animDir, setAnimDir] = useState<AnimDir>(null);
   const [matchProfile, setMatchProfile] = useState<Profile | null>(null);
   const [dragHint, setDragHint] = useState<'PASS' | 'LIKE' | null>(null);
+  const [dragDelta, setDragDelta] = useState(0);
+  const [undoStack, setUndoStack] = useState<Profile[]>([]);
   const actionInProgress = useRef(false);
   const dragStartX = useRef<number | null>(null);
+  const dragStartY = useRef<number | null>(null);
 
   useEffect(() => {
     loadProfiles();
@@ -74,6 +77,11 @@ export default function DiscoverPage() {
 
     actionInProgress.current = true;
     setAnimDir(dir);
+    setDragDelta(0);
+    setDragHint(null);
+
+    // Keep undo stack (last 3)
+    setUndoStack(prev => [profile, ...prev].slice(0, 3));
 
     try {
       const res = await fetch('/api/likes', {
@@ -92,15 +100,50 @@ export default function DiscoverPage() {
     setTimeout(() => {
       setCurrentIndex((i) => {
         const next = i + 1;
-        // Auto-reload when we're near the end
-        if (next >= profiles.length - 2) {
-          loadProfiles();
-        }
+        if (next >= profiles.length - 2) loadProfiles();
         return next;
       });
       setAnimDir(null);
       actionInProgress.current = false;
     }, 300);
+  }
+
+  function handleUndo() {
+    if (undoStack.length === 0 || actionInProgress.current) return;
+    const [last, ...rest] = undoStack;
+    setUndoStack(rest);
+    setProfiles(prev => {
+      const before = prev.slice(0, currentIndex);
+      const after = prev.slice(currentIndex);
+      return [...before, last, ...after];
+    });
+    setCurrentIndex(i => Math.max(0, i - 1));
+  }
+
+  // Shared drag/touch helpers
+  function onDragStart(x: number, y: number) {
+    dragStartX.current = x;
+    dragStartY.current = y;
+  }
+
+  function onDragMove(x: number) {
+    if (dragStartX.current === null) return;
+    const delta = x - dragStartX.current;
+    setDragDelta(delta);
+    if (delta > 50) setDragHint('LIKE');
+    else if (delta < -50) setDragHint('PASS');
+    else setDragHint(null);
+  }
+
+  function onDragEnd(x: number) {
+    if (dragStartX.current === null) return;
+    const delta = x - dragStartX.current;
+    dragStartX.current = null;
+    dragStartY.current = null;
+    setDragDelta(0);
+    setDragHint(null);
+    if (delta > 80) doAction('LIKE', 'right');
+    else if (delta < -80) doAction('PASS', 'left');
   }
 
   const remaining = profiles.slice(currentIndex);
@@ -165,27 +208,24 @@ export default function DiscoverPage() {
 
                 {/* Main Card */}
                 <div
-                  className="relative glass rounded-3xl overflow-hidden shadow-2xl transition-all duration-300 cursor-grab active:cursor-grabbing"
+                  className="relative glass rounded-3xl overflow-hidden shadow-2xl cursor-grab active:cursor-grabbing select-none"
                   style={{
                     zIndex: 1,
-                    transform: cardTransform || undefined,
+                    transform: animDir
+                      ? cardTransform
+                      : dragDelta !== 0
+                        ? `translateX(${dragDelta}px) rotate(${dragDelta * 0.05}deg)`
+                        : undefined,
                     opacity: animDir ? 0 : 1,
+                    transition: dragDelta !== 0 ? 'none' : 'transform 0.3s ease, opacity 0.3s ease',
                   }}
-                  onMouseDown={(e) => { dragStartX.current = e.clientX; }}
-                  onMouseMove={(e) => {
-                    if (dragStartX.current === null) return;
-                    const delta = e.clientX - dragStartX.current;
-                    if (delta > 40) setDragHint('LIKE');
-                    else if (delta < -40) setDragHint('PASS');
-                    else setDragHint(null);
-                  }}
-                  onMouseUp={() => {
-                    if (dragHint === 'LIKE') doAction('LIKE', 'right');
-                    else if (dragHint === 'PASS') doAction('PASS', 'left');
-                    dragStartX.current = null;
-                    setDragHint(null);
-                  }}
-                  onMouseLeave={() => { dragStartX.current = null; setDragHint(null); }}
+                  onMouseDown={(e) => onDragStart(e.clientX, e.clientY)}
+                  onMouseMove={(e) => onDragMove(e.clientX)}
+                  onMouseUp={(e) => onDragEnd(e.clientX)}
+                  onMouseLeave={() => { dragStartX.current = null; setDragDelta(0); setDragHint(null); }}
+                  onTouchStart={(e) => onDragStart(e.touches[0].clientX, e.touches[0].clientY)}
+                  onTouchMove={(e) => { e.preventDefault(); onDragMove(e.touches[0].clientX); }}
+                  onTouchEnd={(e) => onDragEnd(e.changedTouches[0].clientX)}
                 >
                   {/* Photo Area */}
                   <div className="h-96 flex items-center justify-center relative bg-gradient-to-br from-rose-900 via-red-900 to-[#0A0A0F] overflow-hidden">
@@ -278,10 +318,22 @@ export default function DiscoverPage() {
                 </button>
               </div>
 
-              {/* Desktop keyboard hint */}
-              <p className="hidden md:block text-center text-white/25 text-xs mt-4 tracking-wide">
-                ← Pass &nbsp;&nbsp; ❤ Like → &nbsp;&nbsp; ↑ Super Like
-              </p>
+              {/* Undo + keyboard hint */}
+              <div className="flex items-center justify-center gap-4 mt-4">
+                {undoStack.length > 0 && (
+                  <button
+                    onClick={handleUndo}
+                    className="flex items-center gap-1.5 glass px-3 py-1.5 rounded-lg text-white/50 hover:text-white text-xs transition-all hover:bg-white/10"
+                    aria-label="Undo last swipe"
+                  >
+                    ↶ Undo
+                  </button>
+                )}
+                <p className="hidden md:block text-white/25 text-xs tracking-wide">
+                  ← Pass &nbsp;&nbsp; ❤ Like → &nbsp;&nbsp; ↑ Super Like
+                </p>
+                <p className="md:hidden text-white/20 text-xs">Swipe or tap to decide</p>
+              </div>
 
             </div>
           ) : (

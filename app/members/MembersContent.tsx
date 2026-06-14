@@ -31,6 +31,7 @@ export default function MembersContent({ members, total, searchParams, canChange
   const [country, setCountry] = useState(profileCountry || '');
   const [gender, setGender] = useState(searchParams.gender || 'ALL');
   const [onlineOnly, setOnlineOnly] = useState(searchParams.online === '1');
+  const [sortBy, setSortBy] = useState(searchParams.sort || 'online');
 
   const availableCities = country ? (CITIES_BY_COUNTRY[country] ?? []) : [];
 
@@ -38,12 +39,14 @@ export default function MembersContent({ members, total, searchParams, canChange
     const params = new URLSearchParams();
     const g = overrides?.gender ?? gender;
     const om = overrides?.online ?? (onlineOnly ? '1' : undefined);
+    const s = overrides?.sort ?? sortBy;
     const c = canChangeCity ? city : profileCity;
     if (g && g !== 'ALL') params.set('gender', g);
     if (ageMin !== '18') params.set('ageMin', ageMin);
     if (ageMax !== '65') params.set('ageMax', ageMax);
     if (c.trim()) params.set('city', c.trim());
     if (om === '1') params.set('online', '1');
+    if (s && s !== 'online') params.set('sort', s);
     params.set('page', '1');
     startTransition(() => router.push(`${pathname}?${params.toString()}`));
   }
@@ -150,10 +153,28 @@ export default function MembersContent({ members, total, searchParams, canChange
         </p>
       )}
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <p className="text-white/50 text-sm">
           Showing <span className="text-white">{members.length}</span> of <span className="text-white">{total.toLocaleString()}</span> members
         </p>
+        <div className="flex items-center gap-1.5">
+          <span className="text-white/30 text-xs mr-1">Sort:</span>
+          {[
+            { value: 'online', label: '● Online' },
+            { value: 'new', label: '✦ New' },
+            { value: 'verified', label: '✓ Verified' },
+          ].map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => { setSortBy(value); applyFilters({ sort: value }); }}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                sortBy === value ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Member Grid with Infinite Scroll */}

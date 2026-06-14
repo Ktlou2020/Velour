@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
     const tier = searchParams.get('tier')
     const lookingFor = searchParams.get('lookingFor')
     const onlineOnly = searchParams.get('online') === '1'
+    const sortBy = searchParams.get('sort') ?? 'online'
     const discoverMode = searchParams.get('discover') === '1'
 
     // Check caller's membership to enforce city restriction
@@ -155,7 +156,11 @@ export async function GET(req: NextRequest) {
       },
       skip,
       take: effectiveLimit,
-      orderBy: [{ profile: { isOnline: 'desc' } }, { profile: { lastSeen: 'desc' } }],
+      orderBy: sortBy === 'new'
+        ? [{ createdAt: 'desc' as const }]
+        : sortBy === 'verified'
+          ? [{ isVerified: 'desc' as const }, { profile: { lastSeen: 'desc' as const } }]
+          : [{ profile: { isOnline: 'desc' as const } }, { profile: { lastSeen: 'desc' as const } }],
     })
 
     const total = await db.user.count({
