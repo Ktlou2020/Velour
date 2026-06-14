@@ -13,45 +13,63 @@ const GRADIENTS = [
   'from-yellow-900 to-amber-700',
 ];
 
+const FALLBACK = [
+  { username: 'Sofia_M', age: 28, location: 'London' },
+  { username: 'JakeM', age: 34, location: 'New York' },
+  { username: 'Anna', age: 26, location: 'Paris' },
+  { username: 'Carlos', age: 31, location: 'Madrid' },
+  { username: 'Lily', age: 29, location: 'Sydney' },
+  { username: 'Max', age: 36, location: 'Amsterdam' },
+  { username: 'Irina', age: 27, location: 'Dubai' },
+  { username: 'Tom', age: 33, location: 'Cape Town' },
+];
+
 export default async function MemberShowcase() {
-  const users = await db.user.findMany({
-    where: { isActive: true, profile: { profilePhoto: { not: null } } },
-    select: {
-      username: true,
-      profile: {
-        select: {
-          displayName: true,
-          profilePhoto: true,
-          city: true,
-          country: true,
-          dateOfBirth: true,
-          isOnline: true,
-          membershipTier: true,
+  let users: Array<{
+    username: string;
+    profile: {
+      displayName: string | null;
+      profilePhoto: string | null;
+      city: string | null;
+      country: string | null;
+      dateOfBirth: Date | null;
+      isOnline: boolean;
+      membershipTier: string;
+    } | null;
+    photos: Array<{ url: string }>;
+  }> = [];
+
+  try {
+    users = await db.user.findMany({
+      where: { isActive: true, profile: { profilePhoto: { not: null } } },
+      select: {
+        username: true,
+        profile: {
+          select: {
+            displayName: true,
+            profilePhoto: true,
+            city: true,
+            country: true,
+            dateOfBirth: true,
+            isOnline: true,
+            membershipTier: true,
+          },
+        },
+        photos: {
+          where: { isProfile: true, isPrivate: false },
+          take: 1,
+          select: { url: true },
         },
       },
-      photos: {
-        where: { isProfile: true, isPrivate: false },
-        take: 1,
-        select: { url: true },
-      },
-    },
-    orderBy: [{ profile: { isOnline: 'desc' } }, { profile: { lastSeen: 'desc' } }],
-    take: 8,
-  });
-
-  // Fallback placeholders if DB is empty
-  const fallback = [
-    { username: 'Sofia_M', age: 28, location: 'London' },
-    { username: 'JakeM', age: 34, location: 'New York' },
-    { username: 'Anna', age: 26, location: 'Paris' },
-    { username: 'Carlos', age: 31, location: 'Madrid' },
-    { username: 'Lily', age: 29, location: 'Sydney' },
-    { username: 'Max', age: 36, location: 'Amsterdam' },
-    { username: 'Irina', age: 27, location: 'Dubai' },
-    { username: 'Tom', age: 33, location: 'Cape Town' },
-  ];
+      orderBy: [{ profile: { isOnline: 'desc' } }, { profile: { lastSeen: 'desc' } }],
+      take: 8,
+    });
+  } catch {
+    // DB unreachable at build time — use fallback placeholders
+  }
 
   const onlineCount = users.filter(u => u.profile?.isOnline).length;
+  const displayList = users.length > 0 ? users : null;
 
   return (
     <section className="py-24 px-4 bg-[#0F0A1E]">
@@ -71,50 +89,46 @@ export default async function MemberShowcase() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          {(users.length > 0 ? users : fallback).map((m, i) => {
-            const isReal = 'profile' in m;
-            if (isReal) {
-              const u = m as typeof users[0];
-              const photo = u.photos[0]?.url ?? u.profile?.profilePhoto;
-              const name = u.profile?.displayName || u.username;
-              const initials = name.slice(0, 2).toUpperCase();
-              const location = [u.profile?.city, u.profile?.country].filter(Boolean).join(', ');
-              const age = u.profile?.dateOfBirth
-                ? Math.floor((Date.now() - new Date(u.profile.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-                : null;
+          {displayList
+            ? displayList.map((u, i) => {
+                const photo = u.photos[0]?.url ?? u.profile?.profilePhoto;
+                const name = u.profile?.displayName || u.username;
+                const initials = name.slice(0, 2).toUpperCase();
+                const location = [u.profile?.city, u.profile?.country].filter(Boolean).join(', ');
+                const age = u.profile?.dateOfBirth
+                  ? Math.floor((Date.now() - new Date(u.profile.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+                  : null;
 
-              return (
-                <Link key={u.username} href={`/members/${u.username}`} className="glass rounded-2xl overflow-hidden hover:bg-white/5 transition-all hover:scale-[1.02] group cursor-pointer">
-                  <div className={`bg-gradient-to-br ${GRADIENTS[i % GRADIENTS.length]} h-36 flex items-center justify-center relative overflow-hidden`}>
-                    {photo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={photo} alt={name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    ) : (
-                      <span className="text-white text-3xl font-bold font-serif">{initials}</span>
-                    )}
-                    {u.profile?.isOnline && (
-                      <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-[#0A0A0F] animate-pulse" />
-                    )}
-                    {u.profile?.membershipTier === 'GOLD' && (
-                      <div className="absolute top-2 left-2 text-[10px] font-bold text-[#D4AF37] glass px-1.5 py-0.5 rounded-md">✦ GOLD</div>
-                    )}
-                  </div>
-                  <div className="p-3">
-                    <div className="text-white font-semibold text-sm truncate">{name}{age ? `, ${age}` : ''}</div>
-                    {location && (
-                      <div className="text-white/50 text-xs flex items-center gap-1 mt-0.5">
-                        <MapPin size={10} />
-                        <span className="truncate">{location}</span>
-                      </div>
-                    )}
-                  </div>
-                </Link>
-              );
-            } else {
-              // Fallback placeholder
-              const f = m as typeof fallback[0];
-              return (
-                <div key={f.username} className={`glass rounded-2xl overflow-hidden`}>
+                return (
+                  <Link key={u.username} href={`/members/${u.username}`} className="glass rounded-2xl overflow-hidden hover:bg-white/5 transition-all hover:scale-[1.02] group cursor-pointer">
+                    <div className={`bg-gradient-to-br ${GRADIENTS[i % GRADIENTS.length]} h-36 flex items-center justify-center relative overflow-hidden`}>
+                      {photo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={photo} alt={name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      ) : (
+                        <span className="text-white text-3xl font-bold font-serif">{initials}</span>
+                      )}
+                      {u.profile?.isOnline && (
+                        <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-[#0A0A0F] animate-pulse" />
+                      )}
+                      {u.profile?.membershipTier === 'GOLD' && (
+                        <div className="absolute top-2 left-2 text-[10px] font-bold text-[#D4AF37] glass px-1.5 py-0.5 rounded-md">✦ GOLD</div>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <div className="text-white font-semibold text-sm truncate">{name}{age ? `, ${age}` : ''}</div>
+                      {location && (
+                        <div className="text-white/50 text-xs flex items-center gap-1 mt-0.5">
+                          <MapPin size={10} />
+                          <span className="truncate">{location}</span>
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })
+            : FALLBACK.map((f, i) => (
+                <div key={f.username} className="glass rounded-2xl overflow-hidden">
                   <div className={`bg-gradient-to-br ${GRADIENTS[i % GRADIENTS.length]} h-36 flex items-center justify-center`}>
                     <span className="text-white text-3xl font-bold font-serif">{f.username.slice(0, 2).toUpperCase()}</span>
                   </div>
@@ -125,9 +139,8 @@ export default async function MemberShowcase() {
                     </div>
                   </div>
                 </div>
-              );
-            }
-          })}
+              ))
+          }
         </div>
 
         <div className="text-center">
