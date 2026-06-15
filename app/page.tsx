@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic';
-
 import { Suspense } from 'react';
 import Link from 'next/link';
 import {
@@ -8,6 +6,8 @@ import {
 } from 'lucide-react';
 import LandingNav from './LandingNav';
 import MemberShowcase from './MemberShowcase';
+
+export const dynamic = 'force-dynamic';
 
 const FEATURES = [
   { icon: Heart, title: 'Advanced Matching', desc: 'AI-powered compatibility scoring analyses hundreds of dimensions to find your perfect connections.', color: 'text-[#DC143C]' },
