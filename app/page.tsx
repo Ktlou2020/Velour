@@ -7,6 +7,8 @@ import {
 import LandingNav from './LandingNav';
 import MemberShowcase from './MemberShowcase';
 
+export const dynamic = 'force-dynamic';
+
 const FEATURES = [
   { icon: Heart, title: 'Advanced Matching', desc: 'AI-powered compatibility scoring analyses hundreds of dimensions to find your perfect connections.', color: 'text-[#DC143C]' },
   { icon: MessageCircle, title: 'Private Messaging', desc: 'End-to-end encrypted conversations. Your privacy is paramount — always.', color: 'text-blue-400' },
