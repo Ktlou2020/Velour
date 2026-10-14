@@ -153,3 +153,29 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
     html,
   })
 }
+
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/**
+ * Send a branded email. `bodyHtml` is inserted as-is, so escape any
+ * user-supplied values with `escapeHtml` before building it.
+ */
+export async function sendBrandedEmail(to: string, subject: string, title: string, bodyHtml: string): Promise<void> {
+  const html = wrapEmail(title, bodyHtml)
+
+  const transporter = createTransporter()
+  if (!transporter) {
+    console.log(`[Velour Email - DEV] ${subject}`)
+    console.log(`  To: ${to}`)
+    return
+  }
+
+  await transporter.sendMail({ from: fromAddress, to, subject, html })
+}

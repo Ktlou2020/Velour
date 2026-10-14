@@ -70,15 +70,15 @@ model VerificationToken {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  passwordHash  String?
-  username      String    @unique
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  isActive      Boolean   @default(true)
-  isVerified    Boolean   @default(false)
-  role          String    @default("USER")
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String?
+  username     String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  isActive     Boolean  @default(true)
+  isVerified   Boolean  @default(false)
+  role         String   @default("USER")
 
   emailVerifyToken    String?
   emailVerifyExpiry   DateTime?
@@ -91,31 +91,32 @@ model User {
   verificationPhoto   String?
   completionMilestone Int       @default(0)
 
-  accounts        Account[]
-  sessions        Session[]
-  profile         Profile?
-  photos          Photo[]
-  likesGiven      Like[]           @relation("LikesGiven")
-  likesReceived   Like[]           @relation("LikesReceived")
-  matchesA        Match[]          @relation("MatchUser1")
-  matchesB        Match[]          @relation("MatchUser2")
-  messagesSent    Message[]
-  conversations   ConversationParticipant[]
-  events          EventAttendee[]
-  forumPosts      ForumPost[]
-  forumThreads    ForumThread[]
-  notifications   Notification[]
-  interests       UserInterest[]
-  blocksGiven           Block[]              @relation("BlocksGiven")
-  blocksReceived        Block[]              @relation("BlocksReceived")
-  pushSubscriptions     PushSubscription[]
-  verificationRequest   VerificationRequest?
+  accounts            Account[]
+  sessions            Session[]
+  profile             Profile?
+  photos              Photo[]
+  likesGiven          Like[]                    @relation("LikesGiven")
+  likesReceived       Like[]                    @relation("LikesReceived")
+  matchesA            Match[]                   @relation("MatchUser1")
+  matchesB            Match[]                   @relation("MatchUser2")
+  messagesSent        Message[]
+  conversations       ConversationParticipant[]
+  events              EventAttendee[]
+  forumPosts          ForumPost[]
+  forumThreads        ForumThread[]
+  notifications       Notification[]
+  interests           UserInterest[]
+  blocksGiven         Block[]                   @relation("BlocksGiven")
+  blocksReceived      Block[]                   @relation("BlocksReceived")
+  pushSubscriptions   PushSubscription[]
+  datePlans           DatePlan[]
+  verificationRequest VerificationRequest?
 }
 
 model Profile {
-  id                  String    @id @default(cuid())
-  userId              String    @unique
-  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String         @id @default(cuid())
+  userId              String         @unique
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   displayName         String?
   bio                 String?
   dateOfBirth         DateTime?
@@ -129,32 +130,46 @@ model Profile {
   latitude            Float?
   longitude           Float?
   profilePhoto        String?
-  isOnline            Boolean   @default(false)
-  lastSeen            DateTime  @default(now())
+  isOnline            Boolean        @default(false)
+  lastSeen            DateTime       @default(now())
   membershipTier      MembershipTier @default(FREE)
-  profileCompleteness Int       @default(0)
-  profileViews        Int       @default(0)
-  allowMessages       Boolean   @default(true)
-  privatePhotos       Boolean   @default(false)
-  updatedAt           DateTime  @updatedAt
+  profileCompleteness Int            @default(0)
+  profileViews        Int            @default(0)
+  allowMessages       Boolean        @default(true)
+  privatePhotos       Boolean        @default(false)
+  updatedAt           DateTime       @updatedAt
 
-  partnerId           String?   @unique
-  partner             Profile?  @relation("CoupleLink", fields: [partnerId], references: [id])
-  partnerOf           Profile?  @relation("CoupleLink")
-  isCouple            Boolean   @default(false)
+  partnerId String?  @unique
+  partner   Profile? @relation("CoupleLink", fields: [partnerId], references: [id])
+  partnerOf Profile? @relation("CoupleLink")
+  isCouple  Boolean  @default(false)
+
+  // Premium perks
+  boostedUntil DateTime?
+  lastBoostAt  DateTime?
+  incognito    Boolean   @default(false)
+  videoUrl     String?
+
+  // Profile prompts: [{ question: string, answer: string }]
+  prompts Json?
+
+  // Safety & privacy
+  isSnoozed      Boolean   @default(false)
+  snoozedUntil   DateTime?
+  showChatImages Boolean   @default(false)
 }
 
 model Photo {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  url        String
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url          String
   thumbnailUrl String?
-  isProfile  Boolean  @default(false)
-  isPrivate  Boolean  @default(false)
-  caption    String?
-  order      Int      @default(0)
-  createdAt  DateTime @default(now())
+  isProfile    Boolean  @default(false)
+  isPrivate    Boolean  @default(false)
+  caption      String?
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
 }
 
 model Like {
@@ -193,13 +208,13 @@ model VerificationRequest {
 }
 
 model Conversation {
-  id           String   @id @default(cuid())
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  lastMessage  String?
+  id            String                    @id @default(cuid())
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+  lastMessage   String?
   lastMessageAt DateTime?
-  participants ConversationParticipant[]
-  messages     Message[]
+  participants  ConversationParticipant[]
+  messages      Message[]
 }
 
 model ConversationParticipant {
@@ -207,6 +222,7 @@ model ConversationParticipant {
   conversationId String
   userId         String
   unreadCount    Int          @default(0)
+  typingUntil    DateTime?
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -218,14 +234,18 @@ model Message {
   conversationId String
   senderId       String
   content        String
+  imageUrl       String?
   isRead         Boolean      @default(false)
+  readAt         DateTime?
+  // { "❤️": ["userId", ...] }
+  reactions      Json?
   createdAt      DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
 }
 
 model Event {
-  id           String        @id @default(cuid())
+  id           String          @id @default(cuid())
   title        String
   description  String
   date         DateTime
@@ -235,23 +255,24 @@ model Event {
   country      String?
   maxAttendees Int?
   imageUrl     String?
-  category     EventCategory @default(OTHER)
-  isFeatured   Boolean       @default(false)
-  isPrivate    Boolean       @default(false)
+  category     EventCategory   @default(OTHER)
+  isFeatured   Boolean         @default(false)
+  isPrivate    Boolean         @default(false)
   createdBy    String
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
   attendees    EventAttendee[]
 }
 
 model EventAttendee {
-  id        String   @id @default(cuid())
-  eventId   String
-  userId    String
-  status    String   @default("GOING")
-  createdAt DateTime @default(now())
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String    @id @default(cuid())
+  eventId        String
+  userId         String
+  status         String    @default("GOING")
+  reminderSentAt DateTime?
+  createdAt      DateTime  @default(now())
+  event          Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
 }
@@ -339,4 +360,20 @@ model PushSubscription {
   auth      String
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// "Share my date" safety plan — details are emailed to a trusted friend
+model DatePlan {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  matchName     String
+  matchUsername String?
+  location      String
+  dateTime      DateTime
+  friendName    String
+  friendEmail   String
+  notes         String?
+  checkedInAt   DateTime?
+  createdAt     DateTime  @default(now())
 }
