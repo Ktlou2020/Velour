@@ -99,6 +99,7 @@ model User {
   sparkAnswers        SparkAnswer[]
   photoLikes          PhotoLike[]
   messageViews        MessageView[]
+  orders              Order[]
   reviewsGiven        Review[]                  @relation("ReviewsGiven")
   reviewsReceived     Review[]                  @relation("ReviewsReceived")
   reviewRequestsSent  ReviewRequest[]           @relation("ReviewRequestsSent")
@@ -597,4 +598,94 @@ model MessageView {
   viewedAt  DateTime @default(now())
 
   @@unique([messageId, userId])
+}
+
+// ───────────────────────── Store ─────────────────────────
+
+model ProductCategory {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  order       Int       @default(0)
+  products    Product[]
+}
+
+model Product {
+  id             String           @id @default(cuid())
+  slug           String           @unique
+  name           String
+  description    String
+  // Prices in cents (ZAR), VAT-inclusive
+  priceCents     Int
+  compareAtCents Int?
+  categoryId     String?
+  category       ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  // Media URLs (/api/media/<id>) in display order
+  images         String[]         @default([])
+  stock          Int              @default(0)
+  sku            String?          @unique
+  weightGrams    Int?
+  tags           String[]         @default([])
+  isActive       Boolean          @default(true)
+  isFeatured     Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  orderItems     OrderItem[]
+
+  @@index([isActive, categoryId])
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  // Human-friendly order number, e.g. TS-10023
+  number            String      @unique
+  userId            String
+  user              User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  // PENDING_PAYMENT | PAID | PROCESSING | SHIPPED | DELIVERED | CANCELLED | REFUNDED
+  status            String      @default("PENDING_PAYMENT")
+  subtotalCents     Int
+  shippingCents     Int
+  totalCents        Int
+  // Delivery
+  recipientName     String
+  phone             String
+  email             String
+  addressLine1      String
+  addressLine2      String?
+  suburb            String?
+  city              String
+  province          String
+  postalCode        String
+  deliveryNotes     String?
+  discreetPackaging Boolean     @default(true)
+  courier           String?
+  trackingNumber    String?
+  // Payment (PayFast once-off)
+  paymentRef        String      @unique
+  pfPaymentId       String?     @unique
+  paidAt            DateTime?
+  cancelledAt       DateTime?
+  shippedAt         DateTime?
+  deliveredAt       DateTime?
+  adminNotes        String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  items             OrderItem[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  // Snapshot at time of purchase
+  name       String
+  priceCents Int
+  quantity   Int
+  image      String?
 }
