@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   MapPin, Shield, Eye, Heart, MessageCircle, Flag, Crown, Star, Camera, X, Check,
   Zap, Calendar, UserCheck, Flame, ChevronLeft, ChevronRight, Quote, Video, Navigation, Sparkles,
+  Ban,
 } from 'lucide-react';
 import type { ReactElement } from 'react';
 import type { Session } from 'next-auth';
@@ -83,6 +84,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
   const [superLiked, setSuperLiked] = useState(false);
   const [winked, setWinked] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [blocking, setBlocking] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportNote, setReportNote] = useState('');
   const [reportSubmitting, setReportSubmitting] = useState(false);
@@ -135,6 +137,16 @@ export default function MemberProfileClient({ username, profile: raw, session }:
         router.push(data.conversation?.id ? `/messages?conv=${data.conversation.id}` : '/messages');
       }
     } finally { setMessagingLoading(false); }
+  }
+
+  async function handleBlock() {
+    if (!raw?.id) return;
+    if (!window.confirm(`Block ${displayName}? They won't be able to see your profile or message you, and any match between you will be removed.`)) return;
+    setBlocking(true);
+    try {
+      const res = await fetch('/api/block', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: raw!.id }) });
+      if (res.ok) router.push('/members');
+    } finally { setBlocking(false); }
   }
 
   async function handleReport() {
@@ -231,8 +243,17 @@ export default function MemberProfileClient({ username, profile: raw, session }:
               👋 {winked ? 'Winked!' : 'Wink'}
             </button>
             <button
+              onClick={handleBlock}
+              disabled={blocking}
+              className="glass px-4 py-3 rounded-xl text-white/30 hover:text-red-400 text-sm transition-all ml-auto disabled:opacity-40"
+              aria-label="Block member"
+              title="Block"
+            >
+              <Ban size={16} />
+            </button>
+            <button
               onClick={() => setShowReportModal(true)}
-              className="glass px-4 py-3 rounded-xl text-white/30 hover:text-red-400 text-sm transition-all ml-auto"
+              className="glass px-4 py-3 rounded-xl text-white/30 hover:text-red-400 text-sm transition-all"
               aria-label="Report member"
             >
               <Flag size={16} />
