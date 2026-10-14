@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Readable } from 'stream'
+import type { Readable } from 'stream'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { openStream, statFile, thumbKey } from '@/lib/storage'
@@ -8,6 +8,47 @@ import { photoVisibility, type Visibility } from '@/lib/media-access'
 export const runtime = 'nodejs'
 
 const ID_RE = /^[a-z0-9]{20,40}$/i
+
+/**
+ * Node stream → web stream. `Readable.toWeb` on Node 18 throws "Controller is
+ * already closed" when a download ends or is cancelled, so convert by hand and
+ * guard every controller call.
+ */
+function toWebStream(stream: Readable): ReadableStream<Uint8Array> {
+  let done = false
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      stream.on('data', (chunk: Buffer) => {
+        if (done) return
+        try {
+          controller.enqueue(new Uint8Array(chunk))
+        } catch {
+          done = true
+          stream.destroy()
+          return
+        }
+        if ((controller.desiredSize ?? 1) <= 0) stream.pause()
+      })
+      stream.on('end', () => {
+        if (done) return
+        done = true
+        try { controller.close() } catch { /* already closed */ }
+      })
+      stream.on('error', (err) => {
+        if (done) return
+        done = true
+        try { controller.error(err) } catch { /* already closed */ }
+      })
+    },
+    pull() {
+      if (!done) stream.resume()
+    },
+    cancel() {
+      done = true
+      stream.destroy()
+    },
+  })
+}
 
 function notFound() {
   return new NextResponse('Not found', {
@@ -105,7 +146,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const stream = openStream(key, range ?? undefined)
-    const body = Readable.toWeb(stream) as unknown as ReadableStream<Uint8Array>
+    const body = toWebStream(stream)
     if (range) {
       return new NextResponse(body, {
         status: 206,

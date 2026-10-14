@@ -68,7 +68,10 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData().catch(() => null)
     const entry = formData?.get('file')
-    const file = entry instanceof File ? entry : null
+    // Don't use `instanceof File`: the global File class doesn't exist on Node 18.
+    const file = entry && typeof entry === 'object' && typeof (entry as Blob).arrayBuffer === 'function'
+      ? (entry as Blob & { name?: string })
+      : null
     if (!formData || !file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
     const rawPurpose = formData.get('purpose') ?? (formData.get('kind') === 'video' ? 'video' : 'gallery')

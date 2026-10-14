@@ -39,5 +39,8 @@
     "eslint": "^8",
     "eslint-config-next": "15.0.4",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=22 <23"
   }
 }
