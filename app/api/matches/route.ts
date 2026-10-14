@@ -54,12 +54,17 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     })
 
-    // Return matches with the "other" user surfaced
+    // Return matches with the "other" user surfaced.
+    // expiresAt is set on match creation and cleared when the first message
+    // is sent; a past expiresAt means the match lapsed without a hello.
+    const now = Date.now()
     const formattedMatches = matches.map((match) => {
       const otherUser = match.user1Id === userId ? match.user2 : match.user1
       return {
         id: match.id,
         createdAt: match.createdAt,
+        expiresAt: match.expiresAt,
+        expired: !!match.expiresAt && match.expiresAt.getTime() < now,
         otherUser,
       }
     })

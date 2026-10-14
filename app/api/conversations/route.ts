@@ -42,8 +42,24 @@ export async function GET() {
       },
     })
 
+    // Pending match expiries (expiresAt is cleared once anyone sends a message)
+    const pendingMatches = await db.match.findMany({
+      where: {
+        OR: [{ user1Id: userId }, { user2Id: userId }],
+        expiresAt: { not: null },
+      },
+      select: { user1Id: true, user2Id: true, expiresAt: true },
+    })
+    const expiryByUser = new Map<string, Date>()
+    for (const m of pendingMatches) {
+      if (m.expiresAt) expiryByUser.set(m.user1Id === userId ? m.user2Id : m.user1Id, m.expiresAt)
+    }
+    const now = Date.now()
+
     const conversations = participations.map((p) => {
       const other = p.conversation.participants.find((cp) => cp.userId !== userId)
+      const hasMessages = !!p.conversation.lastMessageAt
+      const matchExpiresAt = !hasMessages && other ? expiryByUser.get(other.userId) ?? null : null
       return {
         id: p.conversation.id,
         lastMessage: p.conversation.lastMessage,
@@ -55,6 +71,8 @@ export async function GET() {
         profilePhoto: other?.user.profile?.profilePhoto ?? null,
         isOnline: other?.user.profile?.isOnline ?? false,
         otherUserId: other?.user.id ?? null,
+        matchExpiresAt,
+        expired: !!matchExpiresAt && matchExpiresAt.getTime() < now,
       }
     })
 

@@ -78,9 +78,10 @@ export default function MatchOverlay({ show, matchedUser, onMessage, onClose }: 
           >
             It&apos;s a Match!
           </h2>
-          <p className="text-white/60 text-sm mb-8">
+          <p className="text-white/60 text-sm mb-2">
             You and <span className="text-white font-semibold">{matchedUser.name}</span> liked each other!
           </p>
+          <p className="text-[#D4AF37]/80 text-xs mb-8">Say hi within 7 days before this match expires</p>
 
           {/* Photos */}
           <div className="flex items-center justify-center gap-4 mb-8">
