@@ -3,8 +3,33 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { sendPushToUser } from '@/lib/push'
 
+// Public-safe profile fields. Never expose coordinates, privacy flags or boost bookkeeping.
+const PUBLIC_PROFILE_SELECT = {
+  id: true,
+  displayName: true,
+  bio: true,
+  dateOfBirth: true,
+  gender: true,
+  orientation: true,
+  relationshipStatus: true,
+  lookingFor: true,
+  location: true,
+  city: true,
+  country: true,
+  profilePhoto: true,
+  isOnline: true,
+  lastSeen: true,
+  membershipTier: true,
+  profileCompleteness: true,
+  profileViews: true,
+  allowMessages: true,
+  isCouple: true,
+  videoUrl: true,
+  prompts: true,
+} as const
+
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ username: string }> }
 ) {
   try {
@@ -22,7 +47,7 @@ export async function GET(
         username: true,
         createdAt: true,
         isVerified: true,
-        profile: true,
+        profile: { select: PUBLIC_PROFILE_SELECT },
         photos: {
           where: { isPrivate: false },
           orderBy: { order: 'asc' },
@@ -39,8 +64,17 @@ export async function GET(
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Track profile view (don't count self-views)
-    if (user.id !== session.user.id) {
+    // Track profile view (don't count self-views, incognito viewers, or ?track=0 lookups)
+    const skipTracking = req.nextUrl.searchParams.get('track') === '0'
+    let viewerIncognito = false
+    if (!skipTracking && user.id !== session.user.id) {
+      const viewerProfile = await db.profile.findUnique({
+        where: { userId: session.user.id },
+        select: { incognito: true },
+      })
+      viewerIncognito = !!viewerProfile?.incognito
+    }
+    if (!skipTracking && !viewerIncognito && user.id !== session.user.id) {
       await db.profile.update({
         where: { userId: user.id },
         data: { profileViews: { increment: 1 } },

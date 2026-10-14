@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   MapPin, Shield, Eye, Heart, MessageCircle, Flag, Crown, Star, Camera, X, Check,
-  Zap, Calendar, UserCheck, Flame, ChevronLeft, ChevronRight,
+  Zap, Calendar, UserCheck, Flame, ChevronLeft, ChevronRight, Quote, Video, Navigation, Sparkles,
 } from 'lucide-react';
 import type { ReactElement } from 'react';
 import type { Session } from 'next-auth';
@@ -41,6 +41,12 @@ interface Profile {
   languages?: string;
   memberSince?: string;
   compatibilityScore?: number;
+  compatibilityReasons?: string[];
+  sharedInterests?: string[];
+  insightsLocked?: boolean;
+  distance?: string;
+  videoUrl?: string;
+  prompts?: { question: string; answer: string }[];
 }
 
 interface Props {
@@ -92,7 +98,8 @@ export default function MemberProfileClient({ username, profile: raw, session }:
   const location = [p.city, p.country].filter(Boolean).join(', ') || 'Unknown location';
   const tier = p.membershipTier ?? 'FREE';
   const heroPhoto = photos.find(ph => ph.isProfile) ?? photos[0];
-  const compatScore = p.compatibilityScore ?? Math.floor(65 + (username.charCodeAt(0) % 30));
+  const compatScore = p.compatibilityScore;
+  const sharedSet = new Set((p.sharedInterests ?? []).map((i) => i.toLowerCase()));
 
   async function handleLike() {
     setLiked(!liked);
@@ -183,6 +190,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
               </div>
               <div className="flex flex-wrap items-center gap-3 text-white/70 text-sm">
                 <span className="flex items-center gap-1.5"><MapPin size={13} />{location}</span>
+                {p.distance && <span className="flex items-center gap-1.5"><Navigation size={13} />{p.distance}</span>}
                 {p.age && <span className="flex items-center gap-1.5"><Calendar size={13} />{p.age} years old</span>}
                 {p.isOnline
                   ? <span className="flex items-center gap-1.5 text-emerald-400"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Online now</span>
@@ -265,6 +273,39 @@ export default function MemberProfileClient({ username, profile: raw, session }:
             </div>
           )}
 
+          {/* Prompts */}
+          {p.prompts && p.prompts.length > 0 && (
+            <div className="space-y-4">
+              {p.prompts.map((pr) => (
+                <div key={pr.question} className="glass rounded-2xl p-6 border border-[#DC143C]/10">
+                  <p className="text-white/50 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Quote size={12} className="text-[#DC143C]" />
+                    {pr.question}
+                  </p>
+                  <p className="text-white font-serif text-xl leading-snug break-words">{pr.answer}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Video profile */}
+          {p.videoUrl && (
+            <div className="glass rounded-2xl p-6">
+              <h2 className="font-serif text-lg font-bold text-white mb-3 flex items-center gap-2">
+                <Video size={16} className="text-purple-400" />
+                Video Profile
+              </h2>
+              <video
+                src={p.videoUrl}
+                controls
+                playsInline
+                preload="metadata"
+                controlsList="nodownload"
+                className="w-full max-h-[480px] rounded-xl bg-black"
+              />
+            </div>
+          )}
+
           {/* Looking For */}
           {p.lookingFor && p.lookingFor.length > 0 && (
             <div className="glass rounded-2xl p-6">
@@ -291,7 +332,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
               </h2>
               <div className="flex flex-wrap gap-2">
                 {p.interests.map((interest) => (
-                  <span key={interest} className="glass border border-white/10 hover:border-white/20 px-4 py-1.5 rounded-full text-white/70 text-sm transition-colors">
+                  <span key={interest} className={`glass border px-4 py-1.5 rounded-full text-sm transition-colors ${sharedSet.has(interest.toLowerCase()) ? 'border-[#D4AF37]/50 text-[#D4AF37]' : 'border-white/10 hover:border-white/20 text-white/70'}`}>
                     {interest}
                   </span>
                 ))}
@@ -328,6 +369,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
         {/* ─── SIDEBAR ──────────────────────────────────────────────────── */}
         <div className="space-y-5">
           {/* Compatibility */}
+          {compatScore !== undefined && (
           <div className="glass rounded-2xl p-6 text-center">
             <p className="text-white/50 text-xs font-medium uppercase tracking-wider mb-4">Compatibility</p>
             <div className="relative w-32 h-32 mx-auto mb-3">
@@ -353,8 +395,35 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                 <span className="text-white/40 text-xs mt-0.5">% match</span>
               </div>
             </div>
-            <p className="text-white/40 text-xs">Based on shared interests &amp; preferences</p>
+            {p.insightsLocked ? (
+              <Link href="/upgrade" className="block mt-4 text-xs text-purple-300 hover:text-purple-200 border border-purple-500/25 bg-purple-500/10 rounded-xl px-3 py-2 transition-colors">
+                <Star size={11} className="inline -mt-0.5 mr-1" />
+                See why you match with Platinum
+              </Link>
+            ) : (p.compatibilityReasons ?? []).length > 0 ? (
+              <ul className="space-y-1.5 text-left mt-4">
+                {(p.compatibilityReasons ?? []).map((r) => (
+                  <li key={r} className="flex items-center gap-2 text-sm text-white/70">
+                    <Sparkles size={12} className="text-[#D4AF37] flex-shrink-0" />{r}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-white/40 text-xs">Add interests and what you&apos;re looking for to improve your matches</p>
+            )}
+            {(p.sharedInterests ?? []).length > 0 && (
+              <div className="mt-4 text-left">
+                <p className="text-white/40 text-xs mb-2">You both like</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(p.sharedInterests ?? []).map((i) => (
+                    <span key={i} className="bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] px-2.5 py-1 rounded-full text-xs">{i}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <p className="text-white/30 text-[11px] mt-4">Based on shared interests, goals, age &amp; distance</p>
           </div>
+          )}
 
           {/* Profile details */}
           <div className="glass rounded-2xl p-6">
@@ -367,6 +436,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                 { label: 'Height',       value: p.height },
                 { label: 'Languages',    value: p.languages },
                 { label: 'Location',     value: location !== 'Unknown location' ? location : null },
+                { label: 'Distance',     value: p.distance },
               ].filter(r => !!r.value).map(({ label, value }) => (
                 <div key={label} className="flex items-center justify-between gap-2 text-sm">
                   <span className="text-white/40 flex-shrink-0">{label}</span>

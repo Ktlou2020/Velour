@@ -5,46 +5,40 @@ import Link from 'next/link'
 import { Check, Crown, Star, Zap, Shield, MessageCircle, Eye, Heart, ChevronDown, Loader2 } from 'lucide-react'
 
 const FREE_FEATURES = [
-  'Browse up to 20 profiles per day',
-  '3 messages per day',
-  'Basic search filters',
+  'Browse & message members',
+  'Search members in your own city',
   'Create singles or couples profile',
   'Community forum access (read only)',
   'See your own matches',
+  'Photo verification badge',
 ]
 const GOLD_FEATURES = [
-  'Unlimited profile browsing',
-  'Unlimited messaging',
-  'Advanced search & filters',
+  'Search any city & filter by distance',
   'See everyone who liked you',
+  'See who viewed your profile',
   'Private photo access',
   'Events & meetups access',
   'Profile boost (1× per month)',
   'Read receipts',
+  'Undo your last swipe',
   'Couple profile — search for male or female thirds',
   'Priority in search results',
   'Forum posting & replies',
 ]
 const PLATINUM_FEATURES = [
   'Everything in Gold',
-  'AI-powered compatibility matching',
-  'Dedicated concierge support',
   'Weekly profile boost',
-  'Exclusive Platinum-only events',
   'Anonymous / incognito browsing',
-  'Advanced compatibility insights',
-  'Couple profile — advanced partner search',
+  'Compatibility scores & insights',
   'Video profile (30 sec)',
-  'First access to new features',
-  'Verified badge',
 ]
 
 const FAQS = [
   { q: 'Can I cancel anytime?', a: 'Yes, you can cancel your subscription at any time. Your premium access continues until the end of your billing period.' },
   { q: 'Is my payment information secure?', a: 'Absolutely. We use industry-standard SSL encryption and partner with PayFast for secure payment processing. We never store your card details.' },
   { q: 'What happens to my profile if I downgrade?', a: 'Your profile and all messages are preserved. You simply revert to the free tier feature set.' },
-  { q: 'Do you offer refunds?', a: 'We offer a 3-day money-back guarantee on new subscriptions if you are not satisfied.' },
-  { q: 'Can I upgrade or downgrade mid-cycle?', a: 'Yes. Upgrades take effect immediately with prorated billing. Downgrades take effect at the next billing cycle.' },
+  { q: 'Do you offer refunds?', a: 'If you are unhappy with your subscription, contact support@velour.dating and our team will review your request.' },
+  { q: 'Can I upgrade or downgrade mid-cycle?', a: 'Yes. Upgrades take effect as soon as payment is confirmed. For downgrades or billing changes, contact support@velour.dating.' },
 ]
 
 type Tier = 'GOLD' | 'PLATINUM'

@@ -12,6 +12,9 @@ import {
 } from 'lucide-react';
 import type { Session } from 'next-auth';
 import { CITIES_BY_COUNTRY, COUNTRIES } from '@/lib/cities';
+import BoostCard from './BoostCard';
+import { PromptsEditor, VideoProfileCard, LocationCard, PrivacySettingsCard } from './ProfileExtras';
+import type { ProfilePrompt } from './prompts';
 
 interface Photo {
   id: string;
@@ -24,6 +27,7 @@ interface Profile {
   id?: string;
   displayName?: string;
   username?: string;
+  isVerified?: boolean;
   bio?: string;
   city?: string;
   country?: string;
@@ -38,6 +42,13 @@ interface Profile {
   completeness?: number;
   isCouple?: boolean;
   partnerId?: string | null;
+  prompts?: ProfilePrompt[];
+  videoUrl?: string | null;
+  incognito?: boolean;
+  showChatImages?: boolean;
+  hasLocation?: boolean;
+  isPaid?: boolean;
+  isPlatinum?: boolean;
   partner?: {
     id?: string;
     displayName?: string;
@@ -303,10 +314,12 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                   {tier === 'PLATINUM' && <Star size={12} />}
                   <span className="text-xs font-bold">{tier} Member</span>
                 </div>
-                <div className="flex items-center gap-1 glass px-3 py-1 rounded-full">
-                  <Shield size={12} className="text-emerald-400" />
-                  <span className="text-emerald-400 text-xs font-semibold">Verified</span>
-                </div>
+                {profile.isVerified && (
+                  <div className="flex items-center gap-1 glass px-3 py-1 rounded-full">
+                    <Shield size={12} className="text-emerald-400" />
+                    <span className="text-emerald-400 text-xs font-semibold">Verified</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2 mb-4">
@@ -415,6 +428,12 @@ export default function ProfileClient({ session, initialProfile }: Props) {
             )}
           </div>
 
+          {/* Boost */}
+          <BoostCard className="mb-6" />
+
+          {/* Prompts */}
+          <PromptsEditor initial={profile.prompts ?? []} />
+
           {/* Photos */}
           <div className="glass rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -508,6 +527,19 @@ export default function ProfileClient({ session, initialProfile }: Props) {
 
             <p className="text-white/30 text-xs mt-3">JPEG, PNG, WEBP accepted. Hover a photo to manage it.</p>
           </div>
+
+          {/* Video profile */}
+          <VideoProfileCard initialUrl={profile.videoUrl ?? null} platinum={!!profile.isPlatinum} />
+
+          {/* Location */}
+          <LocationCard initialHasLocation={!!profile.hasLocation} />
+
+          {/* Privacy */}
+          <PrivacySettingsCard
+            initialIncognito={!!profile.incognito}
+            initialShowChatImages={!!profile.showChatImages}
+            platinum={!!profile.isPlatinum}
+          />
 
           {/* Membership Tier */}
           <div className={`glass rounded-2xl p-6 mb-6 ${tier === 'FREE' ? 'border border-[#DC143C]/20' : ''}`}>

@@ -81,7 +81,7 @@ export default function ViewsPage() {
         const enriched: ViewerProfile[] = [];
         for (const [, viewer] of seen) {
           try {
-            const pRes = await fetch(`/api/profile/${viewer.viewerUsername}`);
+            const pRes = await fetch(`/api/profile/${encodeURIComponent(viewer.viewerUsername)}?track=0`);
             if (pRes.ok) {
               const pData = await pRes.json() as {
                 user?: {

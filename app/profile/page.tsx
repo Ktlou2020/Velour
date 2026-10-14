@@ -2,6 +2,8 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import ProfileClient from './ProfileClient';
+import { isPaid, isPlatinum } from '@/lib/premium';
+import { parsePrompts } from './prompts';
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -17,6 +19,7 @@ export default async function ProfilePage() {
       username: true,
       email: true,
       isVerified: true,
+      role: true,
       profile: true,
       photos: { orderBy: { order: 'asc' } },
       interests: { include: { interest: true } },
@@ -30,6 +33,7 @@ export default async function ProfilePage() {
   const initialProfile = {
     id: user.id,
     username: user.username,
+    isVerified: user.isVerified,
     displayName: profile?.displayName ?? undefined,
     bio: profile?.bio ?? undefined,
     city: profile?.city ?? undefined,
@@ -41,6 +45,13 @@ export default async function ProfilePage() {
     completeness: profile?.profileCompleteness ?? 0,
     isCouple: profile?.isCouple ?? false,
     partnerId: profile?.partnerId ?? null,
+    prompts: parsePrompts(profile?.prompts),
+    videoUrl: profile?.videoUrl ?? null,
+    incognito: profile?.incognito ?? false,
+    showChatImages: profile?.showChatImages ?? false,
+    hasLocation: profile?.latitude != null && profile?.longitude != null,
+    isPaid: isPaid(profile?.membershipTier, user.role),
+    isPlatinum: isPlatinum(profile?.membershipTier, user.role),
     photos: user.photos.map(p => ({
       id: p.id,
       url: p.url,

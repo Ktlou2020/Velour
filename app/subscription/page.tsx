@@ -5,27 +5,31 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Crown, Star, CreditCard, ArrowLeft, Mail } from 'lucide-react';
+import BoostCard from '@/app/profile/BoostCard';
 
 const PLAN_FEATURES: Record<string, { label: string; features: string[]; price: string }> = {
   FREE: {
     label: 'Free',
     features: [
-      'Browse member profiles',
-      'Send up to 5 messages/day',
-      'Basic search filters',
-      'Upload up to 3 photos',
+      'Browse & message members',
+      'Search members in your own city',
+      'Community forum access (read only)',
+      'Photo verification badge',
     ],
     price: 'R0 / month',
   },
   GOLD: {
     label: 'Gold',
     features: [
-      'Unlimited messaging',
-      'See who liked you',
-      'Advanced search filters',
-      'Upload up to 9 photos',
-      'Priority profile placement',
+      'Search any city & filter by distance',
+      'See who liked you & who viewed you',
+      'Private photo access',
+      'Events & meetups access',
+      'Profile boost (1× per month)',
       'Read receipts',
+      'Undo your last swipe',
+      'Priority in search results',
+      'Forum posting & replies',
     ],
     price: 'R199 / month',
   },
@@ -33,11 +37,10 @@ const PLAN_FEATURES: Record<string, { label: string; features: string[]; price: 
     label: 'Platinum',
     features: [
       'Everything in Gold',
-      'Profile boost (3× per week)',
-      'See who viewed you',
+      'Weekly profile boost',
       'Incognito browsing mode',
-      'Verified badge on profile',
-      'Dedicated support',
+      'Compatibility scores & insights',
+      'Video profile (30 sec)',
     ],
     price: 'R349 / month',
   },
@@ -144,6 +147,9 @@ export default async function SubscriptionPage() {
             )}
           </div>
         </div>
+
+        {/* Profile Boost */}
+        <BoostCard className="mb-6" />
 
         {/* Billing History */}
         <div className="glass rounded-2xl p-6">

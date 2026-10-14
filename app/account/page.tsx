@@ -3,7 +3,15 @@
 import { useState, useRef, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { useSession, signOut } from 'next-auth/react';
-import { Shield, Download, Trash2, Camera, CheckCircle, Clock, XCircle, Flame } from 'lucide-react';
+import { Shield, Download, Trash2, Camera, CheckCircle, Clock, XCircle, Flame, Moon } from 'lucide-react';
+import { useToast } from '@/lib/toast-context';
+
+const SNOOZE_OPTIONS = [
+  { value: '24h', label: '24 hours' },
+  { value: '3d', label: '3 days' },
+  { value: '1w', label: '1 week' },
+  { value: 'indefinite', label: 'Until I turn it off' },
+] as const;
 
 export default function AccountPage() {
   const { data: session } = useSession();
@@ -17,6 +25,32 @@ export default function AccountPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteStep, setDeleteStep] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useToast();
+  const [snooze, setSnooze] = useState<{ isSnoozed: boolean; snoozedUntil: string | null } | null>(null);
+  const [snoozeChoice, setSnoozeChoice] = useState<string>('24h');
+  const [snoozeBusy, setSnoozeBusy] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/account/snooze').then(r => r.ok ? r.json() : null).then(d => { if (d) setSnooze(d); }).catch(() => {});
+  }, []);
+
+  async function applySnooze(on: boolean) {
+    setSnoozeBusy(true);
+    try {
+      const res = await fetch('/api/account/snooze', on
+        ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ duration: snoozeChoice }) }
+        : { method: 'DELETE' });
+      const d = await res.json().catch(() => ({})) as { isSnoozed?: boolean; snoozedUntil?: string | null; error?: string };
+      if (res.ok) {
+        setSnooze({ isSnoozed: !!d.isSnoozed, snoozedUntil: d.snoozedUntil ?? null });
+        showToast(on ? 'Your profile is snoozed' : 'Your profile is visible again', 'success');
+      } else {
+        showToast(d.error ?? 'Something went wrong', 'error');
+      }
+    } catch {
+      showToast('Network error', 'error');
+    } finally { setSnoozeBusy(false); }
+  }
 
   useEffect(() => {
     fetch('/api/verify').then(r => r.json()).then(d => setVerifyStatus(d.status ?? 'NONE')).catch(() => {});
@@ -139,6 +173,57 @@ export default function AccountPage() {
                 {uploading ? 'Uploading...' : 'Upload Selfie'}
               </button>
             </>
+          )}
+        </div>
+
+        {/* Snooze */}
+        <div className="glass rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Moon size={20} className="text-indigo-300" />
+            <h2 className="text-white font-semibold">Snooze Profile</h2>
+          </div>
+          <p className="text-white/50 text-sm mb-4 leading-relaxed">
+            Need a break? Snoozing hides your profile from browse, search and discover. Your existing matches and chats stay exactly as they are.
+          </p>
+          {snooze?.isSnoozed ? (
+            <div className="space-y-3">
+              <p className="text-indigo-300 text-sm font-medium flex items-center gap-2">
+                <Moon size={14} />
+                {snooze.snoozedUntil
+                  ? `Snoozed until ${new Date(snooze.snoozedUntil).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`
+                  : 'Snoozed until you turn it off'}
+              </p>
+              <button
+                onClick={() => applySnooze(false)}
+                disabled={snoozeBusy}
+                className="flex items-center gap-2 bg-[#DC143C] hover:bg-[#FF1744] text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
+              >
+                {snoozeBusy && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                Un-snooze now
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {SNOOZE_OPTIONS.map((o) => (
+                  <button
+                    key={o.value}
+                    onClick={() => setSnoozeChoice(o.value)}
+                    className={`px-3 py-2 rounded-xl text-sm border transition-all ${snoozeChoice === o.value ? 'bg-indigo-500/20 border-indigo-400/50 text-white' : 'border-white/10 text-white/60 hover:border-white/20'}`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => applySnooze(true)}
+                disabled={snoozeBusy || !snooze}
+                className="flex items-center gap-2 glass border border-indigo-400/40 text-indigo-200 hover:bg-indigo-500/10 px-4 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-60"
+              >
+                {snoozeBusy ? <div className="w-4 h-4 border-2 border-indigo-200 border-t-transparent rounded-full animate-spin" /> : <Moon size={14} />}
+                Snooze my profile
+              </button>
+            </div>
           )}
         </div>
 

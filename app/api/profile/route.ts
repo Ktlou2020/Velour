@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
+import { isPlatinum } from '@/lib/premium'
+import { validatePrompts } from '@/app/profile/prompts'
+
+function bad(error: string, status = 400) {
+  return NextResponse.json({ error }, { status })
+}
 
 export async function GET() {
   try {
@@ -78,6 +84,64 @@ export async function PUT(req: NextRequest) {
     const existing = await db.profile.findUnique({
       where: { userId: session.user.id },
     })
+
+    const needsTierCheck =
+      body.incognito === true || (typeof body.videoUrl === 'string' && body.videoUrl !== '')
+    let platinum = false
+    if (needsTierCheck) {
+      const u = await db.user.findUnique({ where: { id: session.user.id }, select: { role: true } })
+      platinum = isPlatinum(existing?.membershipTier, u?.role)
+    }
+
+    // Profile prompts
+    if (body.prompts !== undefined) {
+      const result = validatePrompts(body.prompts)
+      if ('error' in result) return bad(result.error)
+      updateData.prompts = result.prompts
+    }
+
+    // Incognito (Platinum only to enable; anyone may disable)
+    if (body.incognito !== undefined) {
+      if (typeof body.incognito !== 'boolean') return bad('incognito must be true or false')
+      if (body.incognito && !platinum) return bad('Incognito mode is a Platinum feature', 403)
+      updateData.incognito = body.incognito
+    }
+
+    // Show chat images without blurring
+    if (body.showChatImages !== undefined) {
+      if (typeof body.showChatImages !== 'boolean') return bad('showChatImages must be true or false')
+      updateData.showChatImages = body.showChatImages
+    }
+
+    // Video profile (Platinum only to set; anyone may remove)
+    if (body.videoUrl !== undefined) {
+      if (body.videoUrl === null || body.videoUrl === '') {
+        updateData.videoUrl = null
+      } else {
+        if (typeof body.videoUrl !== 'string') return bad('Invalid video URL')
+        if (!platinum) return bad('Video profiles are a Platinum feature', 403)
+        const cloudName = process.env.CLOUDINARY_CLOUD_NAME
+        const prefix = `https://res.cloudinary.com/${cloudName}/video/upload/`
+        if (!cloudName || !body.videoUrl.startsWith(prefix)) return bad('Video must be uploaded through Velour')
+        updateData.videoUrl = body.videoUrl
+      }
+    }
+
+    // Location coordinates (rounded to ~1 km for privacy). Send null for both to clear.
+    if (body.latitude !== undefined || body.longitude !== undefined) {
+      const { latitude: lat, longitude: lng } = body as { latitude?: unknown; longitude?: unknown }
+      if (lat === null && lng === null) {
+        updateData.latitude = null
+        updateData.longitude = null
+      } else {
+        if (typeof lat !== 'number' || typeof lng !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+          return bad('latitude and longitude must both be numbers')
+        }
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return bad('Coordinates out of range')
+        updateData.latitude = Math.round(lat * 100) / 100
+        updateData.longitude = Math.round(lng * 100) / 100
+      }
+    }
 
     const merged = { ...(existing ?? {}), ...updateData }
     const completenessFields = [
