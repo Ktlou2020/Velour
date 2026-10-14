@@ -13,6 +13,8 @@ export default function MemberCardSkeleton() {
             animation: 'velour-shimmer 1.6s infinite',
           }}
         />
+        {/* Badge placeholder (compatibility) */}
+        <div className="absolute top-2 left-2 h-4 w-14 rounded-md bg-white/10" />
         {/* Bottom text placeholders */}
         <div className="absolute bottom-0 left-0 right-0 p-3 space-y-1.5">
           <div className="h-3 w-3/4 rounded bg-white/10" />

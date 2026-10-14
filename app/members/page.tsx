@@ -4,7 +4,7 @@ import Footer from '@/components/Footer';
 import MembersContent from './MembersContent';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { Prisma } from '@prisma/client';
+import { getCallerContext, searchMembers, type MemberResult } from '@/app/api/members/search';
 
 type SearchParams = Record<string, string | undefined> & {
   gender?: string;
@@ -14,132 +14,45 @@ type SearchParams = Record<string, string | undefined> & {
   online?: string;
   sort?: string;
   page?: string;
+  maxKm?: string;
 }
 
 export default async function MembersPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
   const page = Math.max(1, parseInt(params.page || '1', 10));
   const limit = 12;
-  const skip = (page - 1) * limit;
 
   const session = await auth();
   const userId = (session?.user as { id?: string })?.id ?? '';
   const userRole = (session?.user as { role?: string })?.role;
 
-  // Get caller profile for city restriction + pass to client
+  const caller = await getCallerContext(userId, userRole);
   const callerProfile = userId
     ? await db.profile.findUnique({
         where: { userId },
-        select: { membershipTier: true, city: true, country: true },
+        select: { city: true, country: true },
       })
     : null;
 
-  const membershipTier = (callerProfile?.membershipTier ?? 'FREE') as 'FREE' | 'GOLD' | 'PLATINUM';
   const profileCity = callerProfile?.city ?? '';
   const profileCountry = callerProfile?.country ?? '';
-  const canChangeCity = userRole === 'ADMIN' || membershipTier === 'GOLD' || membershipTier === 'PLATINUM';
+  const canChangeCity = caller.paid;
 
   // City: GOLD/PLATINUM can filter; FREE are locked to their own city (or no filter if city unset)
-  const effectiveCity = canChangeCity ? (params.city ?? '') : profileCity;
-
-  // Build profile filter
-  const profileWhere: Prisma.ProfileWhereInput = {};
-
-  if (params.gender && params.gender !== 'ALL') {
-    if (params.gender === 'COUPLE') {
-      profileWhere.isCouple = true;
-    } else {
-      profileWhere.gender = params.gender as 'MAN' | 'WOMAN' | 'NON_BINARY' | 'OTHER';
-    }
-  }
-  if (effectiveCity) {
-    profileWhere.city = { contains: effectiveCity, mode: 'insensitive' };
-  }
-  if (params.online === '1') {
-    profileWhere.isOnline = true;
-  }
-  if (params.ageMin || params.ageMax) {
-    const now = new Date();
-    // ageMax=40 → must have been born at least 40 years ago → dateOfBirth <= now-40y
-    if (params.ageMax) {
-      const oldestDob = new Date(now);
-      oldestDob.setFullYear(oldestDob.getFullYear() - parseInt(params.ageMax, 10));
-      profileWhere.dateOfBirth = { ...((profileWhere.dateOfBirth as object) ?? {}), lte: oldestDob };
-    }
-    // ageMin=20 → must have been born at most 20 years ago → dateOfBirth >= now-20y
-    if (params.ageMin) {
-      const youngestDob = new Date(now);
-      youngestDob.setFullYear(youngestDob.getFullYear() - parseInt(params.ageMin, 10));
-      profileWhere.dateOfBirth = { ...((profileWhere.dateOfBirth as object) ?? {}), gte: youngestDob };
-    }
-  }
-
-  // Exclude blocked users
-  const blocks = userId
-    ? await db.block.findMany({
-        where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
-        select: { blockerId: true, blockedId: true },
-      })
-    : [];
-  const excludedIds = blocks.map((b) => (b.blockerId === userId ? b.blockedId : b.blockerId));
-
-  const userWhere: Prisma.UserWhereInput = {
-    ...(userId ? { id: { not: userId, notIn: excludedIds.length ? excludedIds : undefined } } : {}),
-    isActive: true,
-    profile: profileWhere,
-  };
-
-  const [users, total] = await Promise.all([
-    db.user.findMany({
-      where: userWhere,
-      select: {
-        id: true,
-        username: true,
-        isVerified: true,
-        profile: {
-          select: {
-            displayName: true,
-            profilePhoto: true,
-            city: true,
-            country: true,
-            gender: true,
-            membershipTier: true,
-            isOnline: true,
-            lastSeen: true,
-            dateOfBirth: true,
-          },
-        },
-        photos: {
-          where: { isProfile: true, isPrivate: false },
-          take: 1,
-          select: { url: true },
-        },
-      },
-      skip,
-      take: limit,
-      orderBy: params.sort === 'new'
-        ? [{ createdAt: 'desc' as const }]
-        : params.sort === 'verified'
-          ? [{ isVerified: 'desc' as const }, { profile: { lastSeen: 'desc' as const } }]
-          : [{ profile: { isOnline: 'desc' as const } }, { profile: { lastSeen: 'desc' as const } }],
-    }),
-    db.user.count({ where: userWhere }),
-  ]);
-
-  const members: MemberData[] = users.map((u) => ({
-    id: u.id,
-    username: u.username,
-    displayName: u.profile?.displayName ?? undefined,
-    age: u.profile?.dateOfBirth
-      ? Math.floor((Date.now() - new Date(u.profile.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-      : undefined,
-    city: u.profile?.city ?? undefined,
-    country: u.profile?.country ?? undefined,
-    isOnline: u.profile?.isOnline ?? undefined,
-    isVerified: u.isVerified,
-    membershipTier: u.profile?.membershipTier as MemberData['membershipTier'],
-    profilePhotoUrl: u.photos[0]?.url ?? u.profile?.profilePhoto ?? undefined,
-  }));
+  const result = await searchMembers(caller, {
+    page: String(page),
+    limit: String(limit),
+    gender: params.gender,
+    ageMin: params.ageMin,
+    ageMax: params.ageMax,
+    city: params.city,
+    online: params.online,
+    sort: params.sort,
+    maxKm: params.maxKm,
+  });
+  const effectiveCity = result.effectiveCity ?? '';
+  const total = result.total;
+  const members: MemberData[] = result.members;
 
   return (
     <div className="min-h-screen bg-[#0A0A0F]">
@@ -164,6 +77,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             canChangeCity={canChangeCity}
             profileCity={profileCity}
             profileCountry={profileCountry}
+            callerHasLocation={result.callerHasLocation}
           />
         </Suspense>
       </main>
@@ -172,16 +86,6 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   );
 }
 
-export interface MemberData {
-  id?: string;
+export type MemberData = Partial<Omit<MemberResult, 'username'>> & {
   username: string;
-  displayName?: string;
-  age?: number;
-  city?: string;
-  country?: string;
-  isOnline?: boolean;
-  isVerified?: boolean;
-  membershipTier?: 'FREE' | 'GOLD' | 'PLATINUM';
-  profilePhotoUrl?: string;
-  interests?: string[];
-}
+};

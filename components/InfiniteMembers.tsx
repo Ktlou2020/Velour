@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { MapPin, Check } from 'lucide-react';
+import { MapPin, Check, Zap, Navigation } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import ProtectedImage from '@/components/ProtectedImage';
 import type { MemberData } from '@/app/members/page';
@@ -13,6 +13,8 @@ type FilterState = Record<string, string | undefined> & {
   ageMax?: string;
   city?: string;
   online?: string;
+  sort?: string;
+  maxKm?: string;
 };
 
 interface Props {
@@ -46,10 +48,17 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
+  // Reset when the server re-renders with a new filter set
+  useEffect(() => {
+    setMembers(initialMembers);
+    setPage(1);
+    setHasMore(initialMembers.length >= 12);
+  }, [initialMembers]);
+
   // Stable filter key so fetchMore doesn't recreate on every render
   const filterKey = useMemo(
-    () => [filters.gender, filters.ageMin, filters.ageMax, filters.city, filters.online].join('|'),
-    [filters.gender, filters.ageMin, filters.ageMax, filters.city, filters.online]
+    () => [filters.gender, filters.ageMin, filters.ageMax, filters.city, filters.online, filters.sort, filters.maxKm].join('|'),
+    [filters.gender, filters.ageMin, filters.ageMax, filters.city, filters.online, filters.sort, filters.maxKm]
   );
 
   const fetchMore = useCallback(async (nextPage: number) => {
@@ -62,6 +71,8 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
         ...(filters.ageMax ? { ageMax: filters.ageMax } : {}),
         ...(filters.city ? { city: filters.city } : {}),
         ...(filters.online === '1' ? { online: '1' } : {}),
+        ...(filters.sort && filters.sort !== 'online' ? { sort: filters.sort } : {}),
+        ...(filters.maxKm ? { maxKm: filters.maxKm } : {}),
         page: String(nextPage),
         limit: '12',
       });
@@ -69,7 +80,11 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
       if (res.ok) {
         const data = await res.json() as { members?: MemberData[]; total?: number };
         const newMembers = data.members || [];
-        setMembers((prev) => [...prev, ...newMembers]);
+        // Boosted profiles are prepended on page 1, so dedupe by id
+        setMembers((prev) => {
+          const seen = new Set(prev.map((m) => m.id ?? m.username));
+          return [...prev, ...newMembers.filter((m) => !seen.has(m.id ?? m.username))];
+        });
         setHasMore(newMembers.length >= 12);
         setPage(nextPage);
       } else {
@@ -140,6 +155,26 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
                   </div>
                 )}
 
+                {/* Boosted badge */}
+                {member.isBoosted && (
+                  <div className={`absolute ${tier !== 'FREE' ? 'top-9' : 'top-2'} left-2 z-10 flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#DC143C]/80 text-white backdrop-blur-sm`} title="Boosted">
+                    <Zap size={9} className="fill-white" />
+                    BOOST
+                  </div>
+                )}
+
+                {/* Compatibility badge */}
+                {typeof member.compatibility === 'number' && member.compatibility > 0 && (
+                  <div
+                    className={`absolute bottom-2 left-2 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded-md glass ${
+                      member.compatibility >= 70 ? 'text-[#D4AF37]' : 'text-white/70'
+                    }`}
+                    title={member.compatibilityReasons?.join(' · ') || 'Compatibility'}
+                  >
+                    {member.compatibility}% match
+                  </div>
+                )}
+
                 {/* Verified badge */}
                 {isVerified && (
                   <div
@@ -150,7 +185,7 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
                   </div>
                 )}
 
-                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/70 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
               </div>
 
               {/* Info */}
@@ -163,6 +198,12 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
                   <div className="flex items-center gap-1 text-white/30 text-xs mt-0.5">
                     <MapPin size={10} />
                     <span className="truncate">{member.city}</span>
+                  </div>
+                )}
+                {member.distance && (
+                  <div className="flex items-center gap-1 text-white/40 text-xs mt-0.5">
+                    <Navigation size={9} />
+                    <span className="truncate">{member.distance}</span>
                   </div>
                 )}
               </div>

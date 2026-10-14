@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { MapPin, Crown, Star } from 'lucide-react';
+import { MapPin, Crown, Star, Zap, Navigation } from 'lucide-react';
 
 interface MemberCardProps {
   username: string;
@@ -10,6 +10,11 @@ interface MemberCardProps {
   membershipTier?: 'FREE' | 'GOLD' | 'PLATINUM';
   gradient?: string;
   initials?: string;
+  /** Formatted distance, e.g. "5 km away" */
+  distance?: string;
+  /** Compatibility score 0–100 */
+  compatibility?: number;
+  isBoosted?: boolean;
 }
 
 const GRADIENTS = [
@@ -41,6 +46,9 @@ export default function MemberCard({
   membershipTier = 'FREE',
   gradient,
   initials,
+  distance,
+  compatibility,
+  isBoosted = false,
 }: MemberCardProps) {
   const bg = gradient || getGradient(username);
   const displayInitials = initials || getInitials(username);
@@ -76,6 +84,20 @@ export default function MemberCard({
               )}
             </div>
           )}
+          {/* Boosted badge */}
+          {isBoosted && (
+            <div className={`absolute ${membershipTier !== 'FREE' ? 'top-10' : 'top-3'} left-3 flex items-center gap-1 bg-[#DC143C]/80 backdrop-blur-sm px-2 py-1 rounded-full`}>
+              <Zap size={10} className="text-white fill-white" />
+              <span className="text-white text-xs font-bold">Boosted</span>
+            </div>
+          )}
+
+          {/* Compatibility badge */}
+          {typeof compatibility === 'number' && compatibility > 0 && (
+            <div className={`absolute bottom-3 left-3 glass px-2 py-1 rounded-full text-xs font-bold ${compatibility >= 70 ? 'text-[#D4AF37]' : 'text-white/80'}`}>
+              {compatibility}% match
+            </div>
+          )}
         </div>
 
         {/* Info */}
@@ -87,6 +109,12 @@ export default function MemberCard({
                 <MapPin size={10} />
                 <span>{age} · {location}</span>
               </div>
+              {distance && (
+                <div className="flex items-center gap-1 text-white/40 text-xs mt-0.5">
+                  <Navigation size={10} />
+                  <span>{distance}</span>
+                </div>
+              )}
             </div>
           </div>
 

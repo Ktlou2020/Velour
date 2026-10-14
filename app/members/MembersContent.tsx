@@ -3,7 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import InfiniteMembers from '@/components/InfiniteMembers';
-import { Lock, Crown } from 'lucide-react';
+import Link from 'next/link';
+import { Lock, Crown, Navigation } from 'lucide-react';
 import { CITIES_BY_COUNTRY, COUNTRIES } from '@/lib/cities';
 import type { MemberData } from './page';
 
@@ -15,12 +16,14 @@ interface Props {
   canChangeCity: boolean;
   profileCity: string;
   profileCountry: string;
+  callerHasLocation?: boolean;
 }
 
 const GENDER_FILTERS = ['ALL', 'MAN', 'WOMAN', 'COUPLE'];
 const GENDER_LABELS: Record<string, string> = { ALL: 'All', MAN: 'Men', WOMAN: 'Women', COUPLE: 'Couples' };
+const DISTANCE_OPTIONS = ['', '10', '25', '50', '100'];
 
-export default function MembersContent({ members, total, searchParams, canChangeCity, profileCity, profileCountry }: Props) {
+export default function MembersContent({ members, total, searchParams, canChangeCity, profileCity, profileCountry, callerHasLocation = false }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [, startTransition] = useTransition();
@@ -32,6 +35,7 @@ export default function MembersContent({ members, total, searchParams, canChange
   const [gender, setGender] = useState(searchParams.gender || 'ALL');
   const [onlineOnly, setOnlineOnly] = useState(searchParams.online === '1');
   const [sortBy, setSortBy] = useState(searchParams.sort || 'online');
+  const [maxKm, setMaxKm] = useState(searchParams.maxKm || '');
 
   const availableCities = country ? (CITIES_BY_COUNTRY[country] ?? []) : [];
 
@@ -40,6 +44,7 @@ export default function MembersContent({ members, total, searchParams, canChange
     const g = overrides?.gender ?? gender;
     const om = overrides?.online ?? (onlineOnly ? '1' : undefined);
     const s = overrides?.sort ?? sortBy;
+    const km = overrides && 'maxKm' in overrides ? overrides.maxKm : maxKm;
     const c = canChangeCity ? city : profileCity;
     if (g && g !== 'ALL') params.set('gender', g);
     if (ageMin !== '18') params.set('ageMin', ageMin);
@@ -47,6 +52,7 @@ export default function MembersContent({ members, total, searchParams, canChange
     if (c.trim()) params.set('city', c.trim());
     if (om === '1') params.set('online', '1');
     if (s && s !== 'online') params.set('sort', s);
+    if (km && callerHasLocation) params.set('maxKm', km);
     params.set('page', '1');
     startTransition(() => router.push(`${pathname}?${params.toString()}`));
   }
@@ -123,6 +129,23 @@ export default function MembersContent({ members, total, searchParams, canChange
             </div>
           )}
 
+          {/* Distance filter — needs the caller's location */}
+          <div className="flex items-center gap-2">
+            <Navigation size={12} className="text-white/30" />
+            <select
+              value={callerHasLocation ? maxKm : ''}
+              onChange={(e) => { setMaxKm(e.target.value); applyFilters({ maxKm: e.target.value || undefined }); }}
+              className="input-dark px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
+              aria-label="Filter by distance"
+              disabled={!callerHasLocation}
+              title={callerHasLocation ? 'Distance' : 'Set your location on your profile to filter by distance'}
+            >
+              {DISTANCE_OPTIONS.map((d) => (
+                <option key={d || 'any'} value={d}>{d ? `Within ${d} km` : 'Any distance'}</option>
+              ))}
+            </select>
+          </div>
+
           <label className="flex items-center gap-2 cursor-pointer">
             <div className="relative">
               <input
@@ -153,6 +176,14 @@ export default function MembersContent({ members, total, searchParams, canChange
         </p>
       )}
 
+      {!callerHasLocation && (
+        <p className="text-white/30 text-xs mb-4 flex items-center gap-1.5">
+          <Navigation size={10} />
+          <Link href="/profile" className="text-[#D4AF37]/80 hover:text-[#D4AF37] hover:underline">Set your location</Link>
+          to see how far away members are and search by distance.
+        </p>
+      )}
+
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <p className="text-white/50 text-sm">
           Showing <span className="text-white">{members.length}</span> of <span className="text-white">{total.toLocaleString()}</span> members
@@ -163,6 +194,7 @@ export default function MembersContent({ members, total, searchParams, canChange
             { value: 'online', label: '● Online' },
             { value: 'new', label: '✦ New' },
             { value: 'verified', label: '✓ Verified' },
+            ...(callerHasLocation ? [{ value: 'distance', label: '➤ Nearest' }] : []),
           ].map(({ value, label }) => (
             <button
               key={value}
@@ -186,7 +218,7 @@ export default function MembersContent({ members, total, searchParams, canChange
           <h3 className="text-white font-semibold text-xl mb-2">No members found</h3>
           <p className="text-white/40 text-sm mb-6">Try adjusting your filters to see more members</p>
           <button
-            onClick={() => { setGender('ALL'); setCity(''); setCountry(''); setOnlineOnly(false); router.push(pathname); }}
+            onClick={() => { setGender('ALL'); setCity(''); setCountry(''); setOnlineOnly(false); setMaxKm(''); router.push(pathname); }}
             className="glass border border-white/20 hover:border-white/40 px-6 py-2.5 rounded-xl text-white/70 hover:text-white text-sm transition-all"
           >
             Clear Filters
@@ -201,6 +233,8 @@ export default function MembersContent({ members, total, searchParams, canChange
             ageMax: searchParams.ageMax,
             city: canChangeCity ? searchParams.city : profileCity,
             online: searchParams.online,
+            sort: searchParams.sort,
+            maxKm: callerHasLocation ? searchParams.maxKm : undefined,
           }}
         />
       )}
