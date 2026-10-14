@@ -98,6 +98,10 @@ model User {
   albums              Album[]
   sparkAnswers        SparkAnswer[]
   photoLikes          PhotoLike[]
+  reviewsGiven        Review[]                  @relation("ReviewsGiven")
+  reviewsReceived     Review[]                  @relation("ReviewsReceived")
+  reviewRequestsSent  ReviewRequest[]           @relation("ReviewRequestsSent")
+  reviewRequestsGot   ReviewRequest[]           @relation("ReviewRequestsGot")
   profileViewsGiven   ProfileView[]             @relation("ViewsGiven")
   profileViewsGot     ProfileView[]             @relation("ViewsGot")
   albumAccess         AlbumAccess[]
@@ -194,6 +198,10 @@ model Profile {
 
   // Show my public photos in the Explore feed (opt-out)
   showInExplore Boolean @default(true)
+
+  // Reviews (denormalised for ranking; recomputed when a review is published/hidden)
+  ratingAvg   Float?
+  ratingCount Int    @default(0)
 
   // Premium perks
   boostedUntil DateTime?
@@ -519,4 +527,52 @@ model PhotoLike {
   @@unique([photoId, userId])
   @@index([photoId, createdAt])
   @@index([userId, createdAt])
+}
+
+// A member (requester) asks someone they met (reviewer) to review them.
+model ReviewRequest {
+  id          String   @id @default(cuid())
+  requesterId String
+  requester   User     @relation("ReviewRequestsSent", fields: [requesterId], references: [id], onDelete: Cascade)
+  reviewerId  String
+  reviewer    User     @relation("ReviewRequestsGot", fields: [reviewerId], references: [id], onDelete: Cascade)
+  // PENDING | COMPLETED | DECLINED | EXPIRED | CANCELLED
+  status      String   @default("PENDING")
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  review      Review?
+
+  @@index([reviewerId, status])
+  @@index([requesterId, status])
+}
+
+// Airbnb-style review: five 1–5 ratings plus a comment. Double-blind: hidden
+// (publishedAt null) until both sides have reviewed each other or 14 days pass.
+model Review {
+  id            String         @id @default(cuid())
+  reviewerId    String
+  reviewer      User           @relation("ReviewsGiven", fields: [reviewerId], references: [id], onDelete: Cascade)
+  revieweeId    String
+  reviewee      User           @relation("ReviewsReceived", fields: [revieweeId], references: [id], onDelete: Cascade)
+  requestId     String?        @unique
+  request       ReviewRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  respectful    Int
+  communication Int
+  authenticity  Int
+  reliability   Int
+  overall       Int
+  comment       String
+  response      String?
+  responseAt    DateTime?
+  publishedAt   DateTime?
+  // Moderation
+  isHidden      Boolean        @default(false)
+  hiddenReason  String?
+  reportCount   Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([reviewerId, revieweeId])
+  @@index([revieweeId, publishedAt])
 }
