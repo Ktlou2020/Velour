@@ -330,6 +330,7 @@ model ConversationParticipant {
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([conversationId, userId])
+  @@index([userId, unreadCount])
 }
 
 model Message {
@@ -468,6 +469,9 @@ model Notification {
   data      Json?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, type])
+  @@index([userId, createdAt])
 }
 
 model PushSubscription {
@@ -478,6 +482,8 @@ model PushSubscription {
   auth      String
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // "Share my date" safety plan — details are emailed to a trusted friend
