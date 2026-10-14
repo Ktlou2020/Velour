@@ -3,6 +3,10 @@ import { auth } from '@/auth'
 import crypto from 'crypto'
 import { db } from '@/lib/db'
 import { isPlatinum } from '@/lib/premium'
+import { rateLimit, TOO_MANY_REQUESTS_MESSAGE } from '@/lib/rate-limit'
+
+// Raster formats only: SVG can carry script.
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'image/avif'])
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const MAX_VIDEO_SIZE = 30 * 1024 * 1024 // 30MB
@@ -78,6 +82,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    if (!rateLimit(`upload:${session.user.id}`, 30, 10 * 60 * 1000)) {
+      return NextResponse.json({ error: TOO_MANY_REQUESTS_MESSAGE }, { status: 429 })
+    }
+
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME
     const apiKey = process.env.CLOUDINARY_API_KEY
     const apiSecret = process.env.CLOUDINARY_API_SECRET
@@ -86,10 +94,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Cloudinary not configured' }, { status: 500 })
     }
 
-    const formData = await req.formData()
-    const file = formData.get('file') as File | null
+    const formData = await req.formData().catch(() => null)
+    const entry = formData?.get('file')
+    const file = entry instanceof File ? entry : null
 
-    if (!file) {
+    if (!formData || !file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
@@ -97,8 +106,8 @@ export async function POST(req: NextRequest) {
       return handleVideoUpload(file, session.user.id, cloudName, apiKey, apiSecret)
     }
 
-    if (!file.type.startsWith('image/')) {
-      return NextResponse.json({ error: 'Only image files are accepted' }, { status: 400 })
+    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+      return NextResponse.json({ error: 'Only JPEG, PNG, WebP, GIF, HEIC or AVIF images are accepted' }, { status: 400 })
     }
 
     if (file.size > MAX_FILE_SIZE) {

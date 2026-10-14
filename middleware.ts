@@ -30,5 +30,8 @@ export default auth((req) => {
 })
 
 export const config = {
+  // Node.js runtime (stable since Next 15.5): the auth jwt callback re-reads
+  // role/isActive from Postgres via Prisma, which cannot run on the edge.
+  runtime: 'nodejs',
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }

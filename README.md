@@ -57,4 +57,21 @@ reminded once (`EventAttendee.reminderSentAt`), so running it more often is safe
      exits when done.
    - **Anything else:** cron-job.org, GitHub Actions `schedule:`, or a server crontab can hit the same URL
      with the `Authorization` header.
+
+## Security
+
+- **Sessions** are JWTs. Every `AUTH_REFRESH_SECONDS` (default 300) the token re-reads `role`, `isActive` and
+  `username` from the database, so bans, demotions, account deletion and password resets end or update existing
+  sessions within that window. `middleware.ts` runs on the Node.js runtime so it can do this check too.
+  Admin pages and `/api/admin/*` additionally verify the role in the database on every request (`requireAdmin()`).
+- **Rate limiting** (`lib/rate-limit.ts`) covers sign-in (per email and per IP), registration, forgot/reset
+  password, verification emails, reports, uploads and account deletion. It is **in-memory and per instance**:
+  fine for a single replica, but it resets on restart and isn't shared — move it to Redis before scaling out.
+  Client IPs come from the first `X-Forwarded-For` entry (set by Railway's proxy).
+- **Passwords**: 8–128 characters with at least one letter and one number, not equal to the email/username;
+  bcrypt cost 12. Password-reset and email-verification tokens are random 256-bit values, stored only as
+  SHA-256 hashes, single-use and time-limited (1 h / 24 h). Forgot-password always returns the same response.
+- **Admins** are granted on each deploy by `scripts/seed-admin.mjs` from `ADMIN_EMAILS` (comma-separated).
+- **Headers** (`next.config.js`): CSP, HSTS, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`,
+  `Permissions-Policy`. When adding a new external image/font/API host, add it to the CSP or it will be blocked.
 # Hush — built 2026-06-03T16:54:21Z

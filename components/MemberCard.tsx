@@ -105,12 +105,12 @@ export default function MemberCard({
           <div className="flex items-start justify-between mb-1">
             <div>
               <h3 className="text-white font-semibold text-base group-hover:text-crimson-400 transition-colors">{username}</h3>
-              <div className="flex items-center gap-1 text-white/50 text-xs mt-0.5">
+              <div className="flex items-center gap-1 text-white/65 text-xs mt-0.5">
                 <MapPin size={10} />
                 <span>{age} · {location}</span>
               </div>
               {distance && (
-                <div className="flex items-center gap-1 text-white/40 text-xs mt-0.5">
+                <div className="flex items-center gap-1 text-white/60 text-xs mt-0.5">
                   <Navigation size={10} />
                   <span>{distance}</span>
                 </div>
@@ -126,7 +126,7 @@ export default function MemberCard({
                 </span>
               ))}
               {interests.length > 3 && (
-                <span className="text-xs text-white/30">+{interests.length - 3}</span>
+                <span className="text-xs text-white/55">+{interests.length - 3}</span>
               )}
             </div>
           )}

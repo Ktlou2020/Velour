@@ -1,14 +1,14 @@
 import { redirect } from 'next/navigation';
-import { auth } from '@/auth';
+import { headers } from 'next/headers';
+import { requireAdmin } from '@/auth';
 import { db } from '@/lib/db';
 import { Users, Activity, TrendingUp, MessageSquare, Heart, Flag } from 'lucide-react';
 import AdminActions from './AdminActions';
 
 export default async function AdminDashboard() {
-  const session = await auth();
-  const sessionUser = session?.user as { id?: string; role?: string } | undefined;
-
-  if (!sessionUser?.id || sessionUser.role !== 'ADMIN') {
+  // Role is checked against the database, not just the session token.
+  const admin = await requireAdmin();
+  if (!admin) {
     redirect('/members');
   }
 
@@ -199,9 +199,12 @@ function SeedButton({ type, label }: { type: 'forums' | 'events'; label: string 
   return (
     <form action={async () => {
       'use server';
+      // Server actions are publicly callable endpoints: re-check admin here.
+      if (!(await requireAdmin())) return;
+      const cookie = (await headers()).get('cookie') ?? '';
       await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/seed`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', cookie },
         body: JSON.stringify({ type }),
       });
     }}>

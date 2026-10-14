@@ -91,11 +91,15 @@ export default function MatchesPage() {
             <img
               src={profile.profilePhoto}
               alt={name}
+              loading="lazy"
+              decoding="async"
+              width={300}
+              height={400}
               className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${expired ? 'grayscale' : ''}`}
             />
           ) : (
             <div className={`w-full h-full bg-gradient-to-br ${gradientFor(other.username)} flex items-center justify-center`}>
-              <span className="text-white/40 text-4xl font-bold font-serif">{initials}</span>
+              <span className="text-white/60 text-4xl font-bold font-serif">{initials}</span>
             </div>
           )}
 
@@ -118,9 +122,9 @@ export default function MatchesPage() {
           {match.expiresAt && !expired && (
             <ExpiryCountdown expiresAt={match.expiresAt} nudge />
           )}
-          {expired && <p className="text-white/40 text-xs">Expired — nobody said hi</p>}
+          {expired && <p className="text-white/60 text-xs">Expired — nobody said hi</p>}
           {location && (
-            <div className="flex items-center gap-1 text-white/30 text-xs">
+            <div className="flex items-center gap-1 text-white/55 text-xs">
               <MapPin size={10} />
               <span className="truncate">{location}</span>
             </div>
@@ -128,16 +132,17 @@ export default function MatchesPage() {
           <div className="flex gap-1.5 pt-1">
             {!expired && <button
               onClick={() => startConversation(other.username)}
-              className="flex-1 flex items-center justify-center gap-1 bg-[#DC143C] hover:bg-[#FF1744] text-white text-xs font-medium py-1.5 rounded-lg transition-colors"
+              className="flex-1 flex items-center justify-center gap-1.5 bg-[#DC143C] hover:bg-[#FF1744] text-white text-xs font-semibold py-2 rounded-lg transition-colors"
             >
-              <MessageCircle size={11} />
+              <MessageCircle size={12} aria-hidden="true" />
               Message
             </button>}
             <Link
               href={`/members/${other.username}`}
-              className="flex items-center justify-center w-8 glass hover:bg-white/10 text-white/60 hover:text-white rounded-lg transition-colors"
+              className="flex items-center justify-center w-9 glass hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors"
+              aria-label={`View ${name}'s profile`}
             >
-              <User size={13} />
+              <User size={14} aria-hidden="true" />
             </Link>
           </div>
         </div>
@@ -150,30 +155,39 @@ export default function MatchesPage() {
       <Navbar />
       <main className="pt-16">
         {/* Header */}
-        <div className="bg-gradient-to-b from-[#0F0A1E] to-[#0A0A0F] py-12 px-4 border-b border-white/5">
+        <div className="bg-gradient-to-b from-[#0F0A1E] to-[#0A0A0F] py-8 sm:py-12 px-4 border-b border-white/5">
           <div className="max-w-5xl mx-auto">
-            <h1 className="font-serif text-4xl font-bold text-white mb-2">Your Matches</h1>
-            <p className="text-white/50">People who liked you back</p>
-            {!loading && (
-              <p className="text-white/30 text-sm mt-1">{activeMatches.length} match{activeMatches.length !== 1 ? 'es' : ''}</p>
+            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-white mb-2">Your matches</h1>
+            <p className="text-white/65">You liked each other — now say hello.</p>
+            {!loading && activeMatches.length > 0 && (
+              <p className="text-white/55 text-sm mt-1">{activeMatches.length} match{activeMatches.length !== 1 ? 'es' : ''}</p>
             )}
           </div>
         </div>
 
         <div className="max-w-5xl mx-auto px-4 py-8">
           {loading ? (
-            <div className="flex justify-center py-20">
-              <div className="w-10 h-10 border-4 border-[#DC143C] border-t-transparent rounded-full animate-spin" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" aria-busy="true" aria-label="Loading matches">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="glass rounded-2xl overflow-hidden">
+                  <div className="aspect-[3/4] skeleton" />
+                  <div className="p-3 space-y-2">
+                    <div className="h-3 w-2/3 rounded skeleton" />
+                    <div className="h-7 rounded-lg skeleton" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : activeMatches.length === 0 && expiredMatches.length === 0 ? (
             <EmptyState
               icon={Heart}
-              title="No matches yet"
-              description="Keep discovering and liking profiles — your matches will appear here"
-              action={{ label: 'Discover People', href: '/discover' }}
+              title="Your first match is close"
+              description="When someone you’ve liked likes you back, they’ll appear here. Start with a few likes in Discover."
+              action={{ label: 'Start discovering', href: '/discover' }}
+              secondaryAction={{ label: 'Browse members', href: '/members' }}
             />
           ) : activeMatches.length === 0 ? (
-            <p className="text-white/40 text-sm text-center py-10">
+            <p className="text-white/60 text-sm text-center py-10">
               No active matches right now. <Link href="/discover" className="text-[#DC143C] hover:text-[#FF1744]">Discover people</Link>
             </p>
           ) : (
@@ -186,7 +200,7 @@ export default function MatchesPage() {
             <div className="mt-10">
               <button
                 onClick={() => setShowExpired(v => !v)}
-                className="flex items-center gap-1.5 text-white/40 hover:text-white/70 text-sm mb-4 transition-colors"
+                className="flex items-center gap-1.5 text-white/60 hover:text-white/70 text-sm mb-4 transition-colors"
               >
                 <ChevronDown size={14} className={`transition-transform ${showExpired ? 'rotate-180' : ''}`} />
                 {expiredMatches.length} expired match{expiredMatches.length !== 1 ? 'es' : ''}

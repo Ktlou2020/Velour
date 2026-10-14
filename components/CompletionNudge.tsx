@@ -49,18 +49,18 @@ export default function CompletionNudge() {
     <div className="glass border border-[#D4AF37]/30 rounded-xl p-4 mb-6 relative">
       <button
         onClick={handleDismiss}
-        className="absolute top-3 right-3 text-white/40 hover:text-white transition-colors"
+        className="absolute top-3 right-3 text-white/60 hover:text-white transition-colors"
         aria-label="Dismiss"
       >
-        <X size={16} />
+        <X size={16} aria-hidden="true" />
       </button>
 
       <div className="pr-6">
         <p className="text-white text-sm font-medium mb-1">
           Your profile is{' '}
           <span className="text-[#D4AF37] font-bold">{completeness}% complete</span>
-          {' '}— members with complete profiles get{' '}
-          <span className="text-white font-semibold">5× more matches</span>
+          {' '}— complete profiles{' '}
+          <span className="text-white font-semibold">get noticed more</span>
         </p>
 
         <div className="mt-3 mb-3 h-1.5 bg-white/10 rounded-full overflow-hidden">

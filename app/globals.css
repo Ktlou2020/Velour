@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&family=Inter:wght@300;400;500;600;700&display=swap');
+/* Fonts are loaded once via <link> in app/layout.tsx (with preconnect). */
 
 @tailwind base;
 @tailwind components;
@@ -26,6 +26,9 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Decorative blurred orbs must never cause sideways scrolling on phones.
+     `clip` (unlike `hidden`) keeps position: sticky working. */
+  overflow-x: clip;
 }
 
 /* Custom Scrollbar */
@@ -139,22 +142,53 @@ body {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(220, 20, 60, 0.15);
 }
 
-/* Input Dark */
-.input-dark {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: white;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
+/* Input Dark — lives in the components layer so Tailwind utilities
+   (px-*, py-*, rounded-*, w-*) on each input still win. */
+@layer components {
+  .input-dark {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.9375rem;
+    line-height: 1.4;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  }
 
-.input-dark::placeholder {
-  color: rgba(255, 255, 255, 0.3);
-}
+  .input-dark::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+  }
 
-.input-dark:focus {
-  outline: none;
-  border-color: #DC143C;
-  box-shadow: 0 0 0 3px rgba(220, 20, 60, 0.15);
+  .input-dark:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .input-dark:focus {
+    outline: none;
+    border-color: #DC143C;
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: 0 0 0 3px rgba(220, 20, 60, 0.2);
+  }
+
+  select.input-dark option {
+    background: #14141c;
+    color: white;
+  }
+
+  /* Reusable section eyebrow + skeleton block */
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 100%);
+    background-size: 200% 100%;
+    animation: velour-shimmer 1.6s ease-in-out infinite;
+  }
 }
 
 /* Shimmer */
@@ -258,4 +292,72 @@ body {
 @keyframes velour-shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
+}
+
+/* ── Accessibility ─────────────────────────────────────────────── */
+
+/* Visible keyboard focus on every interactive element (mouse clicks stay clean). */
+:where(a, button, [role="button"], input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid #D4AF37;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.input-dark:focus-visible {
+  outline: none;
+}
+
+/* Skip link — hidden until focused */
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -100px;
+  z-index: 10000;
+  background: #DC143C;
+  color: #fff;
+  padding: 0.6rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.skip-link:focus {
+  top: 1rem;
+}
+
+/* Keep bottom-fixed content clear of the iOS home indicator */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Respect users who prefer less motion: stop decorative/looping animation. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
+  .card-hover:hover,
+  .btn-crimson:hover,
+  .btn-gold:hover {
+    transform: none;
+  }
+}
+
+/* Full-height chat layout: on phones, stop above the fixed bottom tab bar. */
+.h-chat {
+  height: calc(100vh - 4rem);
+  height: calc(100dvh - 4rem - env(safe-area-inset-bottom));
+}
+@media (min-width: 768px) {
+  .h-chat {
+    height: 100vh;
+    height: 100dvh;
+  }
 }

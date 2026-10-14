@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { requireAdmin } from '@/auth'
+import { isValidId } from '@/lib/security'
 import { db } from '@/lib/db'
 import { sendPushToUser } from '@/lib/push'
 
 export async function GET() {
   try {
-    const session = await auth()
-    const sessionUser = session?.user as { id?: string; role?: string } | undefined
-    if (!sessionUser?.id || sessionUser.role !== 'ADMIN') {
+    if (!(await requireAdmin())) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -36,16 +35,23 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await auth()
-    const sessionUser = session?.user as { id?: string; role?: string } | undefined
-    if (!sessionUser?.id || sessionUser.role !== 'ADMIN') {
+    if (!(await requireAdmin())) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { requestId, action, notes } = await req.json() as {
-      requestId: string
-      action: 'approve' | 'reject'
-      notes?: string
+    const { requestId, action, notes: rawNotes } = await req.json().catch(() => ({})) as {
+      requestId?: unknown
+      action?: unknown
+      notes?: unknown
+    }
+    if (!isValidId(requestId) || (action !== 'approve' && action !== 'reject')) {
+      return NextResponse.json({ error: 'Valid requestId and action (approve|reject) are required' }, { status: 400 })
+    }
+    const notes = typeof rawNotes === 'string' ? rawNotes.slice(0, 500) : undefined
+
+    const existing = await db.verificationRequest.findUnique({ where: { id: requestId }, select: { id: true } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Verification request not found' }, { status: 404 })
     }
 
     const request = await db.verificationRequest.update({

@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import InfiniteMembers from '@/components/InfiniteMembers';
 import Link from 'next/link';
-import { Lock, Crown, Navigation } from 'lucide-react';
+import { Lock, Crown, Navigation, Users } from 'lucide-react';
 import { CITIES_BY_COUNTRY, COUNTRIES } from '@/lib/cities';
 import type { MemberData } from './page';
 
@@ -61,13 +61,14 @@ export default function MembersContent({ members, total, searchParams, canChange
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-4 mb-8 items-start sm:items-center flex-wrap">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {GENDER_FILTERS.map((g) => (
             <button
               key={g}
               onClick={() => { setGender(g); applyFilters({ gender: g }); }}
+              aria-pressed={gender === g}
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                gender === g ? 'bg-[#DC143C] text-white' : 'glass text-white/60 hover:text-white'
+                gender === g ? 'bg-[#DC143C] text-white' : 'glass text-white/75 hover:text-white'
               }`}
             >
               {GENDER_LABELS[g]}
@@ -77,7 +78,7 @@ export default function MembersContent({ members, total, searchParams, canChange
 
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2">
-            <span className="text-white/40 text-sm">Age:</span>
+            <span className="text-white/70 text-sm">Age</span>
             <input
               type="number" min={18} max={99}
               value={ageMin}
@@ -85,7 +86,7 @@ export default function MembersContent({ members, total, searchParams, canChange
               className="input-dark w-16 px-2 py-1.5 rounded-lg text-sm text-center"
               aria-label="Min age"
             />
-            <span className="text-white/30">–</span>
+            <span className="text-white/55">–</span>
             <input
               type="number" min={18} max={99}
               value={ageMax}
@@ -120,8 +121,8 @@ export default function MembersContent({ members, total, searchParams, canChange
             </div>
           ) : (
             <div className="flex items-center gap-2 glass px-3 py-1.5 rounded-lg">
-              <Lock size={12} className="text-white/30" />
-              <span className="text-white/50 text-sm">{profileCity || 'Your city'}</span>
+              <Lock size={12} className="text-white/55" />
+              <span className="text-white/65 text-sm">{profileCity || 'Your city'}</span>
               <a href="/upgrade" className="flex items-center gap-1 text-[#D4AF37] text-xs font-medium hover:underline ml-1">
                 <Crown size={10} />
                 Upgrade
@@ -131,7 +132,7 @@ export default function MembersContent({ members, total, searchParams, canChange
 
           {/* Distance filter — needs the caller's location */}
           <div className="flex items-center gap-2">
-            <Navigation size={12} className="text-white/30" />
+            <Navigation size={12} className="text-white/55" />
             <select
               value={callerHasLocation ? maxKm : ''}
               onChange={(e) => { setMaxKm(e.target.value); applyFilters({ maxKm: e.target.value || undefined }); }}
@@ -157,7 +158,7 @@ export default function MembersContent({ members, total, searchParams, canChange
               />
               <div className="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-[#DC143C] transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-all peer-checked:after:translate-x-4" />
             </div>
-            <span className="text-white/60 text-sm">Online Now</span>
+            <span className="text-white/70 text-sm">Online now</span>
           </label>
 
           <button
@@ -170,26 +171,26 @@ export default function MembersContent({ members, total, searchParams, canChange
       </div>
 
       {!canChangeCity && profileCity && (
-        <p className="text-white/30 text-xs mb-4 flex items-center gap-1.5">
-          <Lock size={10} />
-          Showing members in <span className="text-white/50">{profileCity}</span>. Upgrade to Gold or Platinum to search other cities.
+        <p className="text-white/60 text-xs mb-4 leading-relaxed">
+          <Lock size={10} className="inline -mt-0.5 mr-1.5" aria-hidden="true" />
+          Showing members in <span className="text-white/65">{profileCity}</span>. Upgrade to Gold or Platinum to search other cities.
         </p>
       )}
 
       {!callerHasLocation && (
-        <p className="text-white/30 text-xs mb-4 flex items-center gap-1.5">
-          <Navigation size={10} />
-          <Link href="/profile" className="text-[#D4AF37]/80 hover:text-[#D4AF37] hover:underline">Set your location</Link>
+        <p className="text-white/60 text-xs mb-4 leading-relaxed">
+          <Navigation size={10} className="inline -mt-0.5 mr-1.5" aria-hidden="true" />
+          <Link href="/profile" className="text-[#D4AF37] hover:underline">Set your location</Link>{' '}
           to see how far away members are and search by distance.
         </p>
       )}
 
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <p className="text-white/50 text-sm">
+        <p className="text-white/65 text-sm">
           Showing <span className="text-white">{members.length}</span> of <span className="text-white">{total.toLocaleString()}</span> members
         </p>
         <div className="flex items-center gap-1.5">
-          <span className="text-white/30 text-xs mr-1">Sort:</span>
+          <span className="text-white/55 text-xs mr-1">Sort:</span>
           {[
             { value: 'online', label: '● Online' },
             { value: 'new', label: '✦ New' },
@@ -199,8 +200,9 @@ export default function MembersContent({ members, total, searchParams, canChange
             <button
               key={value}
               onClick={() => { setSortBy(value); applyFilters({ sort: value }); }}
+              aria-pressed={sortBy === value}
               className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                sortBy === value ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'
+                sortBy === value ? 'bg-white/10 text-white' : 'text-white/65 hover:text-white'
               }`}
             >
               {label}
@@ -211,17 +213,19 @@ export default function MembersContent({ members, total, searchParams, canChange
 
       {/* Member Grid with Infinite Scroll */}
       {members.length === 0 ? (
-        <div className="text-center py-24">
-          <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-            <span className="text-4xl">👥</span>
+        <div className="text-center py-16 sm:py-20 px-6 glass rounded-3xl">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#DC143C]/20 to-[#D4AF37]/10 border border-white/10 flex items-center justify-center mx-auto mb-5">
+            <Users size={30} className="text-[#FF4D6D]" aria-hidden="true" />
           </div>
-          <h3 className="text-white font-semibold text-xl mb-2">No members found</h3>
-          <p className="text-white/40 text-sm mb-6">Try adjusting your filters to see more members</p>
+          <h2 className="font-serif text-white font-bold text-2xl mb-2">No one matches these filters — yet</h2>
+          <p className="text-white/70 text-sm sm:text-base mb-7 max-w-md mx-auto">
+            Hush is new and growing every week. Try widening your age range or distance, or check back soon.
+          </p>
           <button
             onClick={() => { setGender('ALL'); setCity(''); setCountry(''); setOnlineOnly(false); setMaxKm(''); router.push(pathname); }}
-            className="glass border border-white/20 hover:border-white/40 px-6 py-2.5 rounded-xl text-white/70 hover:text-white text-sm transition-all"
+            className="bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] px-7 py-3 rounded-xl text-white text-sm font-semibold transition-all"
           >
-            Clear Filters
+            Clear all filters
           </button>
         </div>
       ) : (

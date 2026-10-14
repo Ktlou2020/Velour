@@ -63,7 +63,7 @@ interface Props {
 }
 
 const TIER_COLORS = {
-  FREE: 'text-white/50 border-white/20',
+  FREE: 'text-white/65 border-white/20',
   GOLD: 'text-[#D4AF37] border-[#D4AF37]/30 bg-[#D4AF37]/10',
   PLATINUM: 'text-purple-400 border-purple-500/30 bg-purple-500/10',
 };
@@ -112,7 +112,8 @@ export default function ProfileClient({ session, initialProfile }: Props) {
   const username = profile.username || user.username || user.email?.split('@')[0] || 'User';
   const name = profile.displayName || displayName || user.name || username;
   const tier = profile.membershipTier || 'FREE';
-  const completeness = profile.completeness ?? 60;
+  // Display only: clamp so a stale or over-counted value never shows e.g. "111%".
+  const completeness = Math.min(100, Math.max(0, Math.round(profile.completeness ?? 60)));
   const photos: Photo[] = profile.photos || [];
 
   async function saveBio() {
@@ -304,6 +305,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                   <input
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
+                    aria-label="Display name"
                     className="input-dark font-serif text-2xl font-bold text-white px-3 py-1 rounded-lg"
                   />
                 ) : (
@@ -312,7 +314,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                 <div className={`flex items-center gap-1 border px-3 py-1 rounded-full ${TIER_COLORS[tier]}`}>
                   {tier === 'GOLD' && <Crown size={12} />}
                   {tier === 'PLATINUM' && <Star size={12} />}
-                  <span className="text-xs font-bold">{tier} Member</span>
+                  <span className="text-xs font-bold">{tier.charAt(0) + tier.slice(1).toLowerCase()} member</span>
                 </div>
                 {profile.isVerified && (
                   <div className="flex items-center gap-1 glass px-3 py-1 rounded-full">
@@ -328,6 +330,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                     <select
                       value={country}
                       onChange={(e) => { setCountry(e.target.value); setCity(''); }}
+                      aria-label="Country"
                       className="input-dark text-sm px-3 py-1.5 rounded-lg"
                     >
                       <option value="">Country</option>
@@ -336,23 +339,24 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                     <select
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
+                      aria-label="City"
                       className="input-dark text-sm px-3 py-1.5 rounded-lg"
                       disabled={!country}
                     >
                       <option value="">City</option>
                       {(CITIES_BY_COUNTRY[country] ?? []).map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
-                    <button onClick={saveFields} disabled={saving} className="w-8 h-8 bg-[#DC143C] rounded-lg flex items-center justify-center hover:bg-[#FF1744] transition-colors">
+                    <button onClick={saveFields} disabled={saving} aria-label="Save" className="w-8 h-8 bg-[#DC143C] rounded-lg flex items-center justify-center hover:bg-[#FF1744] transition-colors">
                       <Check size={14} className="text-white" />
                     </button>
-                    <button onClick={() => setEditingFields(false)} className="w-8 h-8 glass rounded-lg flex items-center justify-center text-white/50 hover:text-white">
+                    <button onClick={() => setEditingFields(false)} aria-label="Cancel" className="w-8 h-8 glass rounded-lg flex items-center justify-center text-white/65 hover:text-white">
                       <X size={14} />
                     </button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <p className="text-white/50 text-sm">@{username} · {city || 'Add city'}, {country || 'Add country'}</p>
-                    <button onClick={() => setEditingFields(true)} className="text-white/30 hover:text-white/60 transition-colors" aria-label="Edit profile fields">
+                    <p className="text-white/65 text-sm">@{username} · {city || 'Add city'}, {country || 'Add country'}</p>
+                    <button onClick={() => setEditingFields(true)} className="text-white/55 hover:text-white/60 transition-colors" aria-label="Edit profile fields">
                       <Edit2 size={12} />
                     </button>
                   </div>
@@ -362,14 +366,14 @@ export default function ProfileClient({ session, initialProfile }: Props) {
               {/* Completeness */}
               <div>
                 <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="text-white/50">Profile Completeness</span>
-                  <span className="text-[#DC143C] font-semibold">{completeness}%</span>
+                  <span className="text-white/65">Profile completeness</span>
+                  <span className="text-[#FF4D6D] font-semibold">{completeness}%</span>
                 </div>
                 <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-[#DC143C] to-[#8F0D25] rounded-full transition-all" style={{ width: `${completeness}%` }} />
                 </div>
                 {completeness < 100 && (
-                  <p className="text-white/30 text-xs mt-1">Complete your profile to get more matches</p>
+                  <p className="text-white/60 text-xs mt-1.5">Complete profiles get noticed more — add photos and answer a prompt or two.</p>
                 )}
               </div>
             </div>
@@ -383,7 +387,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
               <div key={label} className="glass rounded-2xl p-4 text-center">
                 <Icon className={`${color} mx-auto mb-2`} size={20} />
                 <div className="text-white text-2xl font-bold mb-0.5">{value}</div>
-                <div className="text-white/40 text-xs">{label}</div>
+                <div className="text-white/60 text-xs">{label}</div>
               </div>
             ))}
           </div>
@@ -396,7 +400,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                 About Me
               </h2>
               {!editingBio && (
-                <button onClick={() => setEditingBio(true)} className="text-white/30 hover:text-white/60 transition-colors" aria-label="Edit bio">
+                <button onClick={() => setEditingBio(true)} className="text-white/55 hover:text-white/60 transition-colors" aria-label="Edit bio">
                   <Edit2 size={14} />
                 </button>
               )}
@@ -412,9 +416,9 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                   aria-label="Bio"
                 />
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-white/30 text-xs">{bio.length}/500</span>
+                  <span className="text-white/55 text-xs">{bio.length}/500</span>
                   <div className="flex gap-2">
-                    <button onClick={() => setEditingBio(false)} className="glass px-3 py-1.5 rounded-lg text-white/50 hover:text-white text-xs transition-colors">Cancel</button>
+                    <button onClick={() => setEditingBio(false)} className="glass px-3 py-1.5 rounded-lg text-white/65 hover:text-white text-xs transition-colors">Cancel</button>
                     <button onClick={saveBio} disabled={saving} className="bg-[#DC143C] hover:bg-[#FF1744] text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60">
                       {saving ? 'Saving...' : 'Save'}
                     </button>
@@ -423,7 +427,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
               </div>
             ) : (
               <p className="text-white/60 text-sm leading-relaxed">
-                {bio || <span className="text-white/30 italic">No bio yet. Click the edit button to add one.</span>}
+                {bio || <span className="text-white/55 italic">No bio yet. Click the edit button to add one.</span>}
               </p>
             )}
           </div>
@@ -441,21 +445,21 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                 <Camera size={16} className="text-[#DC143C]" />
                 My Photos
               </h2>
-              <span className="text-white/30 text-xs">{photos.length}/9 photos</span>
+              <span className="text-white/55 text-xs">{photos.length}/9 photos</span>
             </div>
 
             {/* Folder tabs */}
             <div className="flex gap-2 mb-4">
               <button
                 onClick={() => setPhotoTab('public')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${photoTab === 'public' ? 'bg-[#DC143C] text-white' : 'glass text-white/50 hover:text-white'}`}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${photoTab === 'public' ? 'bg-[#DC143C] text-white' : 'glass text-white/65 hover:text-white'}`}
               >
                 <Globe size={14} />
                 Public ({photos.filter(p => !p.isPrivate).length})
               </button>
               <button
                 onClick={() => setPhotoTab('private')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${photoTab === 'private' ? 'bg-white/10 text-white' : 'glass text-white/50 hover:text-white'}`}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${photoTab === 'private' ? 'bg-white/10 text-white' : 'glass text-white/65 hover:text-white'}`}
               >
                 <Lock size={14} />
                 Private ({photos.filter(p => p.isPrivate).length})
@@ -463,7 +467,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
             </div>
 
             {photoTab === 'private' && (
-              <p className="text-white/30 text-xs mb-3 flex items-center gap-1.5">
+              <p className="text-white/55 text-xs mb-3 flex items-center gap-1.5">
                 <Lock size={10} />
                 Private photos are only visible to you and people you choose to share them with.
               </p>
@@ -514,8 +518,8 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                     <div className="w-6 h-6 border-2 border-[#DC143C] border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      <Upload size={20} className="text-white/20" />
-                      <span className="text-white/20 text-xs">Add to {photoTab === 'private' ? 'Private' : 'Public'}</span>
+                      <Upload size={20} className="text-white/45" />
+                      <span className="text-white/45 text-xs">Add to {photoTab === 'private' ? 'Private' : 'Public'}</span>
                     </>
                   )}
                 </button>
@@ -525,7 +529,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload(e, false)} />
             <input ref={privateFileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload(e, true)} />
 
-            <p className="text-white/30 text-xs mt-3">JPEG, PNG, WEBP accepted. Hover a photo to manage it.</p>
+            <p className="text-white/55 text-xs mt-3">JPEG, PNG, WEBP accepted. Hover a photo to manage it.</p>
           </div>
 
           {/* Video profile */}
@@ -550,7 +554,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-white font-semibold capitalize">{tier} Tier</p>
-                <p className="text-white/40 text-sm mt-0.5">
+                <p className="text-white/60 text-sm mt-0.5">
                   {tier === 'FREE' && 'Upgrade to unlock unlimited messaging, advanced filters & more'}
                   {tier === 'GOLD' && 'You have access to all Gold features'}
                   {tier === 'PLATINUM' && 'You have access to all Platinum features'}
@@ -599,7 +603,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                 </div>
                 <button
                   onClick={unlinkCouple}
-                  className="flex items-center gap-1.5 text-sm glass border border-white/10 hover:border-red-500/30 text-white/50 hover:text-red-400 px-4 py-2 rounded-xl transition-all"
+                  className="flex items-center gap-1.5 text-sm glass border border-white/10 hover:border-red-500/30 text-white/65 hover:text-red-400 px-4 py-2 rounded-xl transition-all"
                 >
                   <Link2Off size={14} />
                   Unlink Partner
@@ -607,7 +611,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
               </div>
             ) : (
               <div>
-                <p className="text-white/50 text-sm mb-4">Link your profile with your partner to show you&apos;re a couple.</p>
+                <p className="text-white/65 text-sm mb-4">Link your profile with your partner to show you&apos;re a couple.</p>
 
                 {/* Pending invite */}
                 {pendingCoupleInvite && (
@@ -640,13 +644,14 @@ export default function ProfileClient({ session, initialProfile }: Props) {
 
       {/* Couple Invite Modal */}
       {coupleModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="couple-modal-title">
           <div className="glass rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="text-white font-semibold text-lg mb-1">Link with Partner</h3>
-            <p className="text-white/50 text-sm mb-4">Enter your partner&apos;s username to send them a link invitation.</p>
+            <h3 id="couple-modal-title" className="text-white font-semibold text-lg mb-1">Link with your partner</h3>
+            <p className="text-white/65 text-sm mb-4">Enter your partner&apos;s username to send them a link invitation.</p>
             <input
               type="text"
               placeholder="Partner's username"
+              aria-label="Partner's username"
               value={partnerUsernameInput}
               onChange={(e) => setPartnerUsernameInput(e.target.value)}
               className="input-dark w-full px-4 py-3 rounded-xl text-sm mb-3"
@@ -667,7 +672,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
               </button>
               <button
                 onClick={() => { setCoupleModalOpen(false); setCoupleMessage(''); setPartnerUsernameInput(''); }}
-                className="glass px-4 py-2.5 rounded-xl text-white/50 hover:text-white text-sm transition-colors"
+                className="glass px-4 py-2.5 rounded-xl text-white/65 hover:text-white text-sm transition-colors"
               >
                 Cancel
               </button>

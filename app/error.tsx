@@ -8,7 +8,7 @@ interface Props {
   reset: () => void;
 }
 
-export default function Error({ error, reset }: Props) {
+export default function ErrorPage({ error, reset }: Props) {
   useEffect(() => {
     console.error('App error:', error);
   }, [error]);
@@ -35,7 +35,8 @@ export default function Error({ error, reset }: Props) {
         </Link>
 
         {/* 500 */}
-        <h1
+        <p
+          aria-hidden="true"
           className="font-serif font-bold mb-4 select-none"
           style={{
             fontSize: 'clamp(6rem, 20vw, 10rem)',
@@ -47,20 +48,18 @@ export default function Error({ error, reset }: Props) {
           }}
         >
           500
+        </p>
+
+        <h1 className="font-serif text-2xl md:text-3xl font-bold text-white mb-3">
+          Something went wrong
         </h1>
 
-        <h2 className="font-serif text-2xl md:text-3xl font-bold text-white mb-3">
-          Something went wrong
-        </h2>
-
-        {error?.message && (
-          <p className="text-white/40 text-sm mb-3 font-mono bg-white/5 rounded-lg px-4 py-2 max-w-sm mx-auto truncate">
-            {error.message}
-          </p>
+        {error?.digest && (
+          <p className="text-white/50 text-xs mb-3 font-mono">Reference: {error.digest}</p>
         )}
 
-        <p className="text-white/50 text-base mb-10">
-          An unexpected error occurred. Please try again.
+        <p className="text-white/65 text-base mb-10">
+          We hit a snag on our side. Your account and messages are safe — please try again.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -68,13 +67,13 @@ export default function Error({ error, reset }: Props) {
             onClick={reset}
             className="bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white px-8 py-3 rounded-xl font-semibold text-sm transition-all shadow-lg shadow-[#DC143C]/20"
           >
-            Try Again
+            Try again
           </button>
           <Link
             href="/"
             className="glass border border-white/20 hover:border-white/40 text-white/70 hover:text-white px-8 py-3 rounded-xl font-semibold text-sm transition-all"
           >
-            Go Home
+            Go home
           </Link>
         </div>
       </div>

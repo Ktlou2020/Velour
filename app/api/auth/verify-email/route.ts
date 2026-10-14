@@ -1,25 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { hashToken } from '@/lib/security'
 
+// Called via fetch() from /auth/verify-email. Returns JSON (not a redirect) so
+// the page can tell success from failure.
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url)
-    const token = searchParams.get('token')
+    const token = req.nextUrl.searchParams.get('token')
 
-    if (!token) {
-      return NextResponse.redirect(new URL('/auth/verify-email?error=missing', req.url))
+    if (!token || token.length > 200) {
+      return NextResponse.json({ error: 'missing' }, { status: 400 })
     }
 
+    // Tokens are stored as SHA-256 hashes, single-use, with an expiry.
     const user = await db.user.findFirst({
       where: {
-        emailVerifyToken: token,
+        emailVerifyToken: hashToken(token),
         emailVerifyExpiry: { gt: new Date() },
       },
       select: { id: true },
     })
 
     if (!user) {
-      return NextResponse.redirect(new URL('/auth/verify-email?error=invalid', req.url))
+      return NextResponse.json({ error: 'invalid' }, { status: 400 })
     }
 
     await db.user.update({
@@ -31,9 +34,9 @@ export async function GET(req: NextRequest) {
       },
     })
 
-    return NextResponse.redirect(new URL('/members?verified=1', req.url))
+    return NextResponse.json({ verified: true })
   } catch (error) {
-    console.error('GET /api/auth/verify-email error:', error)
-    return NextResponse.redirect(new URL('/auth/verify-email?error=server', req.url))
+    console.error('GET /api/auth/verify-email error:', error instanceof Error ? error.message : error)
+    return NextResponse.json({ error: 'server' }, { status: 500 })
   }
 }

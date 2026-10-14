@@ -60,14 +60,14 @@ export default function CreateEventModal({ onClose, onCreated }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center px-4" onClick={onClose}>
       <div
         className="glass-dark border border-white/10 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <h2 className="text-white font-bold text-lg font-serif">Create Event</h2>
-          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-white/60 hover:text-white transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -80,9 +80,9 @@ export default function CreateEventModal({ onClose, onCreated }: Props) {
           )}
 
           <div>
-            <label className="text-white/50 text-xs uppercase tracking-widest mb-1.5 block">Title *</label>
+            <label className="text-white/65 text-xs uppercase tracking-widest mb-1.5 block">Title *</label>
             <div className="relative">
-              <FileText size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+              <FileText size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/55" />
               <input
                 value={form.title}
                 onChange={(e) => set('title', e.target.value)}
@@ -93,7 +93,7 @@ export default function CreateEventModal({ onClose, onCreated }: Props) {
           </div>
 
           <div>
-            <label className="text-white/50 text-xs uppercase tracking-widest mb-1.5 block">Description *</label>
+            <label className="text-white/65 text-xs uppercase tracking-widest mb-1.5 block">Description *</label>
             <textarea
               value={form.description}
               onChange={(e) => set('description', e.target.value)}
@@ -105,9 +105,9 @@ export default function CreateEventModal({ onClose, onCreated }: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-white/50 text-xs uppercase tracking-widest mb-1.5 block">Start Date *</label>
+              <label className="text-white/65 text-xs uppercase tracking-widest mb-1.5 block">Start Date *</label>
               <div className="relative">
-                <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+                <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/55" />
                 <input
                   type="datetime-local"
                   value={form.date}
@@ -117,7 +117,7 @@ export default function CreateEventModal({ onClose, onCreated }: Props) {
               </div>
             </div>
             <div>
-              <label className="text-white/50 text-xs uppercase tracking-widest mb-1.5 block">End Date</label>
+              <label className="text-white/65 text-xs uppercase tracking-widest mb-1.5 block">End Date</label>
               <input
                 type="datetime-local"
                 value={form.endDate}
@@ -128,9 +128,9 @@ export default function CreateEventModal({ onClose, onCreated }: Props) {
           </div>
 
           <div>
-            <label className="text-white/50 text-xs uppercase tracking-widest mb-1.5 block">Location *</label>
+            <label className="text-white/65 text-xs uppercase tracking-widest mb-1.5 block">Location *</label>
             <div className="relative">
-              <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+              <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/55" />
               <input
                 value={form.location}
                 onChange={(e) => set('location', e.target.value)}
@@ -142,7 +142,7 @@ export default function CreateEventModal({ onClose, onCreated }: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-white/50 text-xs uppercase tracking-widest mb-1.5 block">City</label>
+              <label className="text-white/65 text-xs uppercase tracking-widest mb-1.5 block">City</label>
               <input
                 value={form.city}
                 onChange={(e) => set('city', e.target.value)}
@@ -151,9 +151,9 @@ export default function CreateEventModal({ onClose, onCreated }: Props) {
               />
             </div>
             <div>
-              <label className="text-white/50 text-xs uppercase tracking-widest mb-1.5 block">Max Attendees</label>
+              <label className="text-white/65 text-xs uppercase tracking-widest mb-1.5 block">Max Attendees</label>
               <div className="relative">
-                <Users size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+                <Users size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/55" />
                 <input
                   type="number"
                   value={form.maxAttendees}
@@ -167,9 +167,9 @@ export default function CreateEventModal({ onClose, onCreated }: Props) {
           </div>
 
           <div>
-            <label className="text-white/50 text-xs uppercase tracking-widest mb-1.5 block">Category</label>
+            <label className="text-white/65 text-xs uppercase tracking-widest mb-1.5 block">Category</label>
             <div className="relative">
-              <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+              <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/55" />
               <select
                 value={form.category}
                 onChange={(e) => set('category', e.target.value)}

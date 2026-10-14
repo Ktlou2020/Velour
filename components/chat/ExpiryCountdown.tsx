@@ -43,7 +43,7 @@ export default function ExpiryCountdown({ expiresAt, nudge = false, className = 
         {expired ? 'Match expired' : label}
       </span>
       {nudge && !expired && (
-        <span className="text-[11px] text-white/40">Say hi before it expires</span>
+        <span className="text-[11px] text-white/60">Say hi before it expires</span>
       )}
     </span>
   );

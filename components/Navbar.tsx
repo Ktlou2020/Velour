@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Logo from './Logo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
@@ -54,17 +55,13 @@ export default function Navbar() {
   }, [status]);
 
   return (
+    <>
     <div className="fixed top-0 left-0 right-0 z-40">
-    <nav className="glass-dark border-b border-white/5" role="navigation" aria-label="Main navigation">
+    <nav className="glass-dark border-b border-white/5" aria-label="Main">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2" aria-label="Hush home">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center shadow-lg shadow-[#DC143C]/25">
-              <span className="text-white font-bold text-lg font-serif">V</span>
-            </div>
-            <span className="text-white font-bold text-xl tracking-widest font-serif">HUSH</span>
-          </Link>
+          <Logo />
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1">
@@ -103,13 +100,14 @@ export default function Navbar() {
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                     className="flex items-center gap-2 glass px-3 py-1.5 rounded-lg hover:border-white/20 transition-all"
                     aria-expanded={userMenuOpen}
-                    aria-haspopup="true"
+                    aria-haspopup="menu"
+                    aria-label="Account menu"
                   >
                     <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#8F0D25] to-[#DC143C] flex items-center justify-center text-white text-xs font-bold">
                       {initials}
                     </div>
                     <span className="text-white text-sm font-medium max-w-24 truncate">{username}</span>
-                    <ChevronDown size={14} className={`text-white/50 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={14} className={`text-white/65 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                   </button>
 
                   {userMenuOpen && (
@@ -202,7 +200,7 @@ export default function Navbar() {
 
           {/* Mobile Toggle */}
           <button
-            className="md:hidden text-white/80 hover:text-white p-1"
+            className="md:hidden text-white/80 hover:text-white w-10 h-10 -mr-2 flex items-center justify-center rounded-lg"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle navigation menu"
             aria-expanded={mobileOpen}
@@ -308,7 +306,8 @@ export default function Navbar() {
         </div>
       )}
     </nav>
-    {session && <ProfileCompletionBanner />}
     </div>
+    {session && <ProfileCompletionBanner />}
+    </>
   );
 }

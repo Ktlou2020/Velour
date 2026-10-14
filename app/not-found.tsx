@@ -1,4 +1,7 @@
 import Link from 'next/link';
+import { LogoMark } from '@/components/Logo'
+
+export const metadata = { title: 'Page not found' };
 
 export default function NotFound() {
   return (
@@ -20,14 +23,13 @@ export default function NotFound() {
       <div className="relative z-10 text-center max-w-lg mx-auto">
         {/* Logo */}
         <Link href="/" className="inline-flex items-center gap-2 mb-12" aria-label="Hush home">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center shadow-lg shadow-[#DC143C]/25">
-            <span className="text-white font-bold text-xl font-serif">V</span>
-          </div>
+          <LogoMark size="md" />
           <span className="text-white font-bold text-2xl tracking-widest font-serif">HUSH</span>
         </Link>
 
         {/* 404 */}
-        <h1
+        <p
+          aria-hidden="true"
           className="font-serif font-bold mb-4 select-none"
           style={{
             fontSize: 'clamp(6rem, 20vw, 10rem)',
@@ -39,13 +41,13 @@ export default function NotFound() {
           }}
         >
           404
-        </h1>
+        </p>
 
-        <h2 className="font-serif text-2xl md:text-3xl font-bold text-white mb-3">
-          Page Not Found
-        </h2>
-        <p className="text-white/50 text-base mb-10">
-          This page doesn&apos;t exist or has been removed.
+        <h1 className="font-serif text-2xl md:text-3xl font-bold text-white mb-3">
+          This page slipped away
+        </h1>
+        <p className="text-white/65 text-base mb-10">
+          The link may be old, or the page may have moved. Let&apos;s get you somewhere better.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -53,13 +55,13 @@ export default function NotFound() {
             href="/members"
             className="bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white px-8 py-3 rounded-xl font-semibold text-sm transition-all shadow-lg shadow-[#DC143C]/20"
           >
-            Browse Members
+            Browse members
           </Link>
           <Link
             href="/"
             className="glass border border-white/20 hover:border-white/40 text-white/70 hover:text-white px-8 py-3 rounded-xl font-semibold text-sm transition-all"
           >
-            Go Home
+            Go home
           </Link>
         </div>
       </div>

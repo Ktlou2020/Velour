@@ -1,8 +1,9 @@
 import Link from 'next/link'
+import { LogoMark } from '@/components/Logo'
 import { ArrowLeft } from 'lucide-react'
 
 export const metadata = {
-  title: 'Privacy Policy — Hush',
+  title: 'Privacy Policy',
   description: 'Privacy Policy for Hush, compliant with POPIA (South Africa).',
 }
 
@@ -19,9 +20,7 @@ export default function PrivacyPage() {
             <span className="text-sm">Back to Hush</span>
           </Link>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center">
-              <span className="text-white font-serif font-bold text-sm">V</span>
-            </div>
+            <LogoMark size="sm" />
             <span className="font-serif font-bold tracking-wide text-white">HUSH</span>
           </div>
         </div>
@@ -36,7 +35,7 @@ export default function PrivacyPage() {
             <div className="h-px flex-1 bg-gradient-to-l from-[#DC143C]/50 to-transparent" />
           </div>
           <h1 className="text-4xl font-serif font-bold text-white mt-4 mb-3">Privacy Policy</h1>
-          <p className="text-gray-500 text-sm">Last updated: {lastUpdated} · Compliant with POPIA (Act 4 of 2013)</p>
+          <p className="text-gray-400 text-sm">Last updated: {lastUpdated} · Compliant with POPIA (Act 4 of 2013)</p>
         </div>
 
         <div className="space-y-8">
@@ -56,7 +55,7 @@ export default function PrivacyPage() {
               <span className="w-8 h-8 rounded-lg bg-[#DC143C]/15 flex items-center justify-center text-[#DC143C] text-sm font-bold flex-shrink-0">1</span>
               Information We Collect
             </h2>
-            <div className="space-y-4 text-gray-300 leading-relaxed pl-11">
+            <div className="space-y-4 text-gray-300 leading-relaxed sm:pl-11">
               <div>
                 <h3 className="text-white font-semibold mb-2">1.1 Information you provide directly</h3>
                 <ul className="list-disc list-inside space-y-1 pl-4">
@@ -93,7 +92,7 @@ export default function PrivacyPage() {
               <span className="w-8 h-8 rounded-lg bg-[#DC143C]/15 flex items-center justify-center text-[#DC143C] text-sm font-bold flex-shrink-0">2</span>
               How We Use Your Information
             </h2>
-            <div className="space-y-3 text-gray-300 leading-relaxed pl-11">
+            <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
               <p>We use your personal information to:</p>
               <ul className="list-disc list-inside space-y-1.5 pl-4">
                 <li>Create and manage your account</li>
@@ -116,7 +115,7 @@ export default function PrivacyPage() {
               <span className="w-8 h-8 rounded-lg bg-[#DC143C]/15 flex items-center justify-center text-[#DC143C] text-sm font-bold flex-shrink-0">3</span>
               Sharing with Third Parties
             </h2>
-            <div className="space-y-3 text-gray-300 leading-relaxed pl-11">
+            <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
               <p>We do not sell your personal information. We may share your personal information with:</p>
               <ul className="list-disc list-inside space-y-1.5 pl-4">
                 <li><strong className="text-white">Service providers:</strong> Third-party companies that help us operate the Service (hosting, email delivery, payment processing, analytics). These providers are bound by contractual obligations to protect your information and may only use it as instructed by us.</li>
@@ -134,7 +133,7 @@ export default function PrivacyPage() {
               <span className="w-8 h-8 rounded-lg bg-[#DC143C]/15 flex items-center justify-center text-[#DC143C] text-sm font-bold flex-shrink-0">4</span>
               Data Retention
             </h2>
-            <div className="space-y-3 text-gray-300 leading-relaxed pl-11">
+            <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
               <p>We retain your personal information for as long as your account is active or as needed to provide the Service. Specifically:</p>
               <ul className="list-disc list-inside space-y-1.5 pl-4">
                 <li><strong className="text-white">Account data:</strong> Retained for the duration of your account plus up to 90 days after deletion, to allow account recovery and resolve any outstanding disputes.</li>
@@ -152,7 +151,7 @@ export default function PrivacyPage() {
               <span className="w-8 h-8 rounded-lg bg-[#DC143C]/15 flex items-center justify-center text-[#DC143C] text-sm font-bold flex-shrink-0">5</span>
               Your Rights Under POPIA
             </h2>
-            <div className="space-y-3 text-gray-300 leading-relaxed pl-11">
+            <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
               <p>Under the Protection of Personal Information Act 4 of 2013, you have the following rights:</p>
               <ul className="list-disc list-inside space-y-1.5 pl-4">
                 <li><strong className="text-white">Right to access:</strong> You may request a copy of the personal information we hold about you.</li>
@@ -176,7 +175,7 @@ export default function PrivacyPage() {
               <span className="w-8 h-8 rounded-lg bg-[#DC143C]/15 flex items-center justify-center text-[#DC143C] text-sm font-bold flex-shrink-0">6</span>
               Data Security
             </h2>
-            <div className="space-y-3 text-gray-300 leading-relaxed pl-11">
+            <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
               <p>We implement appropriate technical and organisational security measures to protect your personal information against unauthorised access, disclosure, alteration, or destruction. These measures include:</p>
               <ul className="list-disc list-inside space-y-1 pl-4">
                 <li>Encryption of passwords using bcrypt hashing</li>
@@ -195,7 +194,7 @@ export default function PrivacyPage() {
               <span className="w-8 h-8 rounded-lg bg-[#DC143C]/15 flex items-center justify-center text-[#DC143C] text-sm font-bold flex-shrink-0">7</span>
               Children&apos;s Privacy
             </h2>
-            <div className="space-y-3 text-gray-300 leading-relaxed pl-11">
+            <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
               <p>The Service is strictly for adults aged 18 and over. We do not knowingly collect personal information from persons under 18. If we become aware that we have inadvertently collected personal information from a minor, we will take immediate steps to delete it and terminate the associated account.</p>
               <p>If you believe a minor has created an account on Hush, please contact us at <a href="mailto:support@hush.dating" className="text-[#DC143C] hover:underline">support@hush.dating</a> immediately.</p>
             </div>
@@ -207,7 +206,7 @@ export default function PrivacyPage() {
               <span className="w-8 h-8 rounded-lg bg-[#DC143C]/15 flex items-center justify-center text-[#DC143C] text-sm font-bold flex-shrink-0">8</span>
               Cookies &amp; Tracking Technologies
             </h2>
-            <div className="space-y-3 text-gray-300 leading-relaxed pl-11">
+            <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
               <p>We use cookies and similar technologies to operate and improve the Service. Cookies are small text files stored on your device.</p>
               <div className="space-y-2">
                 <p><strong className="text-white">Essential cookies:</strong> Necessary for the Service to function (session management, authentication). These cannot be disabled.</p>
@@ -224,7 +223,7 @@ export default function PrivacyPage() {
               <span className="w-8 h-8 rounded-lg bg-[#DC143C]/15 flex items-center justify-center text-[#DC143C] text-sm font-bold flex-shrink-0">9</span>
               Changes to This Policy
             </h2>
-            <div className="space-y-3 text-gray-300 leading-relaxed pl-11">
+            <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
               <p>We may update this Privacy Policy from time to time. We will notify you of material changes by updating the &quot;Last updated&quot; date and, where required by POPIA, by notifying you directly. Your continued use of the Service after any changes constitutes your acceptance of the updated policy.</p>
             </div>
           </section>
@@ -236,13 +235,13 @@ export default function PrivacyPage() {
               Our Information Officer is responsible for ensuring compliance with POPIA and handling privacy-related enquiries and complaints.
             </p>
             <div className="space-y-2 text-gray-300 text-sm">
-              <p><span className="text-gray-500">Company:</span> <span className="text-white">Hush (Pty) Ltd</span></p>
-              <p><span className="text-gray-500">Information Officer email:</span> <a href="mailto:privacy@hush.dating" className="text-[#DC143C] hover:underline">privacy@hush.dating</a></p>
-              <p><span className="text-gray-500">General support:</span> <a href="mailto:support@hush.dating" className="text-[#DC143C] hover:underline">support@hush.dating</a></p>
-              <p><span className="text-gray-500">Country:</span> <span className="text-white">South Africa</span></p>
+              <p><span className="text-gray-400">Company:</span> <span className="text-white">Hush (Pty) Ltd</span></p>
+              <p><span className="text-gray-400">Information Officer email:</span> <a href="mailto:privacy@hush.dating" className="text-[#DC143C] hover:underline">privacy@hush.dating</a></p>
+              <p><span className="text-gray-400">General support:</span> <a href="mailto:support@hush.dating" className="text-[#DC143C] hover:underline">support@hush.dating</a></p>
+              <p><span className="text-gray-400">Country:</span> <span className="text-white">South Africa</span></p>
             </div>
             <div className="mt-4 pt-4 border-t border-white/5">
-              <p className="text-gray-500 text-sm">
+              <p className="text-gray-400 text-sm">
                 <strong className="text-gray-400">Information Regulator (South Africa):</strong><br />
                 JD House, 27 Stiemens Street, Braamfontein, Johannesburg, 2001<br />
                 <a href="https://www.justice.gov.za/inforeg/" className="text-[#DC143C] hover:underline" target="_blank" rel="noopener noreferrer">www.justice.gov.za/inforeg/</a>

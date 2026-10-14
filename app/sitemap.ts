@@ -1,13 +1,14 @@
-import { MetadataRoute } from 'next'
+import type { MetadataRoute } from 'next'
+import { SITE_URL } from './site'
 
+// Only public, indexable pages. Member areas require sign-in and are disallowed in robots.ts.
 export default function sitemap(): MetadataRoute.Sitemap {
+  const now = new Date()
   return [
-    { url: 'https://hush.dating', lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
-    { url: 'https://hush.dating/upgrade', lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },
-    { url: 'https://hush.dating/auth/signup', changeFrequency: 'monthly', priority: 0.8 },
-    { url: 'https://hush.dating/auth/signin', changeFrequency: 'monthly', priority: 0.7 },
-    { url: 'https://hush.dating/terms', changeFrequency: 'monthly', priority: 0.5 },
-    { url: 'https://hush.dating/safety', changeFrequency: 'monthly', priority: 0.6 },
-    { url: 'https://hush.dating/privacy', changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${SITE_URL}/`, lastModified: now, changeFrequency: 'weekly', priority: 1 },
+    { url: `${SITE_URL}/auth/signup`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/safety`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/privacy`, lastModified: now, changeFrequency: 'yearly', priority: 0.4 },
+    { url: `${SITE_URL}/terms`, lastModified: now, changeFrequency: 'yearly', priority: 0.4 },
   ]
 }

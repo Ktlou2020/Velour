@@ -160,11 +160,11 @@ export default function MemberProfileClient({ username, profile: raw, session }:
   return (
     <>
       {/* ─── HERO ─────────────────────────────────────────────────────── */}
-      <div className="relative min-h-[60vh] flex flex-col justify-end overflow-hidden">
+      <div className="relative min-h-[50vh] sm:min-h-[60vh] flex flex-col justify-end overflow-hidden pt-20">
         {/* Background blurred photo */}
         {heroPhoto ? (
           <div className="absolute inset-0">
-            <ProtectedImage src={heroPhoto.url} alt="" className="w-full h-full object-cover" watermark="" />
+            <ProtectedImage src={heroPhoto.url} alt="" className="w-full h-full object-cover" watermark="" loading="eager" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0F] via-[#0A0A0F]/70 to-black/20" />
           </div>
         ) : (
@@ -174,12 +174,12 @@ export default function MemberProfileClient({ username, profile: raw, session }:
         )}
 
         <div className="relative max-w-5xl mx-auto px-4 pb-8 w-full">
-          <div className="flex flex-col sm:flex-row items-end sm:items-start gap-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 sm:gap-6">
             {/* Avatar */}
             <div className="relative flex-shrink-0 -mb-2">
-              <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-3xl overflow-hidden border-4 border-[#0A0A0F] shadow-2xl bg-gradient-to-br from-rose-900 to-red-700 flex items-center justify-center">
+              <div className="w-28 h-28 sm:w-40 sm:h-40 rounded-3xl overflow-hidden border-4 border-[#0A0A0F] shadow-2xl bg-gradient-to-br from-rose-900 to-red-700 flex items-center justify-center">
                 {heroPhoto ? (
-                  <ProtectedImage src={heroPhoto.url} alt={displayName} className="w-full h-full" watermark={session?.user?.email ?? 'hush'} />
+                  <ProtectedImage src={heroPhoto.url} alt={`${displayName}'s profile photo`} className="w-full h-full" watermark={session?.user?.email ?? 'hush'} loading="eager" />
                 ) : (
                   <span className="text-white text-5xl font-bold font-serif">{initials}</span>
                 )}
@@ -192,7 +192,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
             {/* Name + badges */}
             <div className="flex-1 pb-1">
               <div className="flex flex-wrap items-center gap-2 mb-2">
-                <h1 className="font-serif text-3xl sm:text-4xl font-bold text-white drop-shadow-lg">{displayName}</h1>
+                <h1 className="font-serif text-3xl sm:text-5xl font-bold text-white drop-shadow-lg">{displayName}</h1>
                 {tier !== 'FREE' && TIER_BADGE[tier]}
                 {p.isVerified && (
                   <span className="flex items-center gap-1 bg-blue-500/20 border border-blue-500/40 text-blue-300 text-xs font-bold px-2.5 py-1 rounded-full">
@@ -200,7 +200,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                   </span>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-3 text-white/70 text-sm">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-white/80 text-sm">
                 <span className="flex items-center gap-1.5"><MapPin size={13} />{location}</span>
                 {p.distance && <span className="flex items-center gap-1.5"><Navigation size={13} />{p.distance}</span>}
                 {p.age && <span className="flex items-center gap-1.5"><Calendar size={13} />{p.age} years old</span>}
@@ -213,50 +213,54 @@ export default function MemberProfileClient({ username, profile: raw, session }:
           </div>
 
           {/* Action buttons */}
-          <div className="flex flex-wrap gap-3 mt-6">
+          <div className="flex flex-wrap gap-2 sm:gap-3 mt-6">
             <button
               onClick={handleMessage}
               disabled={messagingLoading}
-              className="bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 text-sm shadow-lg shadow-[#DC143C]/30 transition-all hover:scale-105 active:scale-95 disabled:opacity-60"
+              className="flex-1 sm:flex-none justify-center bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 text-sm shadow-lg shadow-[#DC143C]/30 transition-all hover:scale-105 active:scale-95 disabled:opacity-60"
             >
               {messagingLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <MessageCircle size={16} />}
               Send Message
             </button>
             <button
               onClick={handleLike}
-              className={`glass border px-5 py-3 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all hover:scale-105 active:scale-95 ${liked ? 'border-[#DC143C]/70 bg-[#DC143C]/15 text-[#DC143C]' : 'border-white/20 hover:border-[#DC143C]/40 text-white'}`}
+              aria-pressed={liked}
+              className={`flex-1 sm:flex-none justify-center glass border px-5 py-3 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all hover:scale-105 active:scale-95 ${liked ? 'border-[#DC143C]/70 bg-[#DC143C]/15 text-[#DC143C]' : 'border-white/20 hover:border-[#DC143C]/40 text-white'}`}
             >
               <Heart size={16} className={liked ? 'fill-current' : ''} />
               {liked ? 'Liked!' : 'Like'}
             </button>
             <button
               onClick={handleSuperLike}
-              className={`glass border px-5 py-3 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all hover:scale-105 active:scale-95 ${superLiked ? 'border-[#D4AF37]/70 bg-[#D4AF37]/15 text-[#D4AF37]' : 'border-white/20 hover:border-[#D4AF37]/40 text-white'}`}
+              aria-pressed={superLiked}
+              className={`glass border px-4 sm:px-5 py-3 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all hover:scale-105 active:scale-95 ${superLiked ? 'border-[#D4AF37]/70 bg-[#D4AF37]/15 text-[#D4AF37]' : 'border-white/20 hover:border-[#D4AF37]/40 text-white'}`}
             >
               <Star size={16} className={superLiked ? 'fill-current' : ''} />
               Super Like
             </button>
             <button
               onClick={handleWink}
+              aria-pressed={winked}
               className={`glass border px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2 transition-all hover:scale-105 active:scale-95 ${winked ? 'border-amber-400/60 bg-amber-500/10 text-amber-400' : 'border-white/20 text-white/70 hover:text-white'}`}
             >
-              👋 {winked ? 'Winked!' : 'Wink'}
+              <span aria-hidden="true">👋</span> {winked ? 'Winked!' : 'Wink'}
             </button>
             <button
               onClick={handleBlock}
               disabled={blocking}
-              className="glass px-4 py-3 rounded-xl text-white/30 hover:text-red-400 text-sm transition-all ml-auto disabled:opacity-40"
+              className="glass w-11 h-11 sm:w-auto sm:h-auto sm:px-4 sm:py-3 flex items-center justify-center rounded-xl text-white/65 hover:text-red-400 text-sm transition-all ml-auto disabled:opacity-40"
               aria-label="Block member"
               title="Block"
             >
-              <Ban size={16} />
+              <Ban size={16} aria-hidden="true" />
             </button>
             <button
               onClick={() => setShowReportModal(true)}
-              className="glass px-4 py-3 rounded-xl text-white/30 hover:text-red-400 text-sm transition-all"
+              className="glass w-11 h-11 sm:w-auto sm:h-auto sm:px-4 sm:py-3 flex items-center justify-center rounded-xl text-white/65 hover:text-red-400 text-sm transition-all"
               aria-label="Report member"
+              title="Report"
             >
-              <Flag size={16} />
+              <Flag size={16} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -273,7 +277,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
             <div key={label} className="py-4 text-center">
               <Icon size={16} className={`${color} mx-auto mb-1`} />
               <p className="text-white font-bold text-lg leading-none">{value}</p>
-              <p className="text-white/40 text-xs mt-0.5">{label}</p>
+              <p className="text-white/60 text-xs mt-0.5">{label}</p>
             </div>
           ))}
         </div>
@@ -299,7 +303,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
             <div className="space-y-4">
               {p.prompts.map((pr) => (
                 <div key={pr.question} className="glass rounded-2xl p-6 border border-[#DC143C]/10">
-                  <p className="text-white/50 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <p className="text-white/65 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <Quote size={12} className="text-[#DC143C]" />
                     {pr.question}
                   </p>
@@ -367,7 +371,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
               <h2 className="font-serif text-lg font-bold text-white mb-4 flex items-center gap-2">
                 <Camera size={16} className="text-[#DC143C]" />
                 Photo Gallery
-                <span className="text-white/30 text-sm font-normal ml-auto">{photos.length} photo{photos.length !== 1 ? 's' : ''}</span>
+                <span className="text-white/55 text-sm font-normal ml-auto">{photos.length} photo{photos.length !== 1 ? 's' : ''}</span>
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {photos.map((photo, i) => (
@@ -376,7 +380,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                     onClick={() => setLightboxIdx(i)}
                     className={`relative overflow-hidden rounded-xl group ${i === 0 ? 'col-span-2 sm:col-span-2 row-span-2 aspect-[4/3]' : 'aspect-square'}`}
                   >
-                    <ProtectedImage src={photo.url} alt={`Photo ${i + 1}`} className="w-full h-full" watermark={session?.user?.email ?? 'hush'} />
+                    <ProtectedImage src={photo.url} alt={`${displayName} — photo ${i + 1}`} className="w-full h-full" watermark={session?.user?.email ?? 'hush'} />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                       <Eye size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
                     </div>
@@ -392,7 +396,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
           {/* Compatibility */}
           {compatScore !== undefined && (
           <div className="glass rounded-2xl p-6 text-center">
-            <p className="text-white/50 text-xs font-medium uppercase tracking-wider mb-4">Compatibility</p>
+            <p className="text-white/65 text-xs font-medium uppercase tracking-wider mb-4">Compatibility</p>
             <div className="relative w-32 h-32 mx-auto mb-3">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
@@ -413,7 +417,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-4xl font-bold text-white leading-none">{compatScore}</span>
-                <span className="text-white/40 text-xs mt-0.5">% match</span>
+                <span className="text-white/60 text-xs mt-0.5">% match</span>
               </div>
             </div>
             {p.insightsLocked ? (
@@ -430,11 +434,11 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                 ))}
               </ul>
             ) : (
-              <p className="text-white/40 text-xs">Add interests and what you&apos;re looking for to improve your matches</p>
+              <p className="text-white/60 text-xs">Add interests and what you&apos;re looking for to improve your matches</p>
             )}
             {(p.sharedInterests ?? []).length > 0 && (
               <div className="mt-4 text-left">
-                <p className="text-white/40 text-xs mb-2">You both like</p>
+                <p className="text-white/60 text-xs mb-2">You both like</p>
                 <div className="flex flex-wrap gap-1.5">
                   {(p.sharedInterests ?? []).map((i) => (
                     <span key={i} className="bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] px-2.5 py-1 rounded-full text-xs">{i}</span>
@@ -442,13 +446,13 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                 </div>
               </div>
             )}
-            <p className="text-white/30 text-[11px] mt-4">Based on shared interests, goals, age &amp; distance</p>
+            <p className="text-white/55 text-[11px] mt-4">Based on shared interests, goals, age &amp; distance</p>
           </div>
           )}
 
           {/* Profile details */}
           <div className="glass rounded-2xl p-6">
-            <p className="text-white/50 text-xs font-medium uppercase tracking-wider mb-4">Details</p>
+            <p className="text-white/65 text-xs font-medium uppercase tracking-wider mb-4">Details</p>
             <div className="space-y-3">
               {[
                 { label: 'Gender',       value: p.gender },
@@ -460,7 +464,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                 { label: 'Distance',     value: p.distance },
               ].filter(r => !!r.value).map(({ label, value }) => (
                 <div key={label} className="flex items-center justify-between gap-2 text-sm">
-                  <span className="text-white/40 flex-shrink-0">{label}</span>
+                  <span className="text-white/60 flex-shrink-0">{label}</span>
                   <span className="text-white/80 text-right">{value}</span>
                 </div>
               ))}
@@ -477,7 +481,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
             <div className="glass rounded-2xl p-6 border border-[#D4AF37]/15 bg-gradient-to-b from-[#D4AF37]/5 to-transparent">
               <Crown size={22} className="text-[#D4AF37] mb-3" />
               <h3 className="text-white font-bold mb-1.5">Unlock More</h3>
-              <p className="text-white/50 text-xs mb-4 leading-relaxed">See who liked you, send unlimited messages and get priority in search results.</p>
+              <p className="text-white/65 text-xs mb-4 leading-relaxed">See who liked you, send unlimited messages and get priority in search results.</p>
               <Link
                 href="/upgrade"
                 className="block text-center bg-gradient-to-r from-[#D4AF37] to-[#B8960C] hover:from-[#F4D03F] hover:to-[#D4AF37] text-[#0A0A0F] py-2.5 rounded-xl text-sm font-bold transition-all"
@@ -491,7 +495,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
 
       {/* ─── LIGHTBOX ─────────────────────────────────────────────────── */}
       {lightboxIdx !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95" onClick={() => setLightboxIdx(null)}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95" onClick={() => setLightboxIdx(null)}>
           <button className="absolute top-4 right-4 w-10 h-10 glass rounded-full flex items-center justify-center text-white/60 hover:text-white z-10" onClick={() => setLightboxIdx(null)} aria-label="Close">
             <X size={20} />
           </button>
@@ -507,18 +511,18 @@ export default function MemberProfileClient({ username, profile: raw, session }:
           )}
           <div className="max-w-[90vw] max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
             <ProtectedImage src={photos[lightboxIdx].url} alt={`Photo ${lightboxIdx + 1}`} className="max-w-[90vw] max-h-[85vh] rounded-2xl shadow-2xl" watermark={session?.user?.email ?? 'hush'} />
-            <p className="text-white/40 text-xs text-center mt-3">{lightboxIdx + 1} / {photos.length}</p>
+            <p className="text-white/60 text-xs text-center mt-3">{lightboxIdx + 1} / {photos.length}</p>
           </div>
         </div>
       )}
 
       {/* ─── REPORT MODAL ─────────────────────────────────────────────── */}
       {showReportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm">
           <div className="glass rounded-2xl p-6 w-full max-w-md">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-white font-bold text-lg">Report {displayName}</h3>
-              <button onClick={() => { setShowReportModal(false); setReportSubmitted(false); }} className="text-white/40 hover:text-white"><X size={20} /></button>
+              <button onClick={() => { setShowReportModal(false); setReportSubmitted(false); }} className="text-white/60 hover:text-white"><X size={20} /></button>
             </div>
             {reportSubmitted ? (
               <div className="text-center py-6">
@@ -526,7 +530,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                   <Shield size={24} className="text-emerald-400" />
                 </div>
                 <p className="text-white font-semibold mb-1">Report Submitted</p>
-                <p className="text-white/50 text-sm">Our team will review within 24 hours.</p>
+                <p className="text-white/65 text-sm">Our team will review within 24 hours.</p>
                 <button onClick={() => { setShowReportModal(false); setReportSubmitted(false); }} className="mt-4 glass px-6 py-2 rounded-xl text-white/70 hover:text-white text-sm transition-colors">Close</button>
               </div>
             ) : (

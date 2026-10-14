@@ -33,7 +33,7 @@ function calcAge(dateOfBirth?: string | Date | null): number | undefined {
 }
 
 const TIER_COLORS: Record<string, string> = {
-  FREE: 'text-white/40',
+  FREE: 'text-white/60',
   GOLD: 'text-[#D4AF37]',
   PLATINUM: 'text-purple-400',
 };
@@ -140,7 +140,7 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
                     watermark={watermark}
                   />
                 ) : (
-                  <span className="text-white/30 text-4xl font-bold font-serif">{initials}</span>
+                  <span className="text-white/55 text-4xl font-bold font-serif">{initials}</span>
                 )}
 
                 {/* Online dot */}
@@ -192,16 +192,16 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
               <div className="p-3">
                 <p className="text-white text-sm font-semibold truncate">
                   {member.displayName || member.username}
-                  {age ? <span className="text-white/50 font-normal">, {age}</span> : ''}
+                  {age ? <span className="text-white/65 font-normal">, {age}</span> : ''}
                 </p>
                 {member.city && (
-                  <div className="flex items-center gap-1 text-white/30 text-xs mt-0.5">
+                  <div className="flex items-center gap-1 text-white/55 text-xs mt-0.5">
                     <MapPin size={10} />
                     <span className="truncate">{member.city}</span>
                   </div>
                 )}
                 {member.distance && (
-                  <div className="flex items-center gap-1 text-white/40 text-xs mt-0.5">
+                  <div className="flex items-center gap-1 text-white/60 text-xs mt-0.5">
                     <Navigation size={9} />
                     <span className="truncate">{member.distance}</span>
                   </div>
@@ -220,7 +220,7 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
         </div>
       )}
       {!hasMore && members.length > 0 && (
-        <p className="text-center text-white/20 text-sm py-8">No more members to show</p>
+        <p className="text-center text-white/45 text-sm py-8">No more members to show</p>
       )}
     </div>
   );

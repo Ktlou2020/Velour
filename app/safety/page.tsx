@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { LogoMark } from '@/components/Logo'
 import {
   ArrowLeft, MapPin, Users, Car, Video, Wallet, HeartPulse, Flag, Phone, ShieldCheck, Wine, Lock,
 } from 'lucide-react'
@@ -7,7 +8,7 @@ import Footer from '@/components/Footer'
 import ShareDateClient from './ShareDateClient'
 
 export const metadata = {
-  title: 'Safety Centre — Hush',
+  title: 'Safety Centre',
   description: 'Practical tips for meeting Hush members in person, emergency numbers for South Africa, and Share My Date.',
 }
 
@@ -74,9 +75,7 @@ export default async function SafetyPage() {
             <span className="text-sm">Back to Hush</span>
           </Link>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center">
-              <span className="text-white font-serif font-bold text-sm">V</span>
-            </div>
+            <LogoMark size="sm" />
             <span className="font-serif font-bold tracking-wide text-white">HUSH</span>
           </div>
         </div>
@@ -113,7 +112,7 @@ export default async function SafetyPage() {
               >
                 <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">{e.label}</p>
                 <p className="text-white font-bold text-2xl font-serif">{e.number}</p>
-                <p className="text-gray-500 text-xs mt-1">{e.note}</p>
+                <p className="text-gray-400 text-xs mt-1">{e.note}</p>
               </a>
             ))}
           </div>

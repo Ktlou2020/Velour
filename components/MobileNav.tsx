@@ -14,6 +14,8 @@ const TABS = [
   { href: '/profile', label: 'Profile', icon: User },
 ];
 
+const HIDDEN_ON = ['/onboarding', '/auth', '/admin'];
+
 export default function MobileNav() {
   const pathname = usePathname();
   const { status } = useSession();
@@ -38,12 +40,16 @@ export default function MobileNav() {
   }, [status]);
 
   if (status !== 'authenticated') return null;
+  // Focused flows (onboarding, auth, admin) get the full screen.
+  if (HIDDEN_ON.some((p) => pathname.startsWith(p))) return null;
 
   return (
+    <>
+    {/* In-flow spacer so the last bit of every page can scroll clear of the fixed bar */}
+    <div aria-hidden="true" className="md:hidden" style={{ height: 'calc(4rem + env(safe-area-inset-bottom))' }} />
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 md:hidden glass-dark border-t border-white/10"
-      role="navigation"
-      aria-label="Mobile navigation"
+      className="fixed bottom-0 left-0 right-0 z-50 md:hidden glass-dark border-t border-white/10 pb-safe"
+      aria-label="Primary"
     >
       <div className="flex items-stretch h-16">
         {TABS.map(({ href, label, icon: Icon, showBadge }) => {
@@ -53,13 +59,14 @@ export default function MobileNav() {
               key={href}
               href={href}
               className="flex-1 flex flex-col items-center justify-center gap-0.5 relative"
-              aria-label={label}
+              aria-label={showBadge && unread > 0 ? `${label} (${unread} unread)` : label}
               aria-current={isActive ? 'page' : undefined}
             >
               <div className="relative">
                 <Icon
                   size={22}
-                  className={`transition-colors ${isActive ? 'text-[#DC143C]' : 'text-white/40'}`}
+                  className={`transition-colors ${isActive ? 'text-[#DC143C]' : 'text-white/60'}`}
+                  aria-hidden="true"
                 />
                 {showBadge && unread > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 bg-[#DC143C] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1">
@@ -69,7 +76,7 @@ export default function MobileNav() {
               </div>
               <span
                 className={`text-[10px] font-medium transition-colors ${
-                  isActive ? 'text-[#DC143C]' : 'text-white/40'
+                  isActive ? 'text-white' : 'text-white/60'
                 }`}
               >
                 {label}
@@ -82,5 +89,6 @@ export default function MobileNav() {
         })}
       </div>
     </nav>
+    </>
   );
 }

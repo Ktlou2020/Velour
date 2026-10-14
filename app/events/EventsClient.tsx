@@ -110,16 +110,16 @@ export default function EventsClient({ events, featured, pastEvents = [], active
     <div className="max-w-6xl mx-auto px-4 py-10">
       {/* Featured Event */}
       {featured && (
-        <div className={`relative rounded-3xl overflow-hidden bg-gradient-to-br ${featured.gradient || DEFAULT_GRADIENTS[0]} p-8 md:p-12 mb-12`}>
+        <div className={`relative rounded-3xl overflow-hidden bg-gradient-to-br ${featured.gradient || DEFAULT_GRADIENTS[0]} p-6 sm:p-8 md:p-12 mb-10`}>
           {featured.imageUrl && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={featured.imageUrl} alt={featured.title} className="absolute inset-0 w-full h-full object-cover opacity-30" />
+            <img src={featured.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-30" />
           )}
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent" />
 
           <div className="relative z-10 flex flex-col md:flex-row gap-8 items-start">
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex flex-wrap items-center gap-2 mb-4">
                 <span className="bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest">
                   ★ Featured Event
                 </span>
@@ -135,7 +135,7 @@ export default function EventsClient({ events, featured, pastEvents = [], active
                 <p className="text-white/70 text-sm leading-relaxed mb-6 max-w-xl">{featured.description}</p>
               )}
 
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
                 {[
                   { icon: Calendar, text: featured.date },
                   { icon: Clock, text: featured.time || 'TBD' },
@@ -143,7 +143,7 @@ export default function EventsClient({ events, featured, pastEvents = [], active
                   { icon: Users, text: featured.maxAttendees ? `${featured.attendeeCount ?? 0}/${featured.maxAttendees} spots` : `${featured.attendeeCount ?? 0} attending` },
                 ].map(({ icon: Icon, text }) => (
                   <div key={text} className="flex items-center gap-2 text-white/70 text-sm">
-                    <Icon size={14} className="text-[#DC143C] flex-shrink-0" />
+                    <Icon size={14} className="text-[#FF4D6D] flex-shrink-0" aria-hidden="true" />
                     {text}
                   </div>
                 ))}
@@ -151,7 +151,7 @@ export default function EventsClient({ events, featured, pastEvents = [], active
 
               {featured.maxAttendees && (
                 <div className="mb-6">
-                  <div className="flex justify-between text-xs text-white/50 mb-1">
+                  <div className="flex justify-between text-xs text-white/65 mb-1">
                     <span>Spots filled</span>
                     <span>{Math.round(((featured.attendeeCount ?? 0) / featured.maxAttendees) * 100)}%</span>
                   </div>
@@ -176,16 +176,17 @@ export default function EventsClient({ events, featured, pastEvents = [], active
               </button>
             </div>
 
+            {/* Side summary — desktop only; on phones it just repeated the details above. */}
             {featured.maxAttendees && (
-              <div className="flex flex-col items-center gap-4">
+              <div className="hidden md:flex flex-col items-center gap-4">
                 <div className="glass rounded-2xl p-6 text-center w-40">
-                  <p className="text-white/40 text-xs uppercase tracking-widest mb-1">Date</p>
+                  <p className="text-white/60 text-xs uppercase tracking-widest mb-1">Date</p>
                   <p className="text-white font-bold text-lg">{featured.date}</p>
                 </div>
                 <div className="glass rounded-2xl p-6 text-center w-40">
-                  <p className="text-white/40 text-xs uppercase tracking-widest mb-1">Spots Left</p>
+                  <p className="text-white/60 text-xs uppercase tracking-widest mb-1">Spots Left</p>
                   <p className="text-white font-bold text-3xl">{featured.maxAttendees - (featured.attendeeCount ?? 0)}</p>
-                  <p className="text-white/40 text-xs">of {featured.maxAttendees}</p>
+                  <p className="text-white/60 text-xs">of {featured.maxAttendees}</p>
                 </div>
               </div>
             )}
@@ -194,23 +195,24 @@ export default function EventsClient({ events, featured, pastEvents = [], active
       )}
 
       {/* Category Filter + Create Button */}
-      <div className="flex items-center justify-between gap-4 mb-8">
-        {canCreate && (
+      {canCreate && (
+      <div className="flex items-center justify-end gap-4 mb-4">
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shrink-0"
           >
-            <Plus size={16} /> Create Event
+            <Plus size={16} aria-hidden="true" /> Create event
           </button>
-        )}
       </div>
+      )}
       <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
         {TABS.map((tab) => (
           <button
             key={tab}
             onClick={() => setCategory(tab)}
+            aria-pressed={activeCategory === tab}
             className={`px-5 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-              activeCategory === tab ? 'bg-[#DC143C] text-white' : 'glass text-white/60 hover:text-white'
+              activeCategory === tab ? 'bg-[#DC143C] text-white' : 'glass text-white/70 hover:text-white'
             }`}
           >
             {tab}
@@ -220,9 +222,10 @@ export default function EventsClient({ events, featured, pastEvents = [], active
 
       {/* Events Grid */}
       {filteredEvents.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-white/30 text-lg">No events found</p>
-          <p className="text-white/20 text-sm mt-1">Check back soon for upcoming events</p>
+        <div className="text-center py-16 glass rounded-2xl px-6">
+          <Calendar size={32} className="text-[#FF4D6D] mx-auto mb-4" aria-hidden="true" />
+          <p className="text-white font-serif text-xl font-bold mb-1">Nothing on the calendar here yet</p>
+          <p className="text-white/65 text-sm">New member evenings are added regularly — check back soon, or try another category.</p>
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -266,19 +269,19 @@ export default function EventsClient({ events, featured, pastEvents = [], active
 
                   <div className="space-y-2 mb-4">
                     {event.time && (
-                      <div className="flex items-center gap-2 text-white/50 text-xs">
+                      <div className="flex items-center gap-2 text-white/65 text-xs">
                         <Clock size={12} />{event.time}
                       </div>
                     )}
                     {event.location && (
-                      <div className="flex items-center gap-2 text-white/50 text-xs">
+                      <div className="flex items-center gap-2 text-white/65 text-xs">
                         <MapPin size={12} />{event.location}
                       </div>
                     )}
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-white/40 text-xs">
+                    <div className="flex items-center gap-2 text-white/60 text-xs">
                       <Users size={12} />
                       {event.attendeeCount ?? 0} attending
                     </div>
@@ -322,16 +325,16 @@ export default function EventsClient({ events, featured, pastEvents = [], active
                       {event.category}
                     </span>
                   )}
-                  <span className="text-white/40 text-xs">{event.date}</span>
+                  <span className="text-white/60 text-xs">{event.date}</span>
                 </div>
                 <h3 className="text-white/90 font-semibold text-sm mb-2 leading-snug">{event.title}</h3>
                 {event.location && (
-                  <div className="flex items-center gap-2 text-white/40 text-xs mb-3">
+                  <div className="flex items-center gap-2 text-white/60 text-xs mb-3">
                     <MapPin size={12} />{event.location}
                   </div>
                 )}
                 <div className="mt-auto flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 text-white/40 text-xs">
+                  <span className="flex items-center gap-1.5 text-white/60 text-xs">
                     <Users size={12} />{event.attendeeCount ?? 0} went
                   </span>
                   {event.attending ? (
@@ -354,7 +357,7 @@ export default function EventsClient({ events, featured, pastEvents = [], active
       {/* Who went modal */}
       {whoWent && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-label={`Who went to ${whoWent.event.title}`}
@@ -366,7 +369,7 @@ export default function EventsClient({ events, featured, pastEvents = [], active
                 <p className="text-[#D4AF37] text-xs uppercase tracking-widest mb-1">Who went</p>
                 <h3 className="text-white font-bold text-lg leading-snug">{whoWent.event.title}</h3>
               </div>
-              <button onClick={() => setWhoWent(null)} className="text-white/40 hover:text-white transition-colors" aria-label="Close">
+              <button onClick={() => setWhoWent(null)} className="text-white/60 hover:text-white transition-colors" aria-label="Close">
                 <X size={20} />
               </button>
             </div>
@@ -377,7 +380,7 @@ export default function EventsClient({ events, featured, pastEvents = [], active
             ) : whoWent.error ? (
               <p className="text-red-400 text-sm">{whoWent.error}</p>
             ) : whoWent.attendees.length === 0 ? (
-              <p className="text-white/40 text-sm">No other members to show for this event.</p>
+              <p className="text-white/60 text-sm">No other members to show for this event.</p>
             ) : (
               <ul className="space-y-2">
                 {whoWent.attendees.map((a) => (
@@ -394,7 +397,7 @@ export default function EventsClient({ events, featured, pastEvents = [], active
                       />
                       <div className="min-w-0">
                         <p className="text-white text-sm font-medium truncate">{a.displayName || a.username}</p>
-                        <p className="text-white/40 text-xs truncate">@{a.username}</p>
+                        <p className="text-white/60 text-xs truncate">@{a.username}</p>
                       </div>
                     </Link>
                   </li>

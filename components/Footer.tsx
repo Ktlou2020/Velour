@@ -1,67 +1,63 @@
 import Link from 'next/link';
+import Logo from './Logo';
+
+const COLUMNS = [
+  {
+    heading: 'Hush',
+    links: [
+      { label: 'How it works', href: '/#how-it-works' },
+      { label: 'Membership', href: '/#pricing' },
+      { label: 'Join free', href: '/auth/signup' },
+      { label: 'Sign in', href: '/auth/signin' },
+    ],
+  },
+  {
+    heading: 'Trust & legal',
+    links: [
+      { label: 'Safety Centre', href: '/safety' },
+      { label: 'Privacy Policy', href: '/privacy' },
+      { label: 'Terms of Service', href: '/terms' },
+      { label: 'Contact support', href: 'mailto:support@hush.dating' },
+    ],
+  },
+];
 
 export default function Footer() {
+  const year = new Date().getFullYear();
   return (
-    <footer className="bg-[#060609] border-t border-white/5 py-16 px-4" role="contentinfo">
+    <footer className="bg-[#060609] border-t border-white/5 pt-14 pb-10 px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="grid md:grid-cols-4 gap-10 mb-12">
+        <div className="grid gap-10 md:grid-cols-4 mb-12">
           <div className="md:col-span-2">
-            <Link href="/" className="flex items-center gap-2 mb-4" aria-label="Hush home">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-crimson-500 to-crimson-700 flex items-center justify-center">
-                <span className="text-white font-bold text-lg font-serif">V</span>
-              </div>
-              <span className="text-white font-bold text-xl tracking-widest">HUSH</span>
-            </Link>
-            <p className="text-white/40 text-sm leading-relaxed max-w-xs">
-              Where Connections Become Extraordinary. The world&apos;s most refined lifestyle dating community for discerning adults.
+            <Logo className="mb-4" />
+            <p className="text-white/60 text-sm leading-relaxed max-w-sm">
+              A private, members-first dating community for singles and couples. Discreet by design, made in South Africa.
             </p>
-            <div className="flex gap-3 mt-6">
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter" className="w-9 h-9 glass rounded-lg flex items-center justify-center text-white/40 hover:text-white transition-all text-xs font-bold">T</a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="w-9 h-9 glass rounded-lg flex items-center justify-center text-white/40 hover:text-white transition-all text-xs font-bold">In</a>
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="w-9 h-9 glass rounded-lg flex items-center justify-center text-white/40 hover:text-white transition-all text-xs font-bold">F</a>
-            </div>
           </div>
 
-          <div>
-            <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-widest">Company</h4>
-            <ul className="space-y-2">
-              {[
-                { label: 'About', href: '/about' },
-                { label: 'Blog', href: '/blog' },
-                { label: 'Careers', href: '/careers' },
-                { label: 'Press', href: '/press' },
-                { label: 'Contact', href: '/contact' },
-              ].map(({ label, href }) => (
-                <li key={label}>
-                  <Link href={href} className="text-white/40 hover:text-white text-sm transition-colors">{label}</Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-widest">Legal</h4>
-            <ul className="space-y-2">
-              {[
-                { label: 'Privacy Policy', href: '/privacy' },
-                { label: 'Terms of Service', href: '/terms' },
-                { label: 'Cookie Policy', href: '/cookies' },
-                { label: 'Safety Center', href: '/safety' },
-                { label: 'DMCA', href: '/dmca' },
-              ].map(({ label, href }) => (
-                <li key={label}>
-                  <Link href={href} className="text-white/40 hover:text-white text-sm transition-colors">{label}</Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {COLUMNS.map((col) => (
+            <nav key={col.heading} aria-label={col.heading}>
+              <h2 className="text-white/90 font-semibold text-xs mb-4 uppercase tracking-[0.18em]">{col.heading}</h2>
+              <ul className="space-y-2.5">
+                {col.links.map(({ label, href }) => (
+                  <li key={label}>
+                    <Link href={href} className="text-white/60 hover:text-white text-sm transition-colors">
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
         </div>
 
         <div className="section-divider mb-6" />
 
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-white/30 text-sm">© 2025 Hush. All rights reserved. 18+ only.</p>
-          <p className="text-white/20 text-xs text-center md:text-right">This site is intended for adults aged 18 and over. By using this site you agree to our Terms of Service.</p>
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-center md:text-left">
+          <p className="text-white/60 text-sm">© {year} Hush. Strictly 18+.</p>
+          <p className="text-white/65 text-xs max-w-md md:text-right">
+            By using Hush you agree to our Terms of Service and confirm you are 18 or older.
+          </p>
         </div>
       </div>
     </footer>

@@ -137,11 +137,11 @@ export default function ShareDateClient() {
               <div className="flex-1 min-w-0 space-y-1">
                 <p className="text-white font-medium">
                   {plan.matchName}
-                  {plan.matchUsername && <span className="text-gray-500 text-sm"> · @{plan.matchUsername}</span>}
+                  {plan.matchUsername && <span className="text-gray-400 text-sm"> · @{plan.matchUsername}</span>}
                 </p>
                 <p className="text-gray-400 text-sm flex items-center gap-2"><Calendar className="w-3.5 h-3.5 text-[#DC143C]" />{formatWhen(plan.dateTime)}</p>
                 <p className="text-gray-400 text-sm flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-[#DC143C]" /><span className="truncate">{plan.location}</span></p>
-                <p className="text-gray-500 text-xs">Shared with {plan.friendName} ({plan.friendEmail})</p>
+                <p className="text-gray-400 text-xs">Shared with {plan.friendName} ({plan.friendEmail})</p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 {plan.checkedInAt ? (
@@ -177,7 +177,7 @@ export default function ShareDateClient() {
           <div>
             <label htmlFor="sd-match" className={label}>Who you&apos;re meeting</label>
             <div className="relative">
-              <User className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <User className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input id="sd-match" required maxLength={80} value={form.matchName} onChange={(e) => set('matchName', e.target.value)} placeholder="Their name" className={`${input} pl-9`} />
             </div>
           </div>
@@ -188,7 +188,7 @@ export default function ShareDateClient() {
           <div>
             <label htmlFor="sd-where" className={label}>Where</label>
             <div className="relative">
-              <MapPin className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <MapPin className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input id="sd-where" required maxLength={200} value={form.location} onChange={(e) => set('location', e.target.value)} placeholder="Venue and area" className={`${input} pl-9`} />
             </div>
           </div>
@@ -212,7 +212,7 @@ export default function ShareDateClient() {
           <div>
             <label htmlFor="sd-email" className={label}>Friend&apos;s email</label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input id="sd-email" type="email" required maxLength={254} value={form.friendEmail} onChange={(e) => set('friendEmail', e.target.value)} placeholder="friend@example.com" className={`${input} pl-9`} />
             </div>
           </div>
@@ -226,7 +226,7 @@ export default function ShareDateClient() {
         {success && <p className="text-emerald-400 text-sm" role="status">{success}</p>}
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <p className="text-gray-500 text-xs">We only use your friend&apos;s email for this date. Up to 5 shares per day.</p>
+          <p className="text-gray-400 text-xs">We only use your friend&apos;s email for this date. Up to 5 shares per day.</p>
           <button
             type="submit"
             disabled={submitting}

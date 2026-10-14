@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Eye, Crown, Lock } from 'lucide-react';
 import Link from 'next/link';
+import EmptyState from '@/components/EmptyState';
 
 interface ViewerNotification {
   id: string;
@@ -131,13 +132,10 @@ export default function ViewsPage() {
     <div className="min-h-screen bg-[#0A0A0F]">
       <Navbar />
       <main className="pt-16">
-        <div className="bg-gradient-to-b from-[#0F0A1E] to-[#0A0A0F] py-12 px-4 border-b border-white/5">
+        <div className="bg-gradient-to-b from-[#0F0A1E] to-[#0A0A0F] py-8 sm:py-12 px-4 border-b border-white/5">
           <div className="max-w-4xl mx-auto">
-            <h1 className="font-serif text-4xl font-bold text-white mb-2 flex items-center gap-3">
-              <Eye className="text-[#DC143C]" size={32} />
-              Who Viewed Me
-            </h1>
-            <p className="text-white/50">See who has been checking out your profile</p>
+            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-white mb-2">Who viewed you</h1>
+            <p className="text-white/65">Members who’ve stopped by your profile recently.</p>
           </div>
         </div>
 
@@ -152,7 +150,7 @@ export default function ViewsPage() {
                 <Lock className="text-[#D4AF37]" size={32} />
               </div>
               <h2 className="font-serif text-2xl font-bold text-white mb-3">Gold Feature</h2>
-              <p className="text-white/50 mb-6 leading-relaxed">
+              <p className="text-white/65 mb-6 leading-relaxed">
                 Upgrade to Gold or Platinum to see exactly who has been viewing your profile.
               </p>
               <div className="flex items-center justify-center gap-1 text-[#D4AF37] mb-6">
@@ -169,14 +167,16 @@ export default function ViewsPage() {
           ) : error ? (
             <p className="text-red-400 text-center py-12">{error}</p>
           ) : viewers.length === 0 ? (
-            <div className="text-center py-20">
-              <Eye className="text-white/10 mx-auto mb-4" size={48} />
-              <p className="text-white/40 text-lg">No profile views yet</p>
-              <p className="text-white/20 text-sm mt-2">When someone views your profile, they&apos;ll appear here</p>
-            </div>
+            <EmptyState
+              icon={Eye}
+              title="No visitors just yet"
+              description="Profiles with a few photos and answered prompts get noticed far more. A quick polish now goes a long way."
+              action={{ label: 'Polish my profile', href: '/profile' }}
+              secondaryAction={{ label: 'Browse members', href: '/members' }}
+            />
           ) : (
             <>
-              <p className="text-white/40 text-sm mb-6">{viewers.length} people viewed your profile</p>
+              <p className="text-white/60 text-sm mb-6">{viewers.length} {viewers.length === 1 ? 'person' : 'people'} viewed your profile</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {viewers.map((v) => (
                   <Link
@@ -187,7 +187,7 @@ export default function ViewsPage() {
                     <div className="w-16 h-16 rounded-full bg-gradient-to-br from-rose-900 to-red-700 flex items-center justify-center mx-auto mb-3 overflow-hidden">
                       {v.profilePhoto ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={v.profilePhoto} alt={v.viewerUsername} className="w-full h-full object-cover" />
+                        <img src={v.profilePhoto} alt="" loading="lazy" decoding="async" width={64} height={64} className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-white font-bold text-xl">
                           {(v.displayName || v.viewerUsername).slice(0, 2).toUpperCase()}
@@ -198,9 +198,9 @@ export default function ViewsPage() {
                       {v.displayName || v.viewerUsername}
                     </p>
                     {v.city && (
-                      <p className="text-white/40 text-xs text-center truncate mt-0.5">{v.city}</p>
+                      <p className="text-white/60 text-xs text-center truncate mt-0.5">{v.city}</p>
                     )}
-                    <p className="text-white/20 text-xs text-center mt-1">{formatTimeAgo(v.viewedAt)}</p>
+                    <p className="text-white/45 text-xs text-center mt-1">{formatTimeAgo(v.viewedAt)}</p>
                   </Link>
                 ))}
               </div>

@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
+import { isValidId } from '@/lib/security'
+
+// Photos must be hosted on our image CDN (or the demo/seed hosts).
+const ALLOWED_PHOTO_HOSTS = new Set(['res.cloudinary.com', 'images.unsplash.com', 'picsum.photos'])
+
+function isAllowedPhotoUrl(value: unknown): value is string {
+  if (typeof value !== 'string' || value.length > 2048) return false
+  try {
+    const u = new URL(value)
+    return u.protocol === 'https:' && ALLOWED_PHOTO_HOSTS.has(u.hostname)
+  } catch {
+    return false
+  }
+}
 
 export async function GET() {
   try {
@@ -28,11 +42,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json()
-    const { url, thumbnailUrl, isPrivate = false, caption, isProfile = false } = body
+    const body = await req.json().catch(() => null) as Record<string, unknown> | null
+    if (!body) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    const { url } = body
+    const thumbnailUrl = body.thumbnailUrl == null ? undefined : body.thumbnailUrl
+    const isPrivate = body.isPrivate === true
+    const isProfile = body.isProfile === true
+    const caption = typeof body.caption === 'string' ? body.caption.slice(0, 300) : undefined
 
-    if (!url) {
-      return NextResponse.json({ error: 'url is required' }, { status: 400 })
+    if (!isAllowedPhotoUrl(url)) {
+      return NextResponse.json({ error: 'A valid uploaded photo url is required' }, { status: 400 })
+    }
+    if (thumbnailUrl !== undefined && !isAllowedPhotoUrl(thumbnailUrl)) {
+      return NextResponse.json({ error: 'Invalid thumbnailUrl' }, { status: 400 })
     }
 
     // If setting as profile photo, clear existing profile flags
@@ -56,7 +78,7 @@ export async function POST(req: NextRequest) {
 
     // Update profile photo URL
     if (isProfile) {
-      await db.profile.update({
+      await db.profile.updateMany({
         where: { userId: session.user.id },
         data: { profilePhoto: url },
       })
@@ -76,10 +98,10 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json()
-    const { photoId } = body
+    const body = await req.json().catch(() => null) as { photoId?: unknown } | null
+    const photoId = body?.photoId
 
-    if (!photoId) {
+    if (!isValidId(photoId)) {
       return NextResponse.json({ error: 'photoId is required' }, { status: 400 })
     }
 
@@ -95,7 +117,7 @@ export async function DELETE(req: NextRequest) {
 
     // If deleted photo was the profile photo, clear it
     if (photo.isProfile) {
-      await db.profile.update({
+      await db.profile.updateMany({
         where: { userId: session.user.id },
         data: { profilePhoto: null },
       })

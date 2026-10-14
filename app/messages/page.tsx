@@ -77,6 +77,7 @@ export default function MessagesPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRrHint, setShowRrHint] = useState(false);
+  const [convsLoaded, setConvsLoaded] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -117,6 +118,7 @@ export default function MessagesPage() {
         setConversations(data.conversations || []);
       }
     } catch { /* ignore */ }
+    finally { setConvsLoaded(true); }
   }, []);
 
   useEffect(() => {
@@ -367,11 +369,11 @@ export default function MessagesPage() {
     if (isPaidUser) {
       return msg.isRead
         ? <span className="text-xs text-[#D4AF37]">Seen{msg.readAt ? ` ${clock(msg.readAt)}` : ''}</span>
-        : <span className="text-xs text-white/30">Delivered</span>;
+        : <span className="text-xs text-white/55">Delivered</span>;
     }
     return (
       <span className="flex items-center gap-1.5">
-        <span className="text-xs text-white/30">Delivered</span>
+        <span className="text-xs text-white/55">Delivered</span>
         {rrHintVisible && (
           <Link href="/upgrade" className="flex items-center gap-0.5 text-[11px] text-[#D4AF37]/70 hover:text-[#D4AF37]">
             <Crown size={10} /> See read receipts with Gold
@@ -389,12 +391,13 @@ export default function MessagesPage() {
   const ConvList = (
     <aside className={`${mobileView === 'list' ? 'flex' : 'hidden'} md:flex w-full md:w-80 lg:w-96 flex-shrink-0 border-r border-white/5 flex-col bg-[#0A0A0F]`}>
       <div className="p-4 border-b border-white/5">
-        <h1 className="text-white font-semibold text-lg mb-3">Messages</h1>
+        <h1 className="font-serif text-white font-bold text-2xl mb-3">Messages</h1>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={14} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/55" size={14} aria-hidden="true" />
           <input
             type="search"
-            placeholder="Search conversations..."
+            aria-label="Search conversations"
+            placeholder="Search conversations…"
             className="input-dark w-full pl-9 pr-4 py-2 rounded-xl text-sm"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -402,8 +405,29 @@ export default function MessagesPage() {
         </div>
       </div>
       <div className="flex-1 overflow-y-auto">
-        {conversations.length === 0 ? (
-          <EmptyState icon={Heart} title="No conversations yet" description="Match with members to start chatting" action={{ label: 'Discover', href: '/discover' }} />
+        {!convsLoaded ? (
+          <div aria-busy="true" aria-label="Loading conversations">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-3.5 border-b border-white/5">
+                <div className="w-12 h-12 rounded-full skeleton flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-1/3 rounded skeleton" />
+                  <div className="h-3 w-2/3 rounded skeleton" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : conversations.length === 0 ? (
+          <EmptyState
+            compact
+            icon={Heart}
+            title="Your inbox is quiet — for now"
+            description="Conversations open when you match. Like a few profiles in Discover to get things started."
+            action={{ label: 'Start discovering', href: '/discover' }}
+            secondaryAction={{ label: 'See my matches', href: '/matches' }}
+          />
+        ) : filtered.length === 0 ? (
+          <p className="text-white/60 text-sm text-center px-6 py-10">No conversations match “{search}”.</p>
         ) : filtered.map(conv => {
           const grad = gradientFor(conv.username);
           const init = initialsFor(conv.displayName || conv.username);
@@ -417,7 +441,7 @@ export default function MessagesPage() {
               <div className="relative flex-shrink-0">
                 {conv.profilePhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={conv.profilePhoto} alt={conv.username} className={`w-12 h-12 rounded-full object-cover ${conv.expired ? 'grayscale' : ''}`} />
+                  <img src={conv.profilePhoto} alt="" width={48} height={48} loading="lazy" className={`w-12 h-12 rounded-full object-cover ${conv.expired ? 'grayscale' : ''}`} />
                 ) : (
                   <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${grad} flex items-center justify-center`}>
                     <span className="text-white text-sm font-bold">{init}</span>
@@ -428,13 +452,13 @@ export default function MessagesPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
                   <span className="text-white font-medium text-sm truncate">{conv.displayName || conv.username}</span>
-                  <span className="text-white/30 text-xs flex-shrink-0 ml-2">{fmtTime(conv.lastMessageAt)}</span>
+                  <span className="text-white/55 text-xs flex-shrink-0 ml-2">{fmtTime(conv.lastMessageAt)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   {conv.matchExpiresAt && !conv.lastMessage ? (
                     <ExpiryCountdown expiresAt={conv.matchExpiresAt} />
                   ) : (
-                    <p className="text-white/50 text-xs truncate">{conv.lastMessage || 'Start a conversation'}</p>
+                    <p className="text-white/65 text-xs truncate">{conv.lastMessage || 'Start a conversation'}</p>
                   )}
                   {(conv.unreadCount ?? 0) > 0 && (
                     <span className="flex-shrink-0 ml-2 min-w-5 h-5 bg-[#DC143C] rounded-full text-white text-xs font-bold flex items-center justify-center px-1">
@@ -467,13 +491,13 @@ export default function MessagesPage() {
     <div className={`${mobileView === 'chat' ? 'flex' : 'hidden'} md:flex flex-1 flex-col min-w-0`}>
       {/* Header */}
       <div className="glass-dark border-b border-white/5 px-4 py-3 flex items-center gap-3">
-        <button className="md:hidden text-white/60 hover:text-white mr-1" onClick={() => setMobileView('list')}>
-          <ArrowLeft size={20} />
+        <button className="md:hidden w-9 h-9 -ml-2 flex items-center justify-center text-white/70 hover:text-white rounded-lg" onClick={() => setMobileView('list')} aria-label="Back to conversations">
+          <ArrowLeft size={20} aria-hidden="true" />
         </button>
         <div className="relative flex-shrink-0">
           {activeConv.profilePhoto ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={activeConv.profilePhoto} alt={activeConv.username} className="w-10 h-10 rounded-full object-cover" />
+            <img src={activeConv.profilePhoto} alt="" width={40} height={40} className="w-10 h-10 rounded-full object-cover" />
           ) : (
             <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${gradientFor(activeConv.username)} flex items-center justify-center`}>
               <span className="text-white text-sm font-bold">{initialsFor(name)}</span>
@@ -488,7 +512,7 @@ export default function MessagesPage() {
               ? <span className="text-[#D4AF37]">typing…</span>
               : activeConv.isOnline
                 ? <span className="text-emerald-400">● Online now</span>
-                : <span className="text-white/40">Offline</span>}
+                : <span className="text-white/60">Offline</span>}
           </div>
         </div>
         {expiresAt && (
@@ -506,7 +530,7 @@ export default function MessagesPage() {
         {!loadingMsgs && messages.length === 0 && (
           expired ? (
             <div className="text-center py-10">
-              <p className="text-white/50 text-sm">This match expired before anyone said hi.</p>
+              <p className="text-white/65 text-sm">This match expired before anyone said hi.</p>
               <Link href="/discover" className="text-[#DC143C] hover:text-[#FF1744] text-sm mt-2 inline-block">Keep discovering</Link>
             </div>
           ) : (
@@ -529,7 +553,7 @@ export default function MessagesPage() {
           />
         ))}
         {otherTyping && (
-          <div className="flex items-center gap-2 text-white/40 text-xs pl-1">
+          <div className="flex items-center gap-2 text-white/60 text-xs pl-1">
             <span className="glass rounded-2xl rounded-tl-sm px-3 py-2 flex gap-1">
               <span className="w-1.5 h-1.5 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
               <span className="w-1.5 h-1.5 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -564,7 +588,7 @@ export default function MessagesPage() {
                 </button>
               )}
             </div>
-            <span className="text-white/40 text-xs">{uploading ? 'Uploading…' : 'Photo attached'}</span>
+            <span className="text-white/60 text-xs">{uploading ? 'Uploading…' : 'Photo attached'}</span>
           </div>
         )}
         <div className="flex items-end gap-2">
@@ -579,14 +603,15 @@ export default function MessagesPage() {
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading || expired}
-            className="w-10 h-10 rounded-xl glass flex items-center justify-center text-white/50 hover:text-white disabled:opacity-40 flex-shrink-0 transition-colors"
+            className="w-10 h-10 rounded-xl glass flex items-center justify-center text-white/65 hover:text-white disabled:opacity-40 flex-shrink-0 transition-colors"
             aria-label="Attach photo"
           >
             <ImagePlus size={18} />
           </button>
           <textarea
             ref={textareaRef}
-            placeholder={expired ? 'This match has expired' : `Message ${name}...`}
+            aria-label={`Message ${name}`}
+            placeholder={expired ? 'This match has expired' : `Message ${name}…`}
             className="input-dark flex-1 px-4 py-2.5 rounded-xl text-sm resize-none min-h-[44px] max-h-32"
             rows={1}
             value={input}
@@ -598,7 +623,8 @@ export default function MessagesPage() {
           <button
             onClick={handleSend}
             disabled={!canSend}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${canSend ? 'bg-[#DC143C] hover:bg-[#FF1744]' : 'glass text-white/30 cursor-not-allowed'}`}
+            aria-label="Send message"
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${canSend ? 'bg-[#DC143C] hover:bg-[#FF1744]' : 'glass text-white/55 cursor-not-allowed'}`}
           >
             {sending
               ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -611,18 +637,19 @@ export default function MessagesPage() {
     <div className="hidden md:flex flex-1 items-center justify-center">
       <div className="text-center">
         <div className="w-16 h-16 rounded-full glass flex items-center justify-center mx-auto mb-4">
-          <Send size={24} className="text-white/20" />
+          <Send size={24} className="text-white/45" />
         </div>
-        <p className="text-white/40 font-medium">Select a conversation</p>
-        <p className="text-white/20 text-sm mt-1">Choose from your matches to start chatting</p>
+        <p className="text-white/80 font-medium">Pick up where you left off</p>
+        <p className="text-white/60 text-sm mt-1">Choose a conversation to start chatting.</p>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#0A0A0F] flex flex-col">
+    <div className="bg-[#0A0A0F] flex flex-col">
       <Navbar />
-      <main className="flex-1 pt-16 flex overflow-hidden" style={{ height: 'calc(100vh - 64px)' }}>
+      {/* Mobile: leave room for the fixed bottom tab bar (its in-flow spacer follows the page). */}
+      <main className="pt-16 flex overflow-hidden h-chat">
         {ConvList}
         {ChatWindow}
       </main>

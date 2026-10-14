@@ -1,8 +1,15 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { LogoMark } from '@/components/Logo'
 import { Download, X, Bell, Share } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { usePathname } from 'next/navigation';
+
+/** Don't ask for anything in the first moments of a visit — let people look around first. */
+const PROMPT_DELAY_MS = 20000;
+/** Screens where a floating card would cover the composer / swipe buttons / form actions. */
+const QUIET_PATHS = ['/messages', '/discover', '/onboarding', '/auth', '/upgrade', '/subscription'];
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -36,6 +43,13 @@ export default function PWAInstall() {
   const [showIOS, setShowIOS] = useState(false);
   const [pushStatus, setPushStatus] = useState<'default' | 'granted' | 'denied' | 'none'>('none');
   const [pushBusy, setPushBusy] = useState(false);
+  const [ready, setReady] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), PROMPT_DELAY_MS);
+    return () => clearTimeout(t);
+  }, []);
 
   const doSubscribe = useCallback(async () => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -111,23 +125,23 @@ export default function PWAInstall() {
     else setPushStatus('denied');
   }
 
+  if (!ready || QUIET_PATHS.some((p) => pathname.startsWith(p))) return null;
+
   // iOS install guide
   if (showIOS && !dismissed && !isStandalone()) {
     return (
       <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 z-40 glass border border-white/15 rounded-xl p-4 shadow-xl">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center">
-              <span className="text-white font-serif font-bold text-sm">V</span>
-            </div>
+            <LogoMark size="sm" />
             <p className="text-white text-sm font-semibold">Install Hush</p>
           </div>
-          <button onClick={dismiss} className="text-white/40 hover:text-white transition-colors"><X size={16} /></button>
+          <button onClick={dismiss} className="text-white/60 hover:text-white transition-colors" aria-label="Dismiss"><X size={16} /></button>
         </div>
         <p className="text-white/60 text-xs mb-3 leading-relaxed">
           Install on your iPhone in two taps:
         </p>
-        <div className="space-y-2 text-xs text-white/50">
+        <div className="space-y-2 text-xs text-white/65">
           <div className="flex items-center gap-2">
             <span className="w-5 h-5 bg-white/10 rounded-full flex items-center justify-center text-white text-[10px] font-bold">1</span>
             <span>Tap the</span><Share size={11} className="inline" /><span><strong className="text-white/80">Share</strong> button</span>
@@ -145,17 +159,15 @@ export default function PWAInstall() {
   if (prompt && !dismissed) {
     return (
       <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 z-40 glass border border-white/15 rounded-xl px-4 py-3 flex items-center gap-3 shadow-xl">
-        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-serif font-bold text-base">V</span>
-        </div>
+        <LogoMark size="sm" />
         <div className="flex-1 min-w-0">
           <p className="text-white text-sm font-medium">Install Hush</p>
-          <p className="text-white/50 text-xs">Add to your home screen</p>
+          <p className="text-white/65 text-xs">Add to your home screen</p>
         </div>
         <button onClick={install} className="flex items-center gap-1.5 bg-[#DC143C] hover:bg-[#FF1744] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0">
           <Download size={12} />Install
         </button>
-        <button onClick={dismiss} className="text-white/40 hover:text-white transition-colors flex-shrink-0" aria-label="Dismiss"><X size={16} /></button>
+        <button onClick={dismiss} className="text-white/60 hover:text-white transition-colors flex-shrink-0" aria-label="Dismiss"><X size={16} /></button>
       </div>
     );
   }
@@ -169,7 +181,7 @@ export default function PWAInstall() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-white text-sm font-medium">Enable Notifications</p>
-          <p className="text-white/50 text-xs">Get alerts for matches &amp; messages</p>
+          <p className="text-white/65 text-xs">Get alerts for matches &amp; messages</p>
         </div>
         <button onClick={enablePush} disabled={pushBusy} className="flex items-center gap-1.5 bg-[#DC143C] hover:bg-[#FF1744] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0 disabled:opacity-70">
           {pushBusy
@@ -177,7 +189,7 @@ export default function PWAInstall() {
             : <Bell size={12} />}
           Enable
         </button>
-        <button onClick={dismiss} className="text-white/40 hover:text-white transition-colors flex-shrink-0" aria-label="Dismiss"><X size={16} /></button>
+        <button onClick={dismiss} className="text-white/60 hover:text-white transition-colors flex-shrink-0" aria-label="Dismiss"><X size={16} /></button>
       </div>
     );
   }

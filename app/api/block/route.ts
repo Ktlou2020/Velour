@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
+import { isValidId } from '@/lib/security'
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,10 +10,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json()
-    const { userId: blockedId } = body as { userId?: string }
+    const body = await req.json().catch(() => null) as { userId?: unknown } | null
+    const blockedId = body?.userId
 
-    if (!blockedId) {
+    if (!isValidId(blockedId)) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 })
     }
 
@@ -22,32 +23,37 @@ export async function POST(req: NextRequest) {
 
     const blockerId = session.user.id
 
-    // Upsert block
-    await db.block.upsert({
-      where: { blockerId_blockedId: { blockerId, blockedId } },
-      create: { blockerId, blockedId },
-      update: {},
-    })
+    const target = await db.user.findUnique({ where: { id: blockedId }, select: { id: true } })
+    if (!target) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
 
-    // Delete likes between the two users
-    await db.like.deleteMany({
-      where: {
-        OR: [
-          { fromUserId: blockerId, toUserId: blockedId },
-          { fromUserId: blockedId, toUserId: blockerId },
-        ],
-      },
-    })
-
-    // Delete matches between the two users
-    await db.match.deleteMany({
-      where: {
-        OR: [
-          { user1Id: blockerId, user2Id: blockedId },
-          { user1Id: blockedId, user2Id: blockerId },
-        ],
-      },
-    })
+    await db.$transaction([
+      // Upsert block
+      db.block.upsert({
+        where: { blockerId_blockedId: { blockerId, blockedId } },
+        create: { blockerId, blockedId },
+        update: {},
+      }),
+      // Delete likes between the two users
+      db.like.deleteMany({
+        where: {
+          OR: [
+            { fromUserId: blockerId, toUserId: blockedId },
+            { fromUserId: blockedId, toUserId: blockerId },
+          ],
+        },
+      }),
+      // Delete matches between the two users
+      db.match.deleteMany({
+        where: {
+          OR: [
+            { user1Id: blockerId, user2Id: blockedId },
+            { user1Id: blockedId, user2Id: blockerId },
+          ],
+        },
+      }),
+    ])
 
     return NextResponse.json({ blocked: true })
   } catch (error) {
@@ -63,10 +69,10 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json()
-    const { userId: blockedId } = body as { userId?: string }
+    const body = await req.json().catch(() => null) as { userId?: unknown } | null
+    const blockedId = body?.userId
 
-    if (!blockedId) {
+    if (!isValidId(blockedId)) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 })
     }
 

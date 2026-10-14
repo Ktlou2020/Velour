@@ -104,7 +104,7 @@ export default function AccountPage() {
   }
 
   const verifyBadge = {
-    NONE: { icon: Camera, text: 'Not verified', color: 'text-white/40' },
+    NONE: { icon: Camera, text: 'Not verified', color: 'text-white/60' },
     PENDING: { icon: Clock, text: 'Verification pending review', color: 'text-amber-400' },
     VERIFIED: { icon: CheckCircle, text: 'Verified ✓', color: 'text-emerald-400' },
     REJECTED: { icon: XCircle, text: 'Verification rejected — try again', color: 'text-red-400' },
@@ -115,8 +115,8 @@ export default function AccountPage() {
       <Navbar />
       <main className="pt-24 pb-16 px-4 max-w-2xl mx-auto space-y-6">
         <div>
-          <h1 className="text-white text-2xl font-bold font-serif">Account Settings</h1>
-          <p className="text-white/40 text-sm mt-1">@{username}</p>
+          <h1 className="text-white text-3xl font-bold font-serif">Account &amp; privacy</h1>
+          <p className="text-white/60 text-sm mt-1">@{username}</p>
         </div>
 
         {/* Streak */}
@@ -125,23 +125,23 @@ export default function AccountPage() {
             <Flame size={20} className="text-orange-400" />
             <h2 className="text-white font-semibold">Daily Streak</h2>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="text-center">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-4 sm:gap-6">
+            <div className="text-center order-1">
               <div className="text-4xl font-bold text-orange-400">{streak}</div>
-              <div className="text-white/40 text-xs mt-1">day streak</div>
+              <div className="text-white/60 text-xs mt-1">day streak</div>
             </div>
-            <div className="flex-1">
+            <div className="w-full sm:flex-1 order-3 sm:order-2">
               <p className="text-white/60 text-sm mb-2">Log in every day to grow your streak. Every 7 days earns a free Super Like!</p>
               <div className="flex gap-1">
                 {Array.from({ length: 7 }).map((_, i) => (
                   <div key={i} className={`flex-1 h-2 rounded-full ${i < (streak % 7) ? 'bg-orange-400' : 'bg-white/10'}`} />
                 ))}
               </div>
-              <p className="text-white/30 text-xs mt-1">{7 - (streak % 7)} days until next Super Like reward</p>
+              <p className="text-white/55 text-xs mt-1">{7 - (streak % 7)} days until next Super Like reward</p>
             </div>
-            <div className="text-center glass rounded-xl p-3">
+            <div className="text-center glass rounded-xl p-3 order-2 sm:order-3 ml-auto sm:ml-0">
               <div className="text-2xl font-bold text-[#D4AF37]">{superLikes}</div>
-              <div className="text-white/40 text-xs">super likes</div>
+              <div className="text-white/60 text-xs">super likes</div>
             </div>
           </div>
         </div>
@@ -152,8 +152,8 @@ export default function AccountPage() {
             <Shield size={20} className="text-[#DC143C]" />
             <h2 className="text-white font-semibold">Profile Verification</h2>
           </div>
-          <p className="text-white/50 text-sm mb-4 leading-relaxed">
-            Get a verified badge on your profile. Upload a clear selfie — our team reviews it within 24 hours.
+          <p className="text-white/65 text-sm mb-4 leading-relaxed">
+            Get a verified badge on your profile. Upload a clear selfie and our team will review it.
           </p>
           <div className={`flex items-center gap-2 mb-4 ${verifyBadge.color}`}>
             <verifyBadge.icon size={16} />
@@ -182,7 +182,7 @@ export default function AccountPage() {
             <Moon size={20} className="text-indigo-300" />
             <h2 className="text-white font-semibold">Snooze Profile</h2>
           </div>
-          <p className="text-white/50 text-sm mb-4 leading-relaxed">
+          <p className="text-white/65 text-sm mb-4 leading-relaxed">
             Need a break? Snoozing hides your profile from browse, search and discover. Your existing matches and chats stay exactly as they are.
           </p>
           {snooze?.isSnoozed ? (
@@ -233,7 +233,7 @@ export default function AccountPage() {
             <Download size={20} className="text-blue-400" />
             <h2 className="text-white font-semibold">Your Data (POPIA)</h2>
           </div>
-          <p className="text-white/50 text-sm mb-4 leading-relaxed">
+          <p className="text-white/65 text-sm mb-4 leading-relaxed">
             Download a copy of all data Hush holds about you, including your profile, photos, messages, and activity. Your right under South African POPIA law.
           </p>
           <a
@@ -252,7 +252,7 @@ export default function AccountPage() {
             <Trash2 size={20} className="text-red-400" />
             <h2 className="text-white font-semibold">Delete Account</h2>
           </div>
-          <p className="text-white/50 text-sm mb-4 leading-relaxed">
+          <p className="text-white/65 text-sm mb-4 leading-relaxed">
             Permanently delete your account and all associated data. This action cannot be undone.
           </p>
           {!deleteStep ? (
@@ -270,6 +270,7 @@ export default function AccountPage() {
                 value={deleteConfirm}
                 onChange={e => setDeleteConfirm(e.target.value)}
                 placeholder="DELETE MY ACCOUNT"
+                aria-label="Type DELETE MY ACCOUNT to confirm"
                 className="input-dark w-full px-4 py-2.5 rounded-xl text-sm border border-red-500/30"
               />
               <div className="flex gap-2">

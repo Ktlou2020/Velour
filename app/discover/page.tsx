@@ -240,8 +240,8 @@ export default function DiscoverPage() {
         <div className="glass-dark border-b border-white/5 px-4 py-3">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <div>
-              <h1 className="text-white font-semibold">Discover</h1>
-              <p className="text-white/40 text-xs">{remaining.length} profiles remaining</p>
+              <h1 className="font-serif text-white text-xl font-bold">Discover</h1>
+              <p className="text-white/60 text-xs">{remaining.length} profile{remaining.length !== 1 ? 's' : ''} to discover</p>
             </div>
           </div>
         </div>
@@ -254,7 +254,7 @@ export default function DiscoverPage() {
                 <h2 className="flex items-center gap-1.5 text-white text-sm font-semibold">
                   <Sparkles size={14} className="text-[#D4AF37]" />
                   Today&apos;s picks
-                  <span className="text-white/30 font-normal text-xs">· {picks.length} of {picksLimit}</span>
+                  <span className="text-white/55 font-normal text-xs">· {picks.length} of {picksLimit}</span>
                 </h2>
                 {!isPaid && (
                   <Link href="/upgrade" className="flex items-center gap-1 text-[#D4AF37] text-xs font-medium hover:underline">
@@ -279,7 +279,7 @@ export default function DiscoverPage() {
                         {pick.profilePhotoUrl ? (
                           <ProtectedImage src={pick.profilePhotoUrl} alt={pick.username} className="w-full h-full" watermark={watermark} />
                         ) : (
-                          <span className="text-white/40 text-2xl font-bold font-serif">{pickInitials}</span>
+                          <span className="text-white/60 text-2xl font-bold font-serif">{pickInitials}</span>
                         )}
                         <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
                         {typeof pick.compatibility === 'number' && (
@@ -292,9 +292,9 @@ export default function DiscoverPage() {
                         )}
                       </div>
                       <p className="text-white/80 text-xs font-medium truncate mt-1.5">
-                        {pick.displayName || pick.username}{pick.age ? <span className="text-white/40">, {pick.age}</span> : null}
+                        {pick.displayName || pick.username}{pick.age ? <span className="text-white/60">, {pick.age}</span> : null}
                       </p>
-                      {pick.distance && <p className="text-white/30 text-[10px] truncate">{pick.distance}</p>}
+                      {pick.distance && <p className="text-white/55 text-[10px] truncate">{pick.distance}</p>}
                     </button>
                   );
                 })}
@@ -306,16 +306,22 @@ export default function DiscoverPage() {
         {/* Card Area */}
         <div className="flex-1 flex items-center justify-center px-4 py-8">
           {loading ? (
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-12 h-12 border-4 border-[#DC143C] border-t-transparent rounded-full animate-spin" />
-              <p className="text-white/40 text-sm">Finding matches...</p>
+            <div className="w-full max-w-sm" aria-busy="true">
+              <span className="sr-only">Finding people for you…</span>
+              <div className="rounded-3xl overflow-hidden glass">
+                <div className="aspect-[3/4] skeleton" />
+                <div className="p-5 space-y-3">
+                  <div className="h-4 w-1/2 rounded skeleton" />
+                  <div className="h-3 w-full rounded skeleton" />
+                  <div className="h-3 w-4/5 rounded skeleton" />
+                </div>
+              </div>
+              <div className="flex justify-center gap-4 mt-8">
+                {[64, 56, 64, 56].map((d, i) => <div key={i} className="rounded-full skeleton" style={{ width: d, height: d }} />)}
+              </div>
             </div>
           ) : current ? (
             <div className="w-full max-w-sm">
-              {/* Progress */}
-              <p className="text-center text-white/30 text-xs mb-4">
-                {remaining.length} profile{remaining.length !== 1 ? 's' : ''} remaining
-              </p>
 
               {/* Card Stack */}
               <div className="relative">
@@ -356,9 +362,9 @@ export default function DiscoverPage() {
                   onTouchEnd={(e) => onDragEnd(e.changedTouches[0].clientX)}
                 >
                   {/* Photo Area */}
-                  <div className="h-96 flex items-center justify-center relative bg-gradient-to-br from-rose-900 via-red-900 to-[#0A0A0F] overflow-hidden">
+                  <div className="h-[min(24rem,50vh)] flex items-center justify-center relative bg-gradient-to-br from-rose-900 via-red-900 to-[#0A0A0F] overflow-hidden">
                     {current.profilePhotoUrl ? (
-                      <ProtectedImage src={current.profilePhotoUrl} alt={current.username} className="w-full h-full" watermark={watermark} />
+                      <ProtectedImage src={current.profilePhotoUrl} alt={current.username} className="w-full h-full" watermark={watermark} loading="eager" />
                     ) : (
                       <span className="text-white text-8xl font-bold font-serif opacity-60">{initials}</span>
                     )}
@@ -435,7 +441,7 @@ export default function DiscoverPage() {
                     )}
                     {current.prompts?.[0] && (
                       <div className="mb-4 rounded-2xl bg-white/[0.03] border border-white/10 p-4">
-                        <p className="flex items-center gap-1.5 text-white/40 text-[11px] uppercase tracking-wider mb-1">
+                        <p className="flex items-center gap-1.5 text-white/60 text-[11px] uppercase tracking-wider mb-1">
                           <Quote size={10} />
                           {current.prompts[0].question}
                         </p>
@@ -469,7 +475,7 @@ export default function DiscoverPage() {
                   className="w-14 h-14 rounded-full glass border-2 border-amber-500/50 hover:border-amber-500 hover:bg-amber-500/10 flex items-center justify-center transition-all hover:scale-110 active:scale-95 text-2xl"
                   aria-label="Wink"
                 >
-                  👋
+                  <span aria-hidden="true">👋</span>
                 </button>
 
                 <button
@@ -495,7 +501,7 @@ export default function DiscoverPage() {
                   <button
                     onClick={handleUndo}
                     disabled={undoing}
-                    className="flex items-center gap-1.5 glass px-3 py-1.5 rounded-lg text-white/50 hover:text-white text-xs transition-all hover:bg-white/10 disabled:opacity-50"
+                    className="flex items-center gap-1.5 glass px-3 py-1.5 rounded-lg text-white/65 hover:text-white text-xs transition-all hover:bg-white/10 disabled:opacity-50"
                     aria-label="Undo last swipe"
                     title={isPaid ? 'Undo your last swipe (within 10 minutes)' : 'Undo is a Gold & Platinum feature'}
                   >
@@ -503,19 +509,20 @@ export default function DiscoverPage() {
                     {undoing ? 'Undoing…' : 'Undo'}
                   </button>
                 )}
-                <p className="hidden md:block text-white/25 text-xs tracking-wide">
+                <p className="hidden md:block text-white/50 text-xs tracking-wide" aria-hidden="true">
                   ← Pass &nbsp;&nbsp; ❤ Like → &nbsp;&nbsp; ↑ Super Like
                 </p>
-                <p className="md:hidden text-white/20 text-xs">Swipe or tap to decide</p>
+                <p className="md:hidden text-white/45 text-xs">Swipe or tap to decide</p>
               </div>
 
             </div>
           ) : (
             <EmptyState
               icon={Zap}
-              title="You've seen everyone!"
-              description="Check back tomorrow for new members or adjust your preferences"
-              action={{ label: 'Browse Members', href: '/members' }}
+              title="You’re all caught up"
+              description="New members join every week. Come back tomorrow for fresh faces, or browse members with different filters."
+              action={{ label: 'Browse members', href: '/members' }}
+              secondaryAction={{ label: 'See my matches', href: '/matches' }}
             />
           )}
         </div>
@@ -523,13 +530,13 @@ export default function DiscoverPage() {
 
       {/* Undo upgrade prompt */}
       {showUpgrade && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center px-4" onClick={() => setShowUpgrade(false)}>
+        <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center px-4" onClick={() => setShowUpgrade(false)}>
           <div className="glass rounded-3xl p-6 max-w-sm w-full text-center border border-[#D4AF37]/20" onClick={(e) => e.stopPropagation()}>
             <div className="w-14 h-14 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 flex items-center justify-center mx-auto mb-4">
               <Undo2 className="text-[#D4AF37]" size={24} />
             </div>
             <h3 className="text-white font-serif text-xl font-bold mb-2">Changed your mind?</h3>
-            <p className="text-white/50 text-sm mb-6">Gold and Platinum members can undo their last swipe and get that profile back.</p>
+            <p className="text-white/65 text-sm mb-6">Gold and Platinum members can undo their last swipe and get that profile back.</p>
             <div className="flex flex-col gap-2">
               <Link
                 href="/upgrade"
@@ -538,7 +545,7 @@ export default function DiscoverPage() {
                 <Crown size={14} />
                 Upgrade to undo
               </Link>
-              <button onClick={() => setShowUpgrade(false)} className="text-white/40 hover:text-white/70 text-sm py-2">
+              <button onClick={() => setShowUpgrade(false)} className="text-white/60 hover:text-white/70 text-sm py-2">
                 Maybe later
               </button>
             </div>

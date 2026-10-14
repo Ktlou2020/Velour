@@ -1,7 +1,8 @@
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import EmptyState from '@/components/EmptyState';
 import Link from 'next/link';
-import { MessageSquare, Users, TrendingUp, Clock, Eye, Flame, Plus, Crown } from 'lucide-react';
+import { MessageSquare, Users, TrendingUp, Clock, Flame, Plus, Crown } from 'lucide-react';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { isPaid } from '@/lib/premium';
@@ -109,11 +110,11 @@ export default async function ForumsPage() {
       <Navbar />
       <main className="pt-16">
         {/* Header */}
-        <div className="bg-gradient-to-b from-[#0F0A1E] to-[#0A0A0F] py-12 px-4 border-b border-white/5">
+        <div className="bg-gradient-to-b from-[#0F0A1E] to-[#0A0A0F] py-8 sm:py-12 px-4 border-b border-white/5">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
-              <h1 className="font-serif text-4xl font-bold text-white mb-2">Community Forums</h1>
-              <p className="text-white/50">Connect, share, and engage with the Hush community</p>
+              <h1 className="font-serif text-3xl sm:text-4xl font-bold text-white mb-2">Community forums</h1>
+              <p className="text-white/70">Honest conversations about dating, relationships and the lifestyle — members only.</p>
             </div>
             {canPost ? (
               categories.length > 0 && (
@@ -137,31 +138,17 @@ export default async function ForumsPage() {
           </div>
         </div>
 
-        {/* Stats Bar */}
-        <div className="border-b border-white/5 bg-[#060609]">
-          <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap gap-6">
-            {[
-              { icon: Users, label: 'Members online', color: 'text-emerald-400' },
-              { icon: MessageSquare, label: 'Posts today', color: 'text-blue-400' },
-              { icon: TrendingUp, label: 'Threads total', color: 'text-[#D4AF37]' },
-            ].map(({ icon: Icon, label, color }) => (
-              <div key={label} className="flex items-center gap-2 text-sm">
-                <Icon size={14} className={color} />
-                <span className="text-white/50">{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
         <div className="max-w-6xl mx-auto px-4 py-10">
           {/* Forum Categories */}
           {categories.length === 0 ? (
-            <div className="text-center py-20">
-              <MessageSquare size={48} className="text-white/10 mx-auto mb-4" />
-              <p className="text-white/30 text-lg">No forum categories yet</p>
-            </div>
+            <EmptyState
+              icon={MessageSquare}
+              title="The conversation starts soon"
+              description="Our community forums are being set up. In the meantime, say hello to someone new."
+              action={{ label: 'Browse members', href: '/members' }}
+            />
           ) : (
-            <div className="grid md:grid-cols-2 gap-6 mb-12">
+            <div className="grid md:grid-cols-2 gap-4 md:gap-6 mb-12">
               {categories.map((cat, idx) => {
                 const colorKey = cat.color || ['blue', 'crimson', 'emerald', 'gold'][idx % 4];
                 const colors = COLOR_MAP[colorKey] || COLOR_MAP.blue;
@@ -171,7 +158,7 @@ export default async function ForumsPage() {
                   <Link
                     key={cat.id}
                     href={`/forums/${cat.slug}`}
-                    className="glass rounded-2xl p-6 hover:border-white/20 transition-all group cursor-pointer block"
+                    className="glass rounded-2xl p-5 sm:p-6 hover:border-white/20 transition-all group cursor-pointer block min-w-0"
                   >
                     <div className="flex items-start gap-4">
                       <div className={`w-12 h-12 rounded-xl border ${colors.bg} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
@@ -179,27 +166,27 @@ export default async function ForumsPage() {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <h3 className={`text-white font-bold text-lg mb-1 group-hover:${colors.text} transition-colors`}>{cat.name}</h3>
+                        <h2 className="text-white font-bold text-lg mb-1">{cat.name}</h2>
                         {cat.description && (
-                          <p className="text-white/50 text-sm leading-relaxed mb-4">{cat.description}</p>
+                          <p className="text-white/70 text-sm leading-relaxed mb-4">{cat.description}</p>
                         )}
 
-                        <div className="flex items-center gap-4 text-xs text-white/40 mb-4">
+                        <div className="flex items-center gap-4 text-xs text-white/60 mb-4">
                           <span className="flex items-center gap-1">
                             <MessageSquare size={10} />
-                            {(cat.threadCount ?? 0).toLocaleString()} threads
+                            {(cat.threadCount ?? 0).toLocaleString()} {cat.threadCount === 1 ? 'thread' : 'threads'}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Eye size={10} />
-                            {(cat.postCount ?? 0).toLocaleString()} posts
+                            <MessageSquare size={10} aria-hidden="true" />
+                            {(cat.postCount ?? 0).toLocaleString()} {cat.postCount === 1 ? 'post' : 'posts'}
                           </span>
                         </div>
 
                         {cat.latestThread && (
                           <div className="glass-dark rounded-lg px-3 py-2">
-                            <p className="text-white/30 text-xs mb-0.5">Latest:</p>
-                            <p className="text-white/70 text-xs truncate">&ldquo;{cat.latestThread.title}&rdquo;</p>
-                            <p className="text-white/30 text-xs flex items-center gap-1">
+                            <p className="text-white/65 text-xs mb-0.5">Latest</p>
+                            <p className="text-white/85 text-sm truncate">&ldquo;{cat.latestThread.title}&rdquo;</p>
+                            <p className="text-white/65 text-xs flex items-center gap-1 mt-0.5">
                               <span>by {cat.latestThread.authorName}</span>
                               <Clock size={9} />
                               <span>{cat.latestThread.createdAt}</span>

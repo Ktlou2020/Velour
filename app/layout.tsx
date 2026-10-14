@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION } from "./site";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 import MobileNav from "@/components/MobileNav";
@@ -11,14 +12,28 @@ import CookieBanner from "@/components/CookieBanner";
 import OnlineTracker from "@/components/OnlineTracker";
 
 export const metadata: Metadata = {
-  title: "Hush — Where Connections Become Extraordinary",
-  description:
-    "Hush is the world's most refined lifestyle dating community. Discover genuine connections with like-minded individuals in a luxurious, discreet environment. Join 52,000+ extraordinary members today.",
-  keywords:
-    "dating, lifestyle, connections, premium dating, luxury dating community, relationships, hush",
-  authors: [{ name: "Hush" }],
-  creator: "Hush",
-  publisher: "Hush",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    template: `%s · ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: [
+    "dating South Africa",
+    "lifestyle dating",
+    "couples dating",
+    "discreet dating",
+    "verified dating",
+    "Johannesburg dating",
+    "Cape Town dating",
+    "Durban dating",
+    "Hush",
+  ],
+  authors: [{ name: SITE_NAME }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  alternates: { canonical: "/" },
   robots: {
     index: true,
     follow: true,
@@ -32,41 +47,42 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    locale: "en_GB",
-    url: "https://hush.dating",
-    siteName: "Hush",
-    title: "Hush — Where Connections Become Extraordinary",
-    description:
-      "Join the world's most refined lifestyle dating community. 52,000+ extraordinary members. 120+ countries. Premium matching technology.",
-    images: [
-      {
-        url: "/og-image.jpg",
-        width: 1200,
-        height: 630,
-        alt: "Hush — Where Connections Become Extraordinary",
-      },
-    ],
+    locale: "en_ZA",
+    url: "/",
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    // The image itself comes from app/opengraph-image.tsx
   },
   twitter: {
     card: "summary_large_image",
-    title: "Hush — Where Connections Become Extraordinary",
-    description:
-      "Join the world's most refined lifestyle dating community. Premium, discreet, extraordinary.",
-    creator: "@hush_dating",
-    images: ["/og-image.jpg"],
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
-  themeColor: "#0A0A0F",
   manifest: "/manifest.json",
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon-16x16.png",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
     apple: "/apple-touch-icon.png",
   },
+  appleWebApp: {
+    capable: true,
+    title: SITE_NAME,
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Allow pinch-zoom: blocking it fails WCAG 1.4.4 (resize text).
+  viewportFit: "cover",
+  themeColor: "#0A0A0F",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
@@ -88,10 +104,11 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="bg-[#0A0A0F] text-white antialiased pb-16 md:pb-0">
+      <body className="bg-[#0A0A0F] text-white antialiased">
+        <a href="#main-content" className="skip-link">Skip to content</a>
         <AgeGate />
-        <CookieBanner />
         <SessionProvider>
+          <CookieBanner />
           <ToastProvider>
             <OnlineTracker />
             <PageTransition>

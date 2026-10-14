@@ -132,7 +132,7 @@ function VerifyEmailContent() {
                 <p className="text-emerald-400 font-medium">Verification email sent! Check your inbox.</p>
               )}
               <div className="mt-4">
-                <Link href="/members" className="text-gray-500 hover:text-gray-300 text-sm transition-colors">
+                <Link href="/members" className="text-gray-400 hover:text-gray-300 text-sm transition-colors">
                   Go to Members
                 </Link>
               </div>

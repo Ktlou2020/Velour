@@ -58,47 +58,51 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center px-4 py-12">
-      <div className="fixed top-20 left-20 w-64 h-64 bg-[#DC143C]/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="fixed bottom-20 right-20 w-64 h-64 bg-purple-800/10 rounded-full blur-3xl pointer-events-none" />
+      <div aria-hidden="true" className="fixed top-20 left-20 w-64 h-64 bg-[#DC143C]/10 rounded-full blur-3xl pointer-events-none" />
+      <div aria-hidden="true" className="fixed bottom-20 right-20 w-64 h-64 bg-purple-800/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2">
+          <Link href="/" aria-label="Hush — home" className="inline-flex items-center gap-2 mb-5">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center">
               <span className="text-white font-serif font-bold text-xl">H</span>
             </div>
             <span className="text-2xl font-serif font-bold tracking-wide text-white">HUSH</span>
           </Link>
-          <p className="mt-2 text-gray-400 text-sm">Create your account — it only takes a moment</p>
+          <h1 className="text-3xl font-serif font-bold text-white mb-2">Join Hush</h1>
+          <p className="text-gray-400">Free to join. Discreet by design. For singles and couples.</p>
         </div>
 
-        <div className="glass rounded-2xl p-8">
+        <div className="glass rounded-2xl p-6 sm:p-8">
           {error && (
-            <div className="mb-5 p-3 rounded-lg bg-[#DC143C]/10 border border-[#DC143C]/30 text-[#DC143C] text-sm">
+            <div role="alert" className="mb-5 p-3 rounded-lg bg-[#DC143C]/10 border border-[#DC143C]/30 text-[#FF8FA3] text-sm">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-300 mb-1.5">Username</label>
+              <label htmlFor="su-username" className="block text-sm text-gray-300 mb-1.5">Username</label>
               <input
                 type="text"
-                placeholder="Choose a unique username"
+                id="su-username"
+                placeholder="e.g. jazz_and_sundowners"
+                aria-describedby="su-username-hint"
                 className="input-dark w-full"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 autoComplete="username"
                 disabled={loading}
               />
-              <p className="text-xs text-gray-500 mt-1">This is how others will find you</p>
+              <p id="su-username-hint" className="text-xs text-gray-400 mt-1.5">Shown to other members. Avoid using your real full name.</p>
             </div>
 
             <div>
-              <label className="block text-sm text-gray-300 mb-1.5">Email Address</label>
+              <label htmlFor="su-email" className="block text-sm text-gray-300 mb-1.5">Email address</label>
               <input
                 type="email"
-                placeholder="your@email.com"
+                id="su-email"
+                placeholder="you@example.com"
                 className="input-dark w-full"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -108,11 +112,12 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-300 mb-1.5">Password</label>
+              <label htmlFor="su-password" className="block text-sm text-gray-300 mb-1.5">Password</label>
               <div className="relative">
                 <input
+                  id="su-password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Min. 8 characters"
+                  placeholder="At least 8 characters"
                   className="input-dark w-full pr-12"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
@@ -122,7 +127,9 @@ export default function SignupPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-gray-400 hover:text-white rounded-lg"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -130,9 +137,10 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-300 mb-1.5">Confirm Password</label>
+              <label htmlFor="su-confirm" className="block text-sm text-gray-300 mb-1.5">Confirm password</label>
               <input
                 type="password"
+                id="su-confirm"
                 placeholder="Repeat your password"
                 className="input-dark w-full"
                 value={confirmPassword}
@@ -143,10 +151,11 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-300 mb-1.5">Date of Birth</label>
+              <label htmlFor="su-dob" className="block text-sm text-gray-300 mb-1.5">Date of birth</label>
               <input
+                id="su-dob"
                 type="date"
-                className="input-dark w-full"
+                className="input-dark w-full [color-scheme:dark]"
                 value={dateOfBirth}
                 onChange={e => setDateOfBirth(e.target.value)}
                 disabled={loading}
@@ -154,20 +163,22 @@ export default function SignupPage() {
             </div>
 
             <label className="flex items-start gap-3 cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={ageConfirmed}
+                onChange={e => setAgeConfirmed(e.target.checked)}
+              />
               <div
-                role="checkbox"
-                aria-checked={ageConfirmed}
-                tabIndex={0}
-                className={`w-5 h-5 mt-0.5 rounded border flex-shrink-0 flex items-center justify-center transition-all cursor-pointer ${ageConfirmed ? 'bg-[#DC143C] border-[#DC143C]' : 'border-white/20'}`}
-                onClick={() => setAgeConfirmed(!ageConfirmed)}
-                onKeyDown={e => e.key === ' ' && setAgeConfirmed(!ageConfirmed)}
+                aria-hidden="true"
+                className={`w-5 h-5 mt-0.5 rounded border flex-shrink-0 flex items-center justify-center transition-all cursor-pointer peer-focus-visible:ring-2 peer-focus-visible:ring-[#D4AF37] ${ageConfirmed ? 'bg-[#DC143C] border-[#DC143C]' : 'border-white/30'}`}
               >
                 {ageConfirmed && <Check className="w-3 h-3 text-white" />}
               </div>
               <span className="text-sm text-gray-400 leading-relaxed">
                 I confirm I am at least <span className="text-white font-semibold">18 years of age</span> and agree to the{' '}
-                <Link href="/terms" className="text-[#DC143C] hover:underline">Terms</Link> and{' '}
-                <Link href="/privacy" className="text-[#DC143C] hover:underline">Privacy Policy</Link>
+                <Link href="/terms" className="text-[#FF4D6D] hover:underline">Terms</Link> and{' '}
+                <Link href="/privacy" className="text-[#FF4D6D] hover:underline">Privacy Policy</Link>
               </span>
             </label>
 
@@ -178,11 +189,11 @@ export default function SignupPage() {
             >
               {loading ? (
                 <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : 'Create Account'}
+              ) : 'Create my free account'}
             </button>
           </form>
 
-          <p className="text-center text-gray-500 text-sm mt-6">
+          <p className="text-center text-gray-400 text-sm mt-6">
             Already a member?{' '}
             <Link href="/auth/signin" className="text-[#DC143C] hover:underline font-medium">Sign in</Link>
           </p>

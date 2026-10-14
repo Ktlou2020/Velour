@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
-import crypto from 'crypto'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { sendVerificationEmail } from '@/lib/email'
+import { rateLimit, TOO_MANY_REQUESTS_MESSAGE } from '@/lib/rate-limit'
+import { generateToken, hashToken } from '@/lib/security'
 
 export async function POST() {
   try {
@@ -11,13 +12,28 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const token = crypto.randomBytes(32).toString('hex')
+    if (!rateLimit(`send-verification:${session.user.id}`, 3, 60 * 60 * 1000)) {
+      return NextResponse.json({ error: TOO_MANY_REQUESTS_MESSAGE }, { status: 429 })
+    }
+
+    const current = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { isVerified: true },
+    })
+    if (!current) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (current.isVerified) {
+      return NextResponse.json({ sent: false, alreadyVerified: true })
+    }
+
+    const token = generateToken()
     const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
 
     const user = await db.user.update({
       where: { id: session.user.id },
       data: {
-        emailVerifyToken: token,
+        emailVerifyToken: hashToken(token),
         emailVerifyExpiry: expiry,
       },
       select: { email: true },
@@ -26,12 +42,12 @@ export async function POST() {
     try {
       await sendVerificationEmail(user.email, token)
     } catch (emailError) {
-      console.error('Failed to send verification email:', emailError)
+      console.error('Failed to send verification email:', emailError instanceof Error ? emailError.message : emailError)
     }
 
     return NextResponse.json({ sent: true })
   } catch (error) {
-    console.error('POST /api/auth/send-verification error:', error)
+    console.error('POST /api/auth/send-verification error:', error instanceof Error ? error.message : error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

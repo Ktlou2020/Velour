@@ -160,17 +160,17 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
         <div className="bg-gradient-to-b from-[#0F0A1E] to-[#0A0A0F] py-10 px-4 border-b border-white/5">
           <div className="max-w-3xl mx-auto">
             <div className="flex items-center gap-2 text-sm mb-4">
-              <Link href="/forums" className="text-white/40 hover:text-white transition-colors">Forums</Link>
+              <Link href="/forums" className="text-white/60 hover:text-white transition-colors">Forums</Link>
               {thread?.forumSlug && (
                 <>
-                  <span className="text-white/20">/</span>
-                  <Link href={`/forums/${thread.forumSlug}`} className="text-white/40 hover:text-white transition-colors">
+                  <span className="text-white/45">/</span>
+                  <Link href={`/forums/${thread.forumSlug}`} className="text-white/60 hover:text-white transition-colors">
                     {thread.forumName || thread.forumSlug}
                   </Link>
                 </>
               )}
             </div>
-            <Link href={thread?.forumSlug ? `/forums/${thread.forumSlug}` : '/forums'} className="flex items-center gap-1 text-white/40 hover:text-white text-sm mb-3 transition-colors">
+            <Link href={thread?.forumSlug ? `/forums/${thread.forumSlug}` : '/forums'} className="flex items-center gap-1 text-white/60 hover:text-white text-sm mb-3 transition-colors">
               <ChevronLeft size={14} />Back
             </Link>
             {loading ? (
@@ -179,7 +179,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
               <h1 className="font-serif text-2xl md:text-3xl font-bold text-white">{thread?.title || 'Thread'}</h1>
             )}
             {thread && (
-              <div className="flex items-center gap-4 mt-2 text-white/40 text-xs">
+              <div className="flex items-center gap-4 mt-2 text-white/60 text-xs">
                 {thread.authorName && <span>by <span className="text-white/60">{thread.authorName}</span></span>}
                 {thread.createdAt && <span className="flex items-center gap-1"><Clock size={10} />{formatTime(thread.createdAt)}</span>}
                 <span className="flex items-center gap-1"><MessageSquare size={10} />{thread.replyCount ?? posts.length - 1} replies</span>
@@ -211,7 +211,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                           <span className="bg-[#DC143C]/20 text-[#DC143C] text-xs px-2 py-0.5 rounded-full font-semibold">OP</span>
                         )}
                         {post.createdAt && (
-                          <span className="text-white/30 text-xs">{formatTime(post.createdAt)}</span>
+                          <span className="text-white/55 text-xs">{formatTime(post.createdAt)}</span>
                         )}
                       </div>
                       <p className="text-white/80 text-sm leading-relaxed whitespace-pre-wrap">{post.content}</p>
@@ -232,7 +232,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
 
             {status === 'unauthenticated' ? (
               <div className="text-center py-4">
-                <p className="text-white/50 text-sm mb-3">Sign in to join the discussion</p>
+                <p className="text-white/65 text-sm mb-3">Sign in to join the discussion</p>
                 <Link href="/auth/signin" className="bg-gradient-to-r from-[#DC143C] to-[#8F0D25] text-white px-6 py-2.5 rounded-xl text-sm font-semibold">
                   Sign In
                 </Link>
@@ -242,7 +242,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                 <Lock size={20} className="text-[#D4AF37] flex-shrink-0" />
                 <div>
                   <p className="text-white font-medium text-sm">Gold Membership Required</p>
-                  <p className="text-white/50 text-xs mt-0.5">Upgrade to Gold or Platinum to post replies in forums.</p>
+                  <p className="text-white/65 text-xs mt-0.5">Upgrade to Gold or Platinum to post replies in forums.</p>
                 </div>
                 <Link href="/upgrade" className="ml-auto bg-gradient-to-r from-[#D4AF37] to-[#B8960C] text-[#0A0A0F] font-bold px-4 py-2 rounded-lg text-xs whitespace-nowrap">
                   Upgrade

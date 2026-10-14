@@ -1,328 +1,300 @@
 import { Suspense } from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
-  Heart, MessageCircle, Calendar, Shield, Image, Crown,
-  Star, ChevronDown, Users, Globe, ThumbsUp, Check, ArrowRight, MapPin,
+  ArrowRight, BadgeCheck, CalendarHeart, Check, ChevronDown, EyeOff, Flag, Heart,
+  ImageOff, MessageCircle, MoonStar, ShieldCheck, Sparkles, UserPlus, Users,
 } from 'lucide-react';
 import LandingNav from './LandingNav';
 import MemberShowcase from './MemberShowcase';
+import Footer from '@/components/Footer';
+import { SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION } from './site';
 
 export const dynamic = 'force-dynamic';
 
-const FEATURES = [
-  { icon: Heart, title: 'Advanced Matching', desc: 'AI-powered compatibility scoring analyses hundreds of dimensions to find your perfect connections.', color: 'text-[#DC143C]' },
-  { icon: MessageCircle, title: 'Private Messaging', desc: 'End-to-end encrypted conversations. Your privacy is paramount — always.', color: 'text-blue-400' },
-  { icon: Calendar, title: 'Community Events', desc: 'Exclusive member-only gatherings, soirées, and travel experiences in cities worldwide.', color: 'text-[#D4AF37]' },
-  { icon: Shield, title: 'Verified Profiles', desc: 'Multi-step ID verification ensures every member is genuine, safe, and who they claim to be.', color: 'text-emerald-400' },
-  { icon: Image, title: 'Photo Galleries', desc: 'Private and public photo albums with granular access controls you manage entirely.', color: 'text-purple-400' },
-  { icon: Crown, title: 'Premium Concierge', desc: 'Dedicated support team available 24/7 for our Platinum members. Real humans, real care.', color: 'text-[#D4AF37]' },
+export const metadata: Metadata = {
+  title: { absolute: `${SITE_NAME} — ${SITE_TAGLINE}` },
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: '/' },
+};
+
+const TRUST = [
+  { icon: BadgeCheck, label: 'Photo-verified profiles' },
+  { icon: EyeOff, label: 'Incognito browsing' },
+  { icon: ImageOff, label: 'Blurred photos in chat' },
+  { icon: Users, label: 'Singles & couples' },
 ];
 
 const STEPS = [
-  { num: '01', icon: Users, title: 'Create Your Profile', desc: 'Share your story, passions, and desires. Our guided profile builder helps you stand out authentically.' },
-  { num: '02', icon: Heart, title: 'Discover Connections', desc: 'Browse curated matches, swipe through Discover, or explore the community at your own pace.' },
-  { num: '03', icon: MapPin, title: 'Meet in Real Life', desc: 'Take conversations from the app to unforgettable real-world experiences, guided by our events team.' },
+  {
+    num: '01', icon: UserPlus, title: 'Create your profile',
+    desc: 'As a single or as a couple. Add photos, a few prompts and what you’re looking for — share as much or as little as you like.',
+  },
+  {
+    num: '02', icon: Heart, title: 'Discover with intention',
+    desc: 'Browse members near you or swipe through Discover. Every profile shows a compatibility score and the reasons behind it.',
+  },
+  {
+    num: '03', icon: CalendarHeart, title: 'Meet, safely',
+    desc: 'Chat privately, then meet at a member event or on your own terms — with Share My Date letting a friend know where you’ll be.',
+  },
 ];
 
-const TESTIMONIALS = [
-  { text: 'The most elegant and respectful dating community I\'ve ever been part of. Hush genuinely stands apart in every way.', author: 'Sofia M.', location: 'London', stars: 5 },
-  { text: 'Hush connected me with someone truly compatible. The matching algorithm is exceptional — it understood what I really wanted.', author: 'James K.', location: 'New York', stars: 5 },
-  { text: 'As a professional, I needed discretion and quality. Hush delivers both flawlessly. I found my partner here last year.', author: 'Anonymous', location: 'Paris', stars: 5 },
+const PRIVACY = [
+  { icon: BadgeCheck, title: 'Photo verification', desc: 'Members can verify with a quick selfie check. Look for the verified badge before you say hello.' },
+  { icon: EyeOff, title: 'Incognito mode', desc: 'Platinum members can view profiles without showing up in anyone’s “who viewed me” list.' },
+  { icon: ImageOff, title: 'Blurred chat photos', desc: 'Photos sent in chat stay blurred until you choose to reveal them. Your screen, your rules.' },
+  { icon: ShieldCheck, title: 'Protected photos', desc: 'Profile photos can’t be right-clicked or dragged, and carry a subtle watermark of the person viewing them.' },
+  { icon: MoonStar, title: 'Snooze your profile', desc: 'Need a break? Hide your profile instantly and come back whenever you’re ready.' },
+  { icon: Flag, title: 'Block, report & Share My Date', desc: 'Block or report anyone in two taps, and send your date plans to a trusted friend from the Safety Centre.' },
+];
+
+const FEATURES = [
+  { icon: Sparkles, title: 'Transparent compatibility', desc: 'Scores built from shared interests, goals, age and distance — and we show you why.' },
+  { icon: Users, title: 'Made for couples too', desc: 'Invite your partner to link profiles and appear together. Couples are first-class members here, not an afterthought.' },
+  { icon: CalendarHeart, title: 'Curated events', desc: 'Intimate member gatherings — sundowners, tastings, workshops — where introductions come naturally.' },
+  { icon: MessageCircle, title: 'Conversation, not small talk', desc: 'Profile prompts and icebreakers give you something real to reply to, plus a members-only forum.' },
 ];
 
 const TIERS = [
   {
-    name: 'Freemium', price: 'R0', period: 'always free',
-    features: ['Browse up to 20 profiles per day', '3 messages per day', 'Create singles or couples profile', 'Basic search filters', 'Community forum access (read only)'],
-    cta: 'Start Free — No Card', popular: false,
+    name: 'Free', price: 'R0', period: 'forever',
+    features: ['Browse & message members', 'Search members in your city', 'Singles or couples profile', 'Photo verification badge', 'Read the community forums'],
+    cta: 'Join free', style: 'plain' as const,
   },
   {
     name: 'Gold', price: 'R199', period: 'per month',
-    features: ['Unlimited messaging & browsing', 'Advanced search & filters', 'See everyone who liked you', 'Private photo access', 'Events & meetups access', 'Profile boost (1× per month)', 'Couple profile features'],
-    cta: 'Go Gold', popular: true,
+    features: ['Search any city & filter by distance', 'See who liked & viewed you', 'Private photo access', 'Events & meetups access', 'Monthly profile boost', 'Read receipts & undo swipe'],
+    cta: 'Start with Gold', style: 'gold' as const,
   },
   {
     name: 'Platinum', price: 'R349', period: 'per month',
-    features: ['Everything in Gold', 'AI-powered compatibility matching', 'Weekly profile boost', 'Couple profile — advanced partner search', 'Exclusive Platinum-only events', 'Concierge support + verified badge', 'Incognito browsing'],
-    cta: 'Go Platinum', popular: false,
+    features: ['Everything in Gold', 'Incognito browsing', 'Weekly profile boost', 'Compatibility insights', 'Video profile (30 sec)'],
+    cta: 'Start with Platinum', style: 'crimson' as const,
   },
 ];
+
+const FAQS = [
+  { q: 'Who is Hush for?', a: 'Adults 18 and over — singles and couples — who want to meet like-minded people with discretion and respect. Every orientation and relationship style is welcome.' },
+  { q: 'Is it really free to join?', a: 'Yes. Creating a profile, browsing and messaging are free. Gold and Platinum add extra visibility, privacy and search tools if you want them.' },
+  { q: 'How do you keep things discreet?', a: 'Chat photos stay blurred until you reveal them, profile photos are protected and watermarked, and you can snooze your profile or (on Platinum) browse incognito. We never post to your social accounts.' },
+  { q: 'How do I know people are real?', a: 'Members can complete photo verification and earn a verified badge. You can block or report anyone in a couple of taps, and reports go straight to our moderation team.' },
+  { q: 'Where is Hush available?', a: 'We’re starting in South Africa, with members and events growing in Johannesburg, Cape Town and Durban first.' },
+];
+
+function SectionHeading({ eyebrow, title, sub, id, tone = 'crimson' }: { eyebrow: string; title: string; sub?: string; id: string; tone?: 'crimson' | 'gold' }) {
+  return (
+    <div className="text-center mb-12 md:mb-16">
+      <p className={`eyebrow mb-3 ${tone === 'gold' ? 'text-[#D4AF37]' : 'text-[#FF4D6D]'}`}>{eyebrow}</p>
+      <h2 id={id} className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 text-balance">{title}</h2>
+      {sub && <p className="text-white/70 text-base md:text-lg max-w-xl mx-auto">{sub}</p>}
+    </div>
+  );
+}
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#0A0A0F]">
       <LandingNav />
 
-      {/* Hero */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden animated-gradient pt-16">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#DC143C]/10 rounded-full blur-3xl float-animation pointer-events-none" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl float-animation-delayed pointer-events-none" />
-        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-[#D4AF37]/5 rounded-full blur-3xl float-animation-slow pointer-events-none" />
+      <main>
+        {/* ── Hero ─────────────────────────────────────────────── */}
+        <section aria-labelledby="hero-heading" className="relative min-h-[100svh] flex items-center justify-center overflow-hidden animated-gradient pt-24 pb-16">
+          <div aria-hidden="true" className="absolute top-1/4 left-1/4 w-72 h-72 md:w-96 md:h-96 bg-[#DC143C]/10 rounded-full blur-3xl float-animation pointer-events-none" />
+          <div aria-hidden="true" className="absolute bottom-1/4 right-1/4 w-64 h-64 md:w-80 md:h-80 bg-purple-500/10 rounded-full blur-3xl float-animation-delayed pointer-events-none" />
 
-        <div className="relative z-10 max-w-5xl mx-auto px-4 text-center">
-          <div className="inline-flex items-center gap-2 glass px-4 py-2 rounded-full text-sm text-white/60 mb-8">
-            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-            <span>52,000+ members online worldwide</span>
+          <div className="relative z-10 max-w-5xl mx-auto px-4 text-center">
+            <p className="inline-flex items-center gap-2 glass px-4 py-2 rounded-full text-xs sm:text-sm text-white/80 mb-8">
+              <span aria-hidden="true" className="w-1.5 h-1.5 bg-[#D4AF37] rounded-full" />
+              Private dating for singles &amp; couples · 18+
+            </p>
+
+            <h1 id="hero-heading" className="font-serif text-[2.75rem] leading-[1.05] sm:text-6xl md:text-7xl lg:text-[5.5rem] font-bold mb-6">
+              Where Connections<br className="hidden sm:block" />{' '}
+              Become <span className="text-gradient-crimson">Extraordinary</span>
+            </h1>
+
+            <p className="text-white/75 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+              A discreet, members-first community for singles and couples in South Africa.
+              Verified profiles, privacy you control, and evenings worth dressing up for.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-12">
+              <Link href="/auth/signup" className="btn-crimson px-8 py-4 rounded-xl text-lg font-semibold flex items-center justify-center gap-2 glow-crimson">
+                Join free <ArrowRight size={20} aria-hidden="true" />
+              </Link>
+              <a href="#how-it-works" className="glass border border-white/20 hover:border-white/40 px-8 py-4 rounded-xl text-lg font-medium text-white transition-all flex items-center justify-center gap-2">
+                See how it works
+              </a>
+            </div>
+
+            <ul className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 max-w-3xl mx-auto">
+              {TRUST.map(({ icon: Icon, label }) => (
+                <li key={label} className="glass rounded-xl px-3 py-3 flex items-center justify-center gap-2 text-left">
+                  <Icon className="text-[#D4AF37] flex-shrink-0" size={18} aria-hidden="true" />
+                  <span className="text-white/85 text-xs sm:text-sm font-medium leading-tight">{label}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl font-bold leading-tight mb-6">
-            Where Connections<br />
-            Become{' '}
-            <span className="text-gradient-crimson">Extraordinary</span>
-          </h1>
+          <a href="#how-it-works" aria-label="Scroll to how it works" className="hidden md:block absolute bottom-8 left-1/2 -translate-x-1/2 text-white/60 hover:text-white/70 animate-bounce">
+            <ChevronDown size={24} />
+          </a>
+        </section>
 
-          <p className="text-white/60 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-            The world&apos;s most refined lifestyle dating community. Discover genuine connections with extraordinary people who share your passions, values, and desires.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <Link href="/auth/signup" className="btn-crimson px-8 py-4 rounded-xl text-lg font-semibold flex items-center justify-center gap-2 glow-crimson">
-              Join Free Today <ArrowRight size={20} />
-            </Link>
-            <Link href="/members" className="glass border border-white/20 hover:border-white/40 px-8 py-4 rounded-xl text-lg font-medium text-white transition-all flex items-center justify-center gap-2">
-              Browse Members
-            </Link>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {[
-              { icon: Users, label: '52,000+ Members', sub: 'Active community' },
-              { icon: Globe, label: '120+ Countries', sub: 'Global reach' },
-              { icon: ThumbsUp, label: '98% Satisfaction', sub: 'Member rated' },
-            ].map(({ icon: Icon, label, sub }) => (
-              <div key={label} className="glass px-6 py-4 rounded-xl flex items-center gap-3 float-animation">
-                <Icon className="text-[#DC143C]" size={20} />
-                <div className="text-left">
-                  <div className="text-white font-semibold text-sm">{label}</div>
-                  <div className="text-white/40 text-xs">{sub}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/30 animate-bounce">
-          <ChevronDown size={24} />
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section id="how-it-works" className="py-24 px-4 bg-[#0A0A0F]">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-[#DC143C] text-sm font-semibold tracking-widest uppercase mb-3">Simple & Effortless</p>
-            <h2 className="font-serif text-4xl md:text-5xl font-bold text-white mb-4">Crafted for Extraordinary People</h2>
-            <p className="text-white/50 text-lg max-w-xl mx-auto">Three steps to the connection you&apos;ve been searching for.</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {STEPS.map(({ num, icon: Icon, title, desc }) => (
-              <div key={num} className="glass rounded-2xl p-8 card-hover relative overflow-hidden">
-                <div className="absolute top-4 right-4 text-6xl font-bold text-white/5 font-serif">{num}</div>
-                <div className="w-14 h-14 bg-[#DC143C]/10 border border-[#DC143C]/20 rounded-xl flex items-center justify-center mb-6">
-                  <Icon className="text-[#DC143C]" size={24} />
-                </div>
-                <h3 className="text-white font-bold text-xl mb-3 font-serif">{title}</h3>
-                <p className="text-white/50 leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features Grid */}
-      <section id="features" className="py-24 px-4 bg-gradient-to-b from-[#0A0A0F] to-[#0F0A1E]">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-[#D4AF37] text-sm font-semibold tracking-widest uppercase mb-3">Everything You Need</p>
-            <h2 className="font-serif text-4xl md:text-5xl font-bold text-white mb-4">Premium Features</h2>
-            <p className="text-white/50 text-lg max-w-xl mx-auto">Built with care, refined for luxury, designed around your needs.</p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {FEATURES.map(({ icon: Icon, title, desc, color }) => (
-              <div key={title} className="glass rounded-2xl p-6 card-hover group">
-                <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                  <Icon className={color} size={22} />
-                </div>
-                <h3 className="text-white font-semibold text-lg mb-2">{title}</h3>
-                <p className="text-white/50 text-sm leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Real Member Showcase — server component with real DB data */}
-      <Suspense fallback={
-        <section className="py-24 px-4 bg-[#0F0A1E]">
-          <div className="max-w-6xl mx-auto text-center">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="glass rounded-2xl overflow-hidden animate-pulse">
-                  <div className="h-36 bg-white/5" />
-                  <div className="p-3 space-y-2">
-                    <div className="h-3 bg-white/5 rounded w-3/4" />
-                    <div className="h-2 bg-white/5 rounded w-1/2" />
+        {/* ── How it works ─────────────────────────────────────── */}
+        <section id="how-it-works" aria-labelledby="how-heading" className="py-20 md:py-28 px-4 bg-[#0A0A0F] scroll-mt-16">
+          <div className="max-w-6xl mx-auto">
+            <SectionHeading id="how-heading" eyebrow="How it works" title="Three steps, at your own pace" sub="No pressure, no performance — just a better way to meet people you actually click with." />
+            <ol className="grid md:grid-cols-3 gap-5 md:gap-8">
+              {STEPS.map(({ num, icon: Icon, title, desc }) => (
+                <li key={num} className="glass rounded-2xl p-7 md:p-8 card-hover relative overflow-hidden">
+                  <span aria-hidden="true" className="absolute top-4 right-5 text-6xl font-bold text-white/[0.06] font-serif">{num}</span>
+                  <div className="w-14 h-14 bg-[#DC143C]/10 border border-[#DC143C]/25 rounded-xl flex items-center justify-center mb-6">
+                    <Icon className="text-[#FF4D6D]" size={24} aria-hidden="true" />
                   </div>
-                </div>
+                  <h3 className="text-white font-bold text-xl mb-3 font-serif">{title}</h3>
+                  <p className="text-white/70 leading-relaxed">{desc}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* ── Privacy & safety ─────────────────────────────────── */}
+        <section id="privacy" aria-labelledby="privacy-heading" className="py-20 md:py-28 px-4 bg-gradient-to-b from-[#0A0A0F] to-[#0F0A1E] scroll-mt-16">
+          <div className="max-w-6xl mx-auto">
+            <SectionHeading id="privacy-heading" tone="gold" eyebrow="Privacy & safety" title="Discretion is the default" sub="The tools to stay private and feel safe are built in — not hidden in settings." />
+            <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              {PRIVACY.map(({ icon: Icon, title, desc }) => (
+                <li key={title} className="glass rounded-2xl p-6 card-hover">
+                  <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center mb-4">
+                    <Icon className="text-[#D4AF37]" size={20} aria-hidden="true" />
+                  </div>
+                  <h3 className="text-white font-semibold text-lg mb-2">{title}</h3>
+                  <p className="text-white/70 text-sm leading-relaxed">{desc}</p>
+                </li>
+              ))}
+            </ul>
+            <p className="text-center mt-10">
+              <Link href="/safety" className="inline-flex items-center gap-1.5 text-[#D4AF37] hover:text-[#F5E48F] font-medium text-sm">
+                Visit the Safety Centre <ArrowRight size={14} aria-hidden="true" />
+              </Link>
+            </p>
+          </div>
+        </section>
+
+        {/* ── Features ─────────────────────────────────────────── */}
+        <section aria-labelledby="features-heading" className="py-20 md:py-28 px-4 bg-[#0F0A1E]">
+          <div className="max-w-6xl mx-auto">
+            <SectionHeading id="features-heading" eyebrow="Thoughtfully made" title="Everything you need to connect" />
+            <ul className="grid sm:grid-cols-2 gap-4 md:gap-6">
+              {FEATURES.map(({ icon: Icon, title, desc }) => (
+                <li key={title} className="glass rounded-2xl p-6 md:p-7 flex gap-5 card-hover">
+                  <div className="w-12 h-12 rounded-xl bg-[#DC143C]/10 border border-[#DC143C]/20 flex items-center justify-center flex-shrink-0">
+                    <Icon className="text-[#FF4D6D]" size={22} aria-hidden="true" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold text-lg mb-1.5">{title}</h3>
+                    <p className="text-white/70 text-sm leading-relaxed">{desc}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* ── Real members (renders nothing until there are enough) ── */}
+        <Suspense fallback={null}>
+          <MemberShowcase />
+        </Suspense>
+
+        {/* ── Membership ───────────────────────────────────────── */}
+        <section id="pricing" aria-labelledby="pricing-heading" className="py-20 md:py-28 px-4 bg-gradient-to-b from-[#0F0A1E] to-[#0A0A0F] scroll-mt-16">
+          <div className="max-w-5xl mx-auto">
+            <SectionHeading id="pricing-heading" eyebrow="Membership" title="Start free. Upgrade if you love it." sub="Prices in rand, paid securely through PayFast." />
+            <div className="grid md:grid-cols-3 gap-5 md:gap-6 items-start">
+              {TIERS.map((tier) => {
+                const gold = tier.style === 'gold';
+                return (
+                  <div key={tier.name} className={`glass rounded-2xl p-7 md:p-8 border relative ${gold ? 'border-[#D4AF37]/50 shadow-lg shadow-[#D4AF37]/10 md:-translate-y-2' : 'border-white/10'}`}>
+                    {gold && (
+                      <p className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#D4AF37] to-[#B8960C] text-[#0A0A0F] text-[11px] font-bold tracking-wider px-4 py-1 rounded-full whitespace-nowrap">
+                        RECOMMENDED
+                      </p>
+                    )}
+                    <h3 className={`font-serif text-2xl font-bold mb-1 ${gold ? 'text-[#D4AF37]' : 'text-white'}`}>{tier.name}</h3>
+                    <p className="flex items-baseline gap-1.5 mb-6">
+                      <span className="text-4xl font-bold text-white">{tier.price}</span>
+                      <span className="text-white/60 text-sm">{tier.period}</span>
+                    </p>
+                    <ul className="space-y-3 mb-8">
+                      {tier.features.map((f) => (
+                        <li key={f} className="flex items-start gap-2.5 text-white/80 text-sm">
+                          <Check size={16} aria-hidden="true" className={`mt-0.5 flex-shrink-0 ${gold ? 'text-[#D4AF37]' : 'text-[#FF4D6D]'}`} />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                    <Link
+                      href="/auth/signup"
+                      className={`block text-center py-3.5 rounded-xl font-semibold transition-all ${
+                        gold
+                          ? 'bg-gradient-to-r from-[#D4AF37] to-[#B8960C] text-[#0A0A0F] hover:from-[#F4D03F] hover:to-[#D4AF37]'
+                          : tier.style === 'crimson'
+                          ? 'bg-gradient-to-r from-[#DC143C] to-[#8F0D25] text-white hover:from-[#FF1744] hover:to-[#DC143C]'
+                          : 'glass border border-white/20 hover:border-white/40 text-white'
+                      }`}
+                    >
+                      {tier.cta}
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ── FAQ ──────────────────────────────────────────────── */}
+        <section aria-labelledby="faq-heading" className="py-20 md:py-24 px-4 bg-[#0A0A0F]">
+          <div className="max-w-3xl mx-auto">
+            <SectionHeading id="faq-heading" tone="gold" eyebrow="Questions" title="Good to know" />
+            <div className="space-y-3">
+              {FAQS.map(({ q, a }) => (
+                <details key={q} className="group glass rounded-2xl px-5 md:px-6 open:border-white/20">
+                  <summary className="flex items-center justify-between gap-4 cursor-pointer list-none py-5 text-white font-medium [&::-webkit-details-marker]:hidden">
+                    {q}
+                    <ChevronDown size={18} aria-hidden="true" className="text-white/60 flex-shrink-0 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <p className="text-white/70 text-sm md:text-base leading-relaxed pb-5 -mt-1">{a}</p>
+                </details>
               ))}
             </div>
           </div>
         </section>
-      }>
-        <MemberShowcase />
-      </Suspense>
 
-      {/* Testimonials */}
-      <section className="py-24 px-4 bg-[#0A0A0F]">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-[#D4AF37] text-sm font-semibold tracking-widest uppercase mb-3">Member Stories</p>
-            <h2 className="font-serif text-4xl md:text-5xl font-bold text-white mb-4">Real Connections, Real Stories</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t, i) => (
-              <div key={i} className="glass rounded-2xl p-8 card-hover">
-                <div className="flex mb-4">
-                  {Array.from({ length: t.stars }).map((_, s) => (
-                    <Star key={s} size={16} className="text-[#D4AF37] fill-[#D4AF37]" />
-                  ))}
-                </div>
-                <p className="text-white/80 leading-relaxed mb-6 italic">&ldquo;{t.text}&rdquo;</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#DC143C]/20 border border-[#DC143C]/30 flex items-center justify-center text-[#DC143C] font-bold text-sm">
-                    {t.author[0]}
-                  </div>
-                  <div>
-                    <div className="text-white font-semibold text-sm">{t.author}</div>
-                    <div className="text-white/40 text-xs">{t.location}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Membership Tiers */}
-      <section id="pricing" className="py-24 px-4 bg-gradient-to-b from-[#0A0A0F] to-[#0F0A1E]">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-[#DC143C] text-sm font-semibold tracking-widest uppercase mb-3">Choose Your Journey</p>
-            <h2 className="font-serif text-4xl md:text-5xl font-bold text-white mb-4">Membership Tiers</h2>
-            <p className="text-white/50 text-lg max-w-xl mx-auto">Start free, upgrade when you&apos;re ready for the full Hush experience.</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {TIERS.map((tier) => (
-              <div key={tier.name} className={`glass rounded-2xl p-8 border relative card-hover ${tier.popular ? 'border-[#D4AF37]/40 shadow-lg shadow-[#D4AF37]/10' : 'border-white/10'}`}>
-                {tier.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#D4AF37] to-[#B8960C] text-[#0A0A0F] text-xs font-bold px-4 py-1 rounded-full whitespace-nowrap">
-                    MOST POPULAR
-                  </div>
-                )}
-                <div className="mb-6">
-                  <h3 className={`font-serif text-2xl font-bold mb-1 ${tier.popular ? 'text-[#D4AF37]' : 'text-white'}`}>{tier.name}</h3>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-white">{tier.price}</span>
-                    <span className="text-white/40 text-sm">/{tier.period}</span>
-                  </div>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  {tier.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-white/70 text-sm">
-                      <Check size={16} className={`mt-0.5 flex-shrink-0 ${tier.popular ? 'text-[#D4AF37]' : 'text-[#DC143C]'}`} />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/auth/signup"
-                  className={`block text-center py-3 rounded-xl font-semibold transition-all ${
-                    tier.popular
-                      ? 'bg-gradient-to-r from-[#D4AF37] to-[#B8960C] text-[#0A0A0F] hover:from-[#F4D03F] hover:to-[#D4AF37]'
-                      : tier.name === 'Platinum'
-                      ? 'bg-gradient-to-r from-[#DC143C] to-[#8F0D25] text-white hover:from-[#FF1744] hover:to-[#DC143C]'
-                      : 'glass border border-white/20 hover:border-white/40 text-white'
-                  }`}
-                >
-                  {tier.cta}
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Banner */}
-      <section className="py-20 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="relative rounded-3xl overflow-hidden p-12 text-center" style={{ background: 'linear-gradient(135deg, #DC143C 0%, #9D0208 50%, #6A040F 100%)' }}>
-            <div className="absolute inset-0 shimmer pointer-events-none" />
-            <div className="absolute top-4 right-8 text-white/10 font-serif text-9xl font-bold select-none">H</div>
-            <h2 className="font-serif text-4xl md:text-5xl font-bold text-white mb-4 relative z-10">
-              Ready to Meet Someone Extraordinary?
-            </h2>
-            <p className="text-white/80 text-lg mb-8 max-w-xl mx-auto relative z-10">
-              Join over 52,000 members who&apos;ve found genuine connections through Hush. Your story starts today.
-            </p>
-            <Link href="/auth/signup" className="relative z-10 inline-flex items-center gap-2 bg-white text-[#DC143C] font-bold px-8 py-4 rounded-xl hover:bg-white/90 transition-all text-lg">
-              Join Hush Free <ArrowRight size={20} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-[#060609] border-t border-white/5 py-16 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-10 mb-12">
-            <div className="md:col-span-2">
-              <Link href="/" className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center">
-                  <span className="text-white font-bold text-lg font-serif">H</span>
-                </div>
-                <span className="text-white font-bold text-xl tracking-widest font-serif">HUSH</span>
-              </Link>
-              <p className="text-white/40 text-sm leading-relaxed max-w-xs">
-                Where Connections Become Extraordinary. The world&apos;s most refined lifestyle dating community for discerning adults.
+        {/* ── Closing CTA ──────────────────────────────────────── */}
+        <section className="py-16 md:py-20 px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="relative rounded-3xl overflow-hidden px-6 py-12 md:p-14 text-center" style={{ background: 'linear-gradient(135deg, #DC143C 0%, #9D0208 50%, #6A040F 100%)' }}>
+              <div aria-hidden="true" className="absolute inset-0 shimmer pointer-events-none" />
+              <span aria-hidden="true" className="absolute -top-4 right-6 text-white/10 font-serif text-[9rem] leading-none font-bold select-none">H</span>
+              <h2 className="font-serif text-3xl md:text-5xl font-bold text-white mb-4 relative z-10 text-balance">
+                Your next great story starts quietly.
+              </h2>
+              <p className="text-white/90 text-base md:text-lg mb-8 max-w-xl mx-auto relative z-10">
+                Create your free profile in a couple of minutes. Upgrade only if — and when — you want more.
               </p>
-              <div className="flex gap-3 mt-6">
-                {['T', 'In', 'F'].map((s) => (
-                  <div key={s} className="w-9 h-9 glass rounded-lg flex items-center justify-center text-white/40 text-xs font-bold">
-                    {s}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-widest">Company</h4>
-              <ul className="space-y-2">
-                {['About', 'Blog', 'Careers', 'Press', 'Contact'].map((l) => (
-                  <li key={l}><Link href="#" className="text-white/40 hover:text-white text-sm transition-colors">{l}</Link></li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-widest">Legal</h4>
-              <ul className="space-y-2">
-                {[
-                  { label: 'Privacy Policy', href: '/privacy' },
-                  { label: 'Terms of Service', href: '/terms' },
-                  { label: 'Cookie Policy', href: '#' },
-                  { label: 'Safety Center', href: '#' },
-                  { label: 'DMCA', href: '#' },
-                ].map(({ label, href }) => (
-                  <li key={label}><Link href={href} className="text-white/40 hover:text-white text-sm transition-colors">{label}</Link></li>
-                ))}
-              </ul>
+              <Link href="/auth/signup" className="relative z-10 inline-flex items-center gap-2 bg-white text-[#9D0208] font-bold px-8 py-4 rounded-xl hover:bg-white/90 transition-all text-lg">
+                Join Hush free <ArrowRight size={20} aria-hidden="true" />
+              </Link>
             </div>
           </div>
+        </section>
+      </main>
 
-          <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-white/30 text-sm">© 2025 Hush. All rights reserved. 18+ only.</p>
-            <p className="text-white/20 text-xs">This site is intended for adults aged 18 and over. By using this site you agree to our Terms of Service.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

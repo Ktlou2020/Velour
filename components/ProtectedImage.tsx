@@ -8,6 +8,8 @@ interface Props {
   className?: string;
   watermark?: string;
   style?: React.CSSProperties;
+  /** Defaults to lazy; pass "eager" for above-the-fold hero images. */
+  loading?: 'lazy' | 'eager';
 }
 
 /**
@@ -18,7 +20,7 @@ interface Props {
  * - Pointer events captured by overlay so img is never directly interactable
  * - Semi-transparent watermark burned into the view (not the file)
  */
-export default function ProtectedImage({ src, alt, className, watermark, style }: Props) {
+export default function ProtectedImage({ src, alt, className, watermark, style, loading = 'lazy' }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   function block(e: React.SyntheticEvent) {
@@ -39,6 +41,8 @@ export default function ProtectedImage({ src, alt, className, watermark, style }
       <img
         src={src}
         alt={alt}
+        loading={loading}
+        decoding="async"
         className="w-full h-full object-cover pointer-events-none"
         style={{
           WebkitUserDrag: 'none',

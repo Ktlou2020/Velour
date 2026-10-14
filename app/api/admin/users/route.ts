@@ -1,21 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { requireAdmin } from '@/auth'
+import { isValidId } from '@/lib/security'
 import { db } from '@/lib/db'
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const sessionUser = session.user as { id: string; role?: string }
-    if (sessionUser.role !== 'ADMIN') {
+    const sessionUser = await requireAdmin()
+    if (!sessionUser) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const { searchParams } = new URL(req.url)
-    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
-    const search = searchParams.get('search') ?? ''
+    const page = Math.min(10_000, Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1))
+    const search = (searchParams.get('search') ?? '').slice(0, 100)
     const limit = 50
     const skip = (page - 1) * limit
 
@@ -65,24 +62,30 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const sessionUser = session.user as { id: string; role?: string }
-    if (sessionUser.role !== 'ADMIN') {
+    const sessionUser = await requireAdmin()
+    if (!sessionUser) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const body = await req.json() as {
-      userId: string
-      action: 'ban' | 'unban' | 'verify' | 'promote' | 'setTier'
+    const body = await req.json().catch(() => ({})) as {
+      userId?: unknown
+      action?: 'ban' | 'unban' | 'verify' | 'promote' | 'demote' | 'setTier'
       tier?: 'FREE' | 'GOLD' | 'PLATINUM'
     }
     const { userId, action, tier } = body
 
-    if (!userId || !action) {
+    if (!isValidId(userId) || !action) {
       return NextResponse.json({ error: 'userId and action are required' }, { status: 400 })
+    }
+
+    // Guard against an admin locking themselves out.
+    if (userId === sessionUser.id && (action === 'ban' || action === 'demote')) {
+      return NextResponse.json({ error: 'You cannot ban or demote yourself' }, { status: 400 })
+    }
+
+    const target = await db.user.findUnique({ where: { id: userId }, select: { id: true } })
+    if (!target) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     if (action === 'setTier') {
@@ -102,6 +105,7 @@ export async function PATCH(req: NextRequest) {
     else if (action === 'unban') updateData = { isActive: true }
     else if (action === 'verify') updateData = { isVerified: true }
     else if (action === 'promote') updateData = { role: 'ADMIN' }
+    else if (action === 'demote') updateData = { role: 'USER' }
     else return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
 
     const updated = await db.user.update({

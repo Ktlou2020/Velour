@@ -65,10 +65,10 @@ export function PromptsEditor({ initial }: { initial: ProfilePrompt[] }) {
         <h2 className="text-white font-semibold flex items-center gap-2">
           <Quote size={16} className="text-[#DC143C]" />
           Prompts
-          <span className="text-white/30 text-xs font-normal">({prompts.length}/{MAX_PROMPTS})</span>
+          <span className="text-white/55 text-xs font-normal">({prompts.length}/{MAX_PROMPTS})</span>
         </h2>
         {!editing && (
-          <button onClick={startEdit} className="text-white/30 hover:text-white/60 transition-colors" aria-label="Edit prompts">
+          <button onClick={startEdit} className="text-white/55 hover:text-white/60 transition-colors" aria-label="Edit prompts">
             <Edit2 size={14} />
           </button>
         )}
@@ -91,7 +91,7 @@ export function PromptsEditor({ initial }: { initial: ProfilePrompt[] }) {
                 </select>
                 <button
                   onClick={() => setDraft(draft.filter((_, j) => j !== i))}
-                  className="w-8 h-8 glass rounded-lg flex items-center justify-center text-white/40 hover:text-red-400"
+                  className="w-8 h-8 glass rounded-lg flex items-center justify-center text-white/60 hover:text-red-400"
                   aria-label="Remove prompt"
                 >
                   <Trash2 size={14} />
@@ -105,7 +105,7 @@ export function PromptsEditor({ initial }: { initial: ProfilePrompt[] }) {
                 placeholder="Your answer…"
                 aria-label="Prompt answer"
               />
-              <p className="text-white/30 text-xs text-right mt-1">{d.answer.length}/{MAX_PROMPT_ANSWER}</p>
+              <p className="text-white/55 text-xs text-right mt-1">{d.answer.length}/{MAX_PROMPT_ANSWER}</p>
             </div>
           ))}
           <div className="flex items-center justify-between">
@@ -115,7 +115,7 @@ export function PromptsEditor({ initial }: { initial: ProfilePrompt[] }) {
               </button>
             ) : <span />}
             <div className="flex gap-2">
-              <button onClick={() => setEditing(false)} className="glass px-3 py-1.5 rounded-lg text-white/50 hover:text-white text-xs transition-colors">Cancel</button>
+              <button onClick={() => setEditing(false)} className="glass px-3 py-1.5 rounded-lg text-white/65 hover:text-white text-xs transition-colors">Cancel</button>
               <button onClick={save} disabled={saving} className="bg-[#DC143C] hover:bg-[#FF1744] text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60">
                 {saving ? 'Saving...' : 'Save'}
               </button>
@@ -126,13 +126,13 @@ export function PromptsEditor({ initial }: { initial: ProfilePrompt[] }) {
         <div className="space-y-3">
           {prompts.map((p) => (
             <div key={p.question} className="glass rounded-xl p-4 border border-white/5">
-              <p className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-1">{p.question}</p>
+              <p className="text-white/60 text-xs font-semibold uppercase tracking-wider mb-1">{p.question}</p>
               <p className="text-white/80 text-sm break-words">{p.answer}</p>
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-white/30 text-sm italic">Answer up to {MAX_PROMPTS} prompts to give matches something to talk about.</p>
+        <p className="text-white/55 text-sm italic">Answer up to {MAX_PROMPTS} prompts to give matches something to talk about.</p>
       )}
     </div>
   );
@@ -192,7 +192,7 @@ export function VideoProfileCard({ initialUrl, platinum }: { initialUrl: string 
 
       {platinum ? (
         <>
-          <p className="text-white/40 text-sm mb-4">Keep it short and sweet — 30 seconds max, under 30MB.</p>
+          <p className="text-white/60 text-sm mb-4">Keep it short and sweet — 30 seconds max, under 30MB.</p>
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => inputRef.current?.click()}
@@ -206,7 +206,7 @@ export function VideoProfileCard({ initialUrl, platinum }: { initialUrl: string 
               <button
                 onClick={remove}
                 disabled={busy}
-                className="flex items-center gap-1.5 glass border border-white/10 hover:border-red-500/30 text-white/50 hover:text-red-400 px-4 py-2.5 rounded-xl text-sm transition-all disabled:opacity-60"
+                className="flex items-center gap-1.5 glass border border-white/10 hover:border-red-500/30 text-white/65 hover:text-red-400 px-4 py-2.5 rounded-xl text-sm transition-all disabled:opacity-60"
               >
                 <Trash2 size={14} /> Remove
               </button>
@@ -216,9 +216,9 @@ export function VideoProfileCard({ initialUrl, platinum }: { initialUrl: string 
         </>
       ) : (
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <p className="text-white/40 text-sm flex items-center gap-1.5"><Lock size={12} /> Add a 30-second video intro with Platinum.</p>
+          <p className="text-white/60 text-sm flex items-center gap-1.5"><Lock size={12} /> Add a 30-second video intro with Platinum.</p>
           {videoUrl && (
-            <button onClick={remove} disabled={busy} className="text-white/50 hover:text-red-400 text-sm flex items-center gap-1"><Trash2 size={12} /> Remove video</button>
+            <button onClick={remove} disabled={busy} className="text-white/65 hover:text-red-400 text-sm flex items-center gap-1"><Trash2 size={12} /> Remove video</button>
           )}
           <Link href="/upgrade" className="bg-gradient-to-r from-purple-600 to-purple-800 text-white font-semibold px-4 py-2 rounded-xl text-sm hover:from-purple-500 hover:to-purple-700 transition-all">Go Platinum</Link>
         </div>
@@ -269,7 +269,7 @@ export function LocationCard({ initialHasLocation }: { initialHasLocation: boole
         <MapPin size={16} className="text-[#DC143C]" />
         Distance &amp; Location
       </h2>
-      <p className="text-white/40 text-sm mb-4">
+      <p className="text-white/60 text-sm mb-4">
         {hasLocation
           ? 'Your approximate location is saved. Others only ever see a rounded distance, never your exact position.'
           : 'Share your approximate location to show distance and appear in nearby searches. It is rounded to about 1 km and never shown to others.'}
@@ -287,7 +287,7 @@ export function LocationCard({ initialHasLocation }: { initialHasLocation: boole
           <button
             onClick={clear}
             disabled={busy}
-            className="flex items-center gap-1.5 glass border border-white/10 hover:border-red-500/30 text-white/50 hover:text-red-400 px-4 py-2.5 rounded-xl text-sm transition-all disabled:opacity-60"
+            className="flex items-center gap-1.5 glass border border-white/10 hover:border-red-500/30 text-white/65 hover:text-red-400 px-4 py-2.5 rounded-xl text-sm transition-all disabled:opacity-60"
           >
             <X size={14} /> Clear location
           </button>
@@ -350,7 +350,7 @@ export function PrivacySettingsCard({
               Incognito browsing
               <span className="flex items-center gap-1 text-purple-300 text-[10px] font-bold bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 rounded-full"><Star size={9} /> Platinum</span>
             </p>
-            <p className="text-white/40 text-xs mt-0.5">View profiles without appearing in their &quot;Who viewed me&quot; list or adding to their view count.</p>
+            <p className="text-white/60 text-xs mt-0.5">View profiles without appearing in their &quot;Who viewed me&quot; list or adding to their view count.</p>
             {!platinum && !incognito && (
               <Link href="/upgrade" className="text-purple-300 text-xs hover:underline mt-1 inline-block">Upgrade to Platinum to enable</Link>
             )}
@@ -365,10 +365,10 @@ export function PrivacySettingsCard({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-white text-sm font-medium flex items-center gap-2">
-              <ImageIcon size={13} className="text-white/50" />
+              <ImageIcon size={13} className="text-white/65" />
               Show images in chats without blurring
             </p>
-            <p className="text-white/40 text-xs mt-0.5">When off, photos you receive in messages stay blurred until you tap to reveal them.</p>
+            <p className="text-white/60 text-xs mt-0.5">When off, photos you receive in messages stay blurred until you tap to reveal them.</p>
           </div>
           <Toggle
             label="Show images in chats without blurring"

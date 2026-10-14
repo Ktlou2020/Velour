@@ -48,7 +48,7 @@ export default async function MemberProfilePage({ params }: PageProps) {
 
   if (!user) return (
     <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
-      <p className="text-white/50">Member not found.</p>
+      <p className="text-white/65">Member not found.</p>
     </div>
   );
 

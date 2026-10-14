@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { requireAdmin } from '@/auth'
 import { db } from '@/lib/db'
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const sessionUser = session.user as { id: string; role?: string }
-    if (sessionUser.role !== 'ADMIN') {
+    const sessionUser = await requireAdmin()
+    if (!sessionUser) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const body = await req.json() as { type: 'events' | 'forums' }
+    const body = await req.json().catch(() => ({})) as { type?: unknown }
     const { type } = body
 
     if (type === 'forums') {

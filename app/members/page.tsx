@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import MemberCardSkeleton from '@/components/MemberCardSkeleton';
 import MembersContent from './MembersContent';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
@@ -58,17 +59,17 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
     <div className="min-h-screen bg-[#0A0A0F]">
       <Navbar />
       <main className="pt-16">
-        <div className="bg-gradient-to-b from-[#0F0A1E] to-[#0A0A0F] py-12 px-4 border-b border-white/5">
+        <div className="bg-gradient-to-b from-[#0F0A1E] to-[#0A0A0F] py-8 sm:py-12 px-4 border-b border-white/5">
           <div className="max-w-7xl mx-auto">
-            <h1 className="font-serif text-4xl font-bold text-white mb-2">Browse Members</h1>
-            <p className="text-white/50">Discover extraordinary people from around the world</p>
-            <div className="flex items-center gap-2 mt-2">
-              <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-              <span className="text-emerald-400 text-sm font-medium">Members online now</span>
-            </div>
+            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-white mb-2">Members</h1>
+            <p className="text-white/65">Singles and couples near you — filter by who and where.</p>
           </div>
         </div>
-        <Suspense fallback={<div className="text-white/30 text-center py-20">Loading members...</div>}>
+        <Suspense fallback={
+          <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" aria-busy="true">
+            {Array.from({ length: 8 }).map((_, i) => <MemberCardSkeleton key={i} />)}
+          </div>
+        }>
           <MembersContent
             members={members}
             total={total}

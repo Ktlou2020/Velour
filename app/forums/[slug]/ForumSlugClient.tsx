@@ -97,20 +97,20 @@ export default function ForumSlugClient({ slug, category, threads, total, curren
       {/* Header */}
       <div className="bg-gradient-to-b from-[#0F0A1E] to-[#0A0A0F] py-12 px-4 border-b border-white/5">
         <div className="max-w-4xl mx-auto">
-          <Link href="/forums" className="flex items-center gap-1 text-white/40 hover:text-white text-sm mb-4 transition-colors">
+          <Link href="/forums" className="flex items-center gap-1 text-white/60 hover:text-white text-sm mb-4 transition-colors">
             <ChevronLeft size={14} />
             Back to Forums
           </Link>
           <h1 className="font-serif text-3xl font-bold text-white mb-2">{category?.name || slug}</h1>
-          {category?.description && <p className="text-white/50">{category.description}</p>}
-          <p className="text-white/30 text-sm mt-2">{total} threads</p>
+          {category?.description && <p className="text-white/65">{category.description}</p>}
+          <p className="text-white/55 text-sm mt-2">{total} threads</p>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Action Bar */}
         <div className="flex items-center justify-between mb-6">
-          <p className="text-white/40 text-sm">Showing page {currentPage} of {totalPages}</p>
+          <p className="text-white/60 text-sm">Showing page {currentPage} of {totalPages}</p>
           {canPost ? (
             <button
               onClick={() => setShowNewThread(true)}
@@ -134,7 +134,7 @@ export default function ForumSlugClient({ slug, category, threads, total, curren
         {threads.length === 0 ? (
           <div className="text-center py-20">
             <MessageSquare size={48} className="text-white/10 mx-auto mb-4" />
-            <p className="text-white/30 text-lg">No threads yet</p>
+            <p className="text-white/55 text-lg">No threads yet</p>
             {canPost && (
               <button onClick={() => setShowNewThread(true)} className="mt-4 text-[#DC143C] hover:text-[#FF1744] text-sm transition-colors">
                 Start the first discussion
@@ -159,8 +159,8 @@ export default function ForumSlugClient({ slug, category, threads, total, curren
                       )}
                     </div>
                     <h4 className="text-white/90 font-medium group-hover:text-white transition-colors">{thread.title}</h4>
-                    <div className="flex items-center gap-3 mt-1 text-white/30 text-xs">
-                      {thread.authorName && <span>by <span className="text-white/50">{thread.authorName}</span></span>}
+                    <div className="flex items-center gap-3 mt-1 text-white/55 text-xs">
+                      {thread.authorName && <span>by <span className="text-white/65">{thread.authorName}</span></span>}
                       {thread.createdAt && (
                         <span className="flex items-center gap-1">
                           <Clock size={10} />
@@ -173,16 +173,16 @@ export default function ForumSlugClient({ slug, category, threads, total, curren
                   <div className="flex items-center gap-4 flex-shrink-0 text-xs">
                     <div className="text-center">
                       <div className="text-white/70 font-semibold">{thread.replyCount ?? 0}</div>
-                      <div className="text-white/30 flex items-center gap-1"><MessageSquare size={9} />replies</div>
+                      <div className="text-white/55 flex items-center gap-1"><MessageSquare size={9} />replies</div>
                     </div>
                     <div className="text-center">
                       <div className="text-white/70 font-semibold">{(thread.views ?? 0).toLocaleString()}</div>
-                      <div className="text-white/30 flex items-center gap-1"><Eye size={9} />views</div>
+                      <div className="text-white/55 flex items-center gap-1"><Eye size={9} />views</div>
                     </div>
                     {thread.lastReplyAt && (
                       <div className="text-center hidden sm:block">
-                        <div className="text-white/30 text-xs">{formatTime(thread.lastReplyAt)}</div>
-                        <div className="text-white/20 text-xs">last reply</div>
+                        <div className="text-white/55 text-xs">{formatTime(thread.lastReplyAt)}</div>
+                        <div className="text-white/45 text-xs">last reply</div>
                       </div>
                     )}
                   </div>
@@ -196,7 +196,7 @@ export default function ForumSlugClient({ slug, category, threads, total, curren
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-2">
             <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage <= 1}
-              className="glass px-3 py-2 rounded-lg text-white/50 hover:text-white transition-colors disabled:opacity-30" aria-label="Previous page">
+              className="glass px-3 py-2 rounded-lg text-white/65 hover:text-white transition-colors disabled:opacity-30" aria-label="Previous page">
               <ChevronLeft size={16} />
             </button>
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((p) => (
@@ -206,7 +206,7 @@ export default function ForumSlugClient({ slug, category, threads, total, curren
               </button>
             ))}
             <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage >= totalPages}
-              className="glass px-3 py-2 rounded-lg text-white/50 hover:text-white transition-colors disabled:opacity-30" aria-label="Next page">
+              className="glass px-3 py-2 rounded-lg text-white/65 hover:text-white transition-colors disabled:opacity-30" aria-label="Next page">
               <ChevronRight size={16} />
             </button>
           </div>
@@ -215,11 +215,11 @@ export default function ForumSlugClient({ slug, category, threads, total, curren
 
       {/* New Thread Modal */}
       {showNewThread && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
           <div className="glass rounded-2xl p-6 w-full max-w-lg">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-white font-bold text-lg">New Thread</h3>
-              <button onClick={() => setShowNewThread(false)} className="text-white/40 hover:text-white transition-colors" aria-label="Close">
+              <button onClick={() => setShowNewThread(false)} className="text-white/60 hover:text-white transition-colors" aria-label="Close">
                 <X size={20} />
               </button>
             </div>

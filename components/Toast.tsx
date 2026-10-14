@@ -55,7 +55,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
       <p className="text-white text-sm leading-snug flex-1">{toast.message}</p>
       <button
         onClick={handleDismiss}
-        className="flex-shrink-0 text-white/40 hover:text-white transition-colors"
+        className="flex-shrink-0 text-white/60 hover:text-white transition-colors"
         aria-label="Dismiss notification"
       >
         <X size={14} />

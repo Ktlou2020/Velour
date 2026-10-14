@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
               <p className="text-gray-400 mb-6">
                 If an account exists for <span className="text-white font-medium">{email}</span>, we&apos;ve sent a password reset link. The link expires in 1 hour.
               </p>
-              <p className="text-gray-500 text-sm mb-6">
+              <p className="text-gray-400 text-sm mb-6">
                 Don&apos;t see the email? Check your spam folder.
               </p>
               <Link
@@ -71,19 +71,20 @@ export default function ForgotPasswordPage() {
           ) : (
             <>
               {error && (
-                <div className="mb-5 p-3 rounded-lg bg-[#DC143C]/10 border border-[#DC143C]/30 text-[#DC143C] text-sm">
+                <div role="alert" className="mb-5 p-3 rounded-lg bg-[#DC143C]/10 border border-[#DC143C]/30 text-[#FF8FA3] text-sm">
                   {error}
                 </div>
               )}
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <label className="block text-sm text-gray-300 mb-1.5">Email Address</label>
+                  <label htmlFor="fp-email" className="block text-sm text-gray-300 mb-1.5">Email address</label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="email"
                       placeholder="your@email.com"
-                      className="input-dark pl-10"
+                      id="fp-email"
+                      className="input-dark w-full pl-10"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       required

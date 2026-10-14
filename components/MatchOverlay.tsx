@@ -29,7 +29,7 @@ export default function MatchOverlay({ show, matchedUser, onMessage, onClose }: 
   const initials = matchedUser.name.slice(0, 2).toUpperCase();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/85 backdrop-blur-md">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/85 backdrop-blur-md">
       <style>{`
         @keyframes heartRain {
           0% { transform: translateY(-20px) rotate(0deg); opacity: 0; }
@@ -128,7 +128,7 @@ export default function MatchOverlay({ show, matchedUser, onMessage, onClose }: 
             )}
             <button
               onClick={onClose}
-              className="w-full glass py-3 rounded-xl text-white/40 hover:text-white/70 text-sm transition-colors"
+              className="w-full glass py-3 rounded-xl text-white/60 hover:text-white/70 text-sm transition-colors"
             >
               Keep Discovering
             </button>

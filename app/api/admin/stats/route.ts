@@ -1,15 +1,10 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { requireAdmin } from '@/auth'
 import { db } from '@/lib/db'
 
 export async function GET() {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const sessionUser = session.user as { id: string; role?: string }
-    if (sessionUser.role !== 'ADMIN') {
+    if (!(await requireAdmin())) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

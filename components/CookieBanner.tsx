@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Cookie, X } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 const STORAGE_KEY = 'velour_cookie_consent'
 
 export default function CookieBanner() {
   const [visible, setVisible] = useState(false)
+  const { status } = useSession()
 
   useEffect(() => {
     try {
@@ -32,7 +34,12 @@ export default function CookieBanner() {
   if (!visible) return null
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[9000] px-4 pb-4">
+    // Sits above the mobile tab bar when it is showing (signed-in, < md).
+    <div
+      role="region"
+      aria-label="Cookie consent"
+      className={`fixed left-0 right-0 z-[9000] px-4 pb-4 ${status === 'authenticated' ? 'bottom-16 md:bottom-0' : 'bottom-0'}`}
+    >
       <div
         className="max-w-4xl mx-auto rounded-2xl p-4 sm:p-5"
         style={{
@@ -49,7 +56,7 @@ export default function CookieBanner() {
               <Cookie className="w-4 h-4 text-[#DC143C]" />
             </div>
             <p className="text-gray-300 text-sm leading-relaxed">
-              We use cookies to enhance your experience and for analytics. By continuing, you accept our{' '}
+              We use essential cookies to keep you signed in and secure, and optional ones to improve Hush. See our{' '}
               <Link href="/privacy" className="text-[#DC143C] hover:underline font-medium">
                 Privacy Policy
               </Link>
@@ -63,19 +70,19 @@ export default function CookieBanner() {
               onClick={() => accept('essential')}
               className="flex-1 sm:flex-none px-4 py-2 rounded-lg border border-white/10 text-gray-400 hover:border-white/25 hover:text-white text-sm font-medium transition-all"
             >
-              Essential Only
+              Essential only
             </button>
             <button
               onClick={() => accept('accepted')}
               className="flex-1 sm:flex-none px-5 py-2 rounded-lg text-white text-sm font-semibold transition-all shadow-lg shadow-[#DC143C]/20"
               style={{ background: 'linear-gradient(135deg, #DC143C, #8F0D25)' }}
             >
-              Accept All
+              Accept all
             </button>
             <button
               onClick={() => accept('essential')}
-              className="p-2 text-gray-500 hover:text-white transition-colors"
-              aria-label="Dismiss"
+              className="p-2 text-gray-400 hover:text-white transition-colors"
+              aria-label="Dismiss (essential cookies only)"
             >
               <X className="w-4 h-4" />
             </button>

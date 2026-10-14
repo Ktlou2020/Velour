@@ -159,7 +159,7 @@ export default function NotificationBell() {
               {unreadCount > 0 && (
                 <button
                   onClick={markAllRead}
-                  className="text-white/40 hover:text-white text-xs flex items-center gap-1 transition-colors"
+                  className="text-white/60 hover:text-white text-xs flex items-center gap-1 transition-colors"
                   aria-label="Mark all as read"
                 >
                   <Check size={12} />
@@ -168,7 +168,7 @@ export default function NotificationBell() {
               )}
               <button
                 onClick={() => setOpen(false)}
-                className="text-white/40 hover:text-white transition-colors"
+                className="text-white/60 hover:text-white transition-colors"
                 aria-label="Close notifications"
               >
                 <X size={14} />
@@ -181,7 +181,7 @@ export default function NotificationBell() {
             {notifications.length === 0 ? (
               <div className="text-center py-8">
                 <Bell size={24} className="text-white/10 mx-auto mb-2" />
-                <p className="text-white/30 text-sm">No notifications yet</p>
+                <p className="text-white/55 text-sm">No notifications yet</p>
               </div>
             ) : (
               notifications.slice(0, 5).map((notif) => (
@@ -205,7 +205,7 @@ export default function NotificationBell() {
                         {notif.message || 'New notification'}
                       </p>
                       {notif.createdAt && (
-                        <p className="text-white/30 text-xs mt-1">{formatTime(notif.createdAt)}</p>
+                        <p className="text-white/55 text-xs mt-1">{formatTime(notif.createdAt)}</p>
                       )}
                     </div>
                     {!notif.isRead && (

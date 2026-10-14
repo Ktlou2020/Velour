@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { LogoMark } from '@/components/Logo'
 import { useRouter } from 'next/navigation';
 import { ChevronRight, ChevronLeft, Check, Upload, X, Camera } from 'lucide-react';
 
@@ -197,50 +198,48 @@ export default function OnboardingPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center shadow-lg shadow-[#DC143C]/25">
-              <span className="text-white font-bold text-xl font-serif">V</span>
-            </div>
+            <LogoMark size="md" />
             <span className="text-white font-bold text-2xl tracking-widest font-serif">HUSH</span>
           </div>
-          <p className="text-white/40 text-sm">Complete your profile to get started</p>
+          <p className="text-white/65 text-sm">A few details and you’re in. You can change everything later.</p>
         </div>
 
         {/* Progress Bar */}
         <div className="mb-8">
-          <div className="flex justify-between text-xs text-white/40 mb-2">
+          <div className="flex justify-between text-xs text-white/60 mb-2">
             <span>Step {step + 1} of {STEPS.length}</span>
             <span>{STEPS[step]}</span>
           </div>
-          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden" role="progressbar" aria-label="Onboarding progress" aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={STEPS.length}>
             <div
               className="h-full bg-gradient-to-r from-[#DC143C] to-[#8F0D25] rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <div className="flex justify-between mt-3">
+          <div className="flex justify-between mt-3" aria-hidden="true">
             {STEPS.map((s, i) => (
               <div key={s} className="flex flex-col items-center gap-1">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                   i < step ? 'bg-[#DC143C] text-white' :
                   i === step ? 'bg-[#DC143C]/20 border-2 border-[#DC143C] text-[#DC143C]' :
-                  'bg-white/5 text-white/20'
+                  'bg-white/5 text-white/45'
                 }`}>
                   {i < step ? <Check size={12} /> : i + 1}
                 </div>
-                <span className={`text-xs hidden sm:block ${i === step ? 'text-white/70' : 'text-white/20'}`}>{s}</span>
+                <span className={`text-xs hidden sm:block ${i === step ? 'text-white/70' : 'text-white/45'}`}>{s}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Card */}
-        <div className="glass rounded-3xl p-8">
-          <h2 className="font-serif text-2xl font-bold text-white mb-1">{STEPS[step]}</h2>
-          <p className="text-white/40 text-sm mb-8">
-            {step === 0 && 'Tell us a bit about yourself'}
+        <div className="glass rounded-3xl p-6 sm:p-8">
+          <h1 className="font-serif text-2xl font-bold text-white mb-1">{STEPS[step]}</h1>
+          <p className="text-white/65 text-sm mb-8">
+            {step === 0 && 'Just the basics to get you started.'}
             {step === 1 && 'Who are you looking to meet?'}
             {step === 2 && 'Where are you based?'}
-            {step === 3 && 'Show your best self — photos increase matches by 10×'}
+            {step === 3 && 'Show your best self — a clear photo makes saying hello easier'}
           </p>
 
           {/* Step 1: About You */}
@@ -283,10 +282,11 @@ export default function OnboardingPage() {
                       key={opt.value}
                       type="button"
                       onClick={() => updateForm('gender', opt.value)}
+                      aria-pressed={form.gender === opt.value}
                       className={`px-4 py-3 rounded-xl text-sm font-medium transition-all border ${
                         form.gender === opt.value
                           ? 'bg-[#DC143C]/20 border-[#DC143C] text-white'
-                          : 'border-white/10 text-white/60 hover:text-white hover:border-white/30'
+                          : 'border-white/15 text-white/75 hover:text-white hover:border-white/30'
                       }`}
                     >
                       {opt.label}
@@ -309,10 +309,11 @@ export default function OnboardingPage() {
                       key={opt.value}
                       type="button"
                       onClick={() => updateForm('orientation', opt.value)}
+                      aria-pressed={form.orientation === opt.value}
                       className={`px-4 py-3 rounded-xl text-sm font-medium transition-all border ${
                         form.orientation === opt.value
                           ? 'bg-[#DC143C]/20 border-[#DC143C] text-white'
-                          : 'border-white/10 text-white/60 hover:text-white hover:border-white/30'
+                          : 'border-white/15 text-white/75 hover:text-white hover:border-white/30'
                       }`}
                     >
                       {opt.label}
@@ -324,7 +325,7 @@ export default function OnboardingPage() {
 
               <div>
                 <label className="text-white/60 text-xs uppercase tracking-widest block mb-3">
-                  I&apos;m Looking For <span className="text-white/30">(select all that apply)</span>
+                  I&apos;m Looking For <span className="text-white/55">(select all that apply)</span>
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   {lookingForOptions.map((opt) => (
@@ -333,7 +334,7 @@ export default function OnboardingPage() {
                       className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer transition-all border ${
                         form.lookingFor.includes(opt.value)
                           ? 'bg-[#DC143C]/20 border-[#DC143C] text-white'
-                          : 'border-white/10 text-white/60 hover:text-white hover:border-white/30'
+                          : 'border-white/15 text-white/75 hover:text-white hover:border-white/30'
                       }`}
                     >
                       <input
@@ -362,10 +363,11 @@ export default function OnboardingPage() {
                       key={opt.value}
                       type="button"
                       onClick={() => updateForm('relationshipStatus', opt.value)}
+                      aria-pressed={form.relationshipStatus === opt.value}
                       className={`w-full px-4 py-3 rounded-xl text-sm font-medium text-left transition-all border ${
                         form.relationshipStatus === opt.value
                           ? 'bg-[#DC143C]/20 border-[#DC143C] text-white'
-                          : 'border-white/10 text-white/60 hover:text-white hover:border-white/30'
+                          : 'border-white/15 text-white/75 hover:text-white hover:border-white/30'
                       }`}
                     >
                       {opt.label}
@@ -409,7 +411,7 @@ export default function OnboardingPage() {
 
               <div>
                 <label className="text-white/60 text-xs uppercase tracking-widest block mb-2" htmlFor="bio">
-                  About You <span className="text-white/30 normal-case">(optional)</span>
+                  About You <span className="text-white/55 normal-case">(optional)</span>
                 </label>
                 <textarea
                   id="bio"
@@ -419,7 +421,7 @@ export default function OnboardingPage() {
                   className="input-dark w-full px-4 py-3 rounded-xl text-sm resize-none"
                   rows={5}
                 />
-                <p className="text-white/30 text-xs mt-1 text-right">{form.bio.length}/500</p>
+                <p className="text-white/55 text-xs mt-1 text-right">{form.bio.length}/500</p>
               </div>
             </div>
           )}
@@ -453,8 +455,8 @@ export default function OnboardingPage() {
                     <div className="w-6 h-6 border-2 border-[#DC143C] border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      <Upload size={20} className="text-white/30" />
-                      <span className="text-white/30 text-xs">Add Photo</span>
+                      <Upload size={20} className="text-white/55" />
+                      <span className="text-white/55 text-xs">Add Photo</span>
                     </>
                   )}
                 </button>
@@ -470,8 +472,8 @@ export default function OnboardingPage() {
 
               <div className="flex items-center gap-3 glass rounded-xl p-4">
                 <Camera size={20} className="text-[#DC143C] flex-shrink-0" />
-                <p className="text-white/50 text-xs leading-relaxed">
-                  Members with photos get 10× more matches. Add at least one clear face photo. Max 10MB per photo.
+                <p className="text-white/65 text-xs leading-relaxed">
+                  Add at least one clear photo of your face (couples: one of you both works well). JPEG, PNG or WebP, up to 10MB each.
                 </p>
               </div>
             </div>
@@ -490,7 +492,7 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={() => setStep((s) => s - 1)}
-                className="flex items-center gap-2 text-white/50 hover:text-white text-sm transition-colors"
+                className="flex items-center gap-2 text-white/65 hover:text-white text-sm transition-colors"
               >
                 <ChevronLeft size={16} />
                 Back
@@ -504,7 +506,7 @@ export default function OnboardingPage() {
                 <button
                   type="button"
                   onClick={handleFinish}
-                  className="text-white/40 hover:text-white/70 text-sm transition-colors"
+                  className="text-white/60 hover:text-white/70 text-sm transition-colors"
                 >
                   Skip for now
                 </button>
@@ -519,7 +521,7 @@ export default function OnboardingPage() {
                 {loading ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : null}
-                {step === STEPS.length - 1 ? 'Complete Profile' : 'Continue'}
+                {step === STEPS.length - 1 ? 'Finish my profile' : 'Continue'}
                 {step !== STEPS.length - 1 && !loading && <ChevronRight size={16} />}
               </button>
             </div>

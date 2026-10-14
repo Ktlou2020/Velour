@@ -95,6 +95,8 @@ model User {
   sessions            Session[]
   profile             Profile?
   photos              Photo[]
+  albums              Album[]
+  albumAccess         AlbumAccess[]
   likesGiven          Like[]                    @relation("LikesGiven")
   likesReceived       Like[]                    @relation("LikesReceived")
   matchesA            Match[]                   @relation("MatchUser1")
@@ -144,6 +146,36 @@ model Profile {
   partnerOf Profile? @relation("CoupleLink")
   isCouple  Boolean  @default(false)
 
+  // Identity & inclusivity
+  pronouns        String?
+  // Optional self-described identity shown alongside gender, e.g. "Trans woman", "Genderqueer"
+  genderLabel     String?
+  // Who they want to meet: MAN, WOMAN, NON_BINARY, COUPLE
+  interestedIn    String[]
+  // What they're open to: e.g. DATING, RELATIONSHIP, FRIENDSHIP, CASUAL, COUPLES_PLAY, EVENTS
+  intentions      String[]
+  showGender      Boolean  @default(true)
+  showOrientation Boolean  @default(true)
+  // Couple profile details (when isCouple): e.g. "MF", "FF", "MM", "MX" — derived or chosen
+  coupleType      String?
+
+  // About me (all optional)
+  heightCm      Int?
+  bodyType      String?
+  // Race/ethnicity is POPIA "special personal information": optional, self-described,
+  // shown only when showEthnicity is true, and never used as a search filter.
+  ethnicity     String?
+  showEthnicity Boolean  @default(false)
+  languages     String[]
+  drinking      String?
+  smoking       String?
+  hasChildren   String?
+
+  // Shared couple account: details for each person, e.g.
+  // [{ name, gender, genderLabel, pronouns, dateOfBirth, orientation, heightCm, bodyType,
+  //    ethnicity, showEthnicity, languages, drinking, smoking }]
+  coupleMembers Json?
+
   // Premium perks
   boostedUntil DateTime?
   lastBoostAt  DateTime?
@@ -170,6 +202,44 @@ model Photo {
   caption      String?
   order        Int      @default(0)
   createdAt    DateTime @default(now())
+
+  // Self-hosted media (served via /api/media/[id] with access checks)
+  storageKey String?
+  mimeType   String?
+  sizeBytes  Int?
+  albumId    String?
+  album      Album?  @relation(fields: [albumId], references: [id], onDelete: SetNull)
+}
+
+// A member's photo album. Private albums are visible only to the owner and
+// to members with GRANTED access (via invite, or an approved request).
+model Album {
+  id           String        @id @default(cuid())
+  ownerId      String
+  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  isPrivate    Boolean       @default(false)
+  coverPhotoId String?
+  order        Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  photos       Photo[]
+  access       AlbumAccess[]
+}
+
+model AlbumAccess {
+  id        String   @id @default(cuid())
+  albumId   String
+  album     Album    @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // INVITED (owner invited, awaiting acceptance), REQUESTED (member asked), GRANTED, DECLINED
+  status    String   @default("INVITED")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([albumId, userId])
 }
 
 model Like {

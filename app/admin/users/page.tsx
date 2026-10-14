@@ -1,13 +1,12 @@
 import { redirect } from 'next/navigation';
-import { auth } from '@/auth';
+import { requireAdmin } from '@/auth';
 import { db } from '@/lib/db';
 import AdminUsersClient from './AdminUsersClient';
 
 export default async function AdminUsersPage() {
-  const session = await auth();
-  const sessionUser = session?.user as { id?: string; role?: string } | undefined;
-
-  if (!sessionUser?.id || sessionUser.role !== 'ADMIN') {
+  // Role is checked against the database, not just the session token.
+  const admin = await requireAdmin();
+  if (!admin) {
     redirect('/members');
   }
 

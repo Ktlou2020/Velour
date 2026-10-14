@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
+import EmptyState from '@/components/EmptyState';
 import { Bell, Heart, MessageCircle, Users, Eye, Shield, Star, Check, CheckCheck, Flame } from 'lucide-react';
 
 interface Notification {
@@ -25,7 +26,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; href
   COUPLE_INVITE:{ icon: Users,          color: 'text-emerald-400',href: () => '/profile' },
   VERIFIED:     { icon: Shield,         color: 'text-emerald-400',href: () => '/account' },
   STREAK:       { icon: Flame,          color: 'text-orange-400', href: () => '/account' },
-  DEFAULT:      { icon: Bell,           color: 'text-white/50' },
+  DEFAULT:      { icon: Bell,           color: 'text-white/65' },
 };
 
 function fmtTime(d: string) {
@@ -81,9 +82,9 @@ export default function NotificationsPage() {
       <main className="pt-24 pb-16 px-4 max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-white text-2xl font-bold font-serif">Notifications</h1>
+            <h1 className="text-white text-3xl font-bold font-serif">Notifications</h1>
             {unreadCount > 0 && (
-              <p className="text-white/40 text-sm mt-0.5">{unreadCount} unread</p>
+              <p className="text-white/60 text-sm mt-0.5">{unreadCount} unread</p>
             )}
           </div>
           {unreadCount > 0 && (
@@ -101,20 +102,16 @@ export default function NotificationsPage() {
         {loading ? (
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="glass rounded-2xl p-4 animate-pulse h-16" />
+              <div key={i} className="rounded-2xl h-[76px] skeleton" />
             ))}
           </div>
         ) : notifications.length === 0 ? (
-          <div className="text-center py-24">
-            <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-              <Bell size={32} className="text-white/20" />
-            </div>
-            <h3 className="text-white font-semibold text-lg mb-2">No notifications yet</h3>
-            <p className="text-white/40 text-sm">Start connecting with members to get notified about likes, matches and messages.</p>
-            <Link href="/discover" className="inline-block mt-6 bg-[#DC143C] hover:bg-[#FF1744] text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-colors">
-              Start Discovering
-            </Link>
-          </div>
+          <EmptyState
+            icon={Bell}
+            title="All quiet for now"
+            description="Likes, matches, messages and event reminders will appear here. A few likes in Discover usually gets things going."
+            action={{ label: 'Start discovering', href: '/discover' }}
+          />
         ) : (
           <div className="space-y-2">
             {notifications.map((n) => {
@@ -128,19 +125,19 @@ export default function NotificationsPage() {
                   onClick={() => !n.isRead && markRead(n.id)}
                 >
                   <div className={`w-10 h-10 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0 ${cfg.color}`}>
-                    <Icon size={18} />
+                    <Icon size={18} aria-hidden="true" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-sm font-medium leading-snug">{n.title}</p>
-                    <p className="text-white/50 text-xs mt-0.5 leading-relaxed">{n.body}</p>
-                    <p className="text-white/25 text-xs mt-1">{fmtTime(n.createdAt)}</p>
+                    <p className="text-white/65 text-xs mt-0.5 leading-relaxed">{n.body}</p>
+                    <p className="text-white/50 text-xs mt-1">{fmtTime(n.createdAt)}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {!n.isRead && (
-                      <div className="w-2 h-2 rounded-full bg-[#DC143C]" />
+                      <div className="w-2 h-2 rounded-full bg-[#DC143C]" role="img" aria-label="Unread" />
                     )}
                     {n.isRead && (
-                      <Check size={14} className="text-white/20" />
+                      <Check size={14} className="text-white/45" />
                     )}
                   </div>
                 </div>

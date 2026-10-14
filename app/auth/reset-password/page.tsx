@@ -89,7 +89,7 @@ function ResetPasswordContent() {
 
         <div className="glass rounded-2xl p-8">
           {error && (
-            <div className="mb-5 p-3 rounded-lg bg-[#DC143C]/10 border border-[#DC143C]/30 text-[#DC143C] text-sm">
+            <div role="alert" className="mb-5 p-3 rounded-lg bg-[#DC143C]/10 border border-[#DC143C]/30 text-[#FF8FA3] text-sm">
               {error}
               {error.includes('expired') && (
                 <div className="mt-2">
@@ -103,13 +103,14 @@ function ResetPasswordContent() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm text-gray-300 mb-1.5">New Password</label>
+              <label htmlFor="rp-password" className="block text-sm text-gray-300 mb-1.5">New password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Min. 8 characters"
-                  className="input-dark pl-10 pr-12"
+                  id="rp-password"
+                  className="input-dark w-full pl-10 pr-12"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
@@ -118,7 +119,8 @@ function ResetPasswordContent() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-gray-400 hover:text-white transition-colors rounded-lg"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -126,13 +128,14 @@ function ResetPasswordContent() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-300 mb-1.5">Confirm New Password</label>
+              <label htmlFor="rp-confirm" className="block text-sm text-gray-300 mb-1.5">Confirm new password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="password"
                   placeholder="Repeat your new password"
-                  className="input-dark pl-10"
+                  id="rp-confirm"
+                  className="input-dark w-full pl-10"
                   value={confirm}
                   onChange={e => setConfirm(e.target.value)}
                   required

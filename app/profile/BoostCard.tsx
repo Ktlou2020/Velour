@@ -81,15 +81,15 @@ export default function BoostCard({ className = '' }: { className?: string }) {
             Profile Boost
           </h2>
           {!state.paid ? (
-            <p className="text-white/40 text-sm">Jump to the top of search for 30 minutes. Gold members get 1 boost a month, Platinum members get one every week.</p>
+            <p className="text-white/60 text-sm">Jump to the top of search for 30 minutes. Gold members get 1 boost a month, Platinum members get one every week.</p>
           ) : active ? (
             <p className="text-[#D4AF37] text-sm font-medium">
               Boost active — <span className="font-mono">{formatCountdown(boostedUntilMs - now)}</span> remaining
             </p>
           ) : state.canBoost ? (
-            <p className="text-white/40 text-sm">Put your profile at the top of search results for 30 minutes.</p>
+            <p className="text-white/60 text-sm">Put your profile at the top of search results for 30 minutes.</p>
           ) : (
-            <p className="text-white/40 text-sm">
+            <p className="text-white/60 text-sm">
               Next boost available on{' '}
               <span className="text-white/70">
                 {state.nextAvailableAt
