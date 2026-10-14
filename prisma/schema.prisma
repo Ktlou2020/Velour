@@ -96,6 +96,9 @@ model User {
   profile             Profile?
   photos              Photo[]
   albums              Album[]
+  sparkAnswers        SparkAnswer[]
+  profileViewsGiven   ProfileView[]             @relation("ViewsGiven")
+  profileViewsGot     ProfileView[]             @relation("ViewsGot")
   albumAccess         AlbumAccess[]
   likesGiven          Like[]                    @relation("LikesGiven")
   likesReceived       Like[]                    @relation("LikesReceived")
@@ -175,6 +178,18 @@ model Profile {
   // [{ name, gender, genderLabel, pronouns, dateOfBirth, orientation, heightCm, bodyType,
   //    ethnicity, showEthnicity, languages, drinking, smoking }]
   coupleMembers Json?
+
+  // Status ("Free tonight 🍷"), shown until statusUntil
+  statusText  String?
+  statusEmoji String?
+  statusUntil DateTime?
+
+  // Travel mode (Gold+): appear in and browse another city until travelUntil
+  travelCity    String?
+  travelCountry String?
+  travelLat     Float?
+  travelLng     Float?
+  travelUntil   DateTime?
 
   // Premium perks
   boostedUntil DateTime?
@@ -307,6 +322,14 @@ model Message {
   imageUrl          String?
   // For couples sharing one account: which partner wrote this (name from Profile.coupleMembers)
   senderPartnerName String?
+  // TEXT | IMAGE | VOICE | GAME
+  kind              String       @default("TEXT")
+  audioUrl          String?
+  audioDurationSec  Int?
+  // Game payload for kind = GAME, e.g. { game: "this_or_that", prompt, options, answers }
+  meta              Json?
+  // Priority message (Gold+): pinned to the top of the recipient's inbox
+  isPriority        Boolean      @default(false)
   isRead            Boolean      @default(false)
   readAt            DateTime?
   // { "❤️": ["userId", ...] }
@@ -448,4 +471,31 @@ model DatePlan {
   notes         String?
   checkedInAt   DateTime?
   createdAt     DateTime  @default(now())
+}
+
+// Daily Spark: one question per day (question list lives in code, keyed by id)
+model SparkAnswer {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId String
+  answer     String
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, questionId])
+  @@index([questionId, createdAt])
+}
+
+// Profile view history (for "who viewed you" and the Platinum insights dashboard).
+// Not written when the viewer is incognito.
+model ProfileView {
+  id        String   @id @default(cuid())
+  viewerId  String
+  viewer    User     @relation("ViewsGiven", fields: [viewerId], references: [id], onDelete: Cascade)
+  viewedId  String
+  viewed    User     @relation("ViewsGot", fields: [viewedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([viewedId, createdAt])
+  @@index([viewerId, viewedId, createdAt])
 }
