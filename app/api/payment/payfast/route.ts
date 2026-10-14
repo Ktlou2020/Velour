@@ -1,29 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import crypto from 'crypto'
 import { db } from '@/lib/db'
-
-const PRICES: Record<string, Record<string, number>> = {
-  GOLD: {
-    monthly: 199.0,
-    annual: 1668.0, // 139/mo
-  },
-  PLATINUM: {
-    monthly: 349.0,
-    annual: 2988.0, // 249/mo
-  },
-}
-
-function buildSignature(params: Record<string, string>, passphrase?: string): string {
-  const sorted = Object.keys(params)
-    .sort()
-    .filter((k) => k !== 'signature' && params[k] !== '')
-    .map((k) => `${k}=${encodeURIComponent(params[k]).replace(/%20/g, '+')}`)
-    .join('&')
-
-  const str = passphrase ? `${sorted}&passphrase=${encodeURIComponent(passphrase).replace(/%20/g, '+')}` : sorted
-  return crypto.createHash('md5').update(str).digest('hex')
-}
+import { MEMBERSHIP_PRICES, PAYMENTS_NOT_CONFIGURED, buildCheckoutFields, membershipItemName, payfastConfig } from '@/lib/payfast'
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,7 +10,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json()
+    const cfg = payfastConfig()
+    if (!cfg) {
+      return NextResponse.json({ error: PAYMENTS_NOT_CONFIGURED }, { status: 503 })
+    }
+
+    const body = await req.json().catch(() => ({}))
     const { tier, billing } = body as {
       tier?: 'GOLD' | 'PLATINUM'
       billing?: 'monthly' | 'annual'
@@ -50,8 +33,8 @@ export async function POST(req: NextRequest) {
       select: { email: true, profile: { select: { displayName: true } } },
     })
 
-    const amount = PRICES[tier][billing].toFixed(2)
-    const itemName = tier === 'GOLD' ? 'Hush Gold' : 'Hush Platinum'
+    const amount = MEMBERSHIP_PRICES[tier][billing].toFixed(2)
+    const itemName = membershipItemName(tier)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
     const today = new Date().toISOString().split('T')[0]
     // frequency: 3 = monthly, 6 = annual
@@ -60,31 +43,33 @@ export async function POST(req: NextRequest) {
     const nameParts = (user?.profile?.displayName ?? '').split(' ')
     const nameFirst = nameParts[0] ?? ''
 
-    const params: Record<string, string> = {
-      merchant_id: process.env.PAYFAST_MERCHANT_ID ?? '',
-      merchant_key: process.env.PAYFAST_MERCHANT_KEY ?? '',
+    // Same fields as before; signed in PayFast's documented field order
+    // (lib/payfast.ts) instead of alphabetically.
+    const pairs = buildCheckoutFields({
+      merchant_id: cfg.merchantId,
+      merchant_key: cfg.merchantKey,
       return_url: `${appUrl}/members?upgraded=1`,
       cancel_url: `${appUrl}/upgrade`,
       notify_url: `${appUrl}/api/payment/payfast/notify`,
       name_first: nameFirst,
       email_address: user?.email ?? '',
-      item_name: itemName,
       amount,
+      item_name: itemName,
+      custom_str1: session.user.id,
       subscription_type: '1',
       billing_date: today,
       recurring_amount: amount,
       frequency,
       cycles: '0',
-      custom_str1: session.user.id,
-    }
+    }, cfg.passphrase)
 
-    const passphrase = process.env.PAYFAST_PASSPHRASE
-    const signature = buildSignature(params, passphrase)
-    params.signature = signature
+    // Insertion order = signing order, so the client's form posts them in order.
+    const paymentData: Record<string, string> = {}
+    for (const [k, v] of pairs) paymentData[k] = v
 
     return NextResponse.json({
-      paymentData: params,
-      payfastUrl: 'https://www.payfast.co.za/eng/process',
+      paymentData,
+      payfastUrl: cfg.processUrl,
     })
   } catch (error) {
     console.error('POST /api/payment/payfast error:', error)

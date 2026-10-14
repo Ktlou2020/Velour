@@ -103,6 +103,18 @@ export async function POST() {
         unmatched = true
       }
 
+      // …and the "liked you" / "winked at you" notification it sent
+      if (like.type !== 'PASS') {
+        await tx.notification.deleteMany({
+          where: {
+            userId: otherId,
+            type: { in: ['LIKE', 'SUPERLIKE', 'WINK'] },
+            createdAt: { gte: like.createdAt },
+            data: { path: ['fromUserId'], equals: userId },
+          },
+        })
+      }
+
       if (refundBonus) {
         await tx.user.update({ where: { id: userId }, data: { superLikeCredits: { increment: 1 } } })
       }

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { LogoMark } from '@/components/Logo'
 import { ArrowLeft } from 'lucide-react'
+import { STORE_NAME, SUPPORT_EMAIL } from '@/lib/store/config'
 
 export const metadata = {
   title: 'Terms of Service',
@@ -229,6 +230,26 @@ export default function TermsPage() {
             </h2>
             <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
               <p>We may update these Terms from time to time. We will notify you of material changes by posting the updated Terms on this page with an updated &quot;Last updated&quot; date and, where appropriate, by email. Your continued use of the Service after such changes constitutes your acceptance of the new Terms.</p>
+            </div>
+          </section>
+
+          {/* Section 14 — Store */}
+          <section id="store-terms" className="scroll-mt-24">
+            <h2 className="text-2xl font-serif font-bold text-white mb-4 flex items-center gap-3">
+              <span className="w-8 h-8 rounded-lg bg-[#DC143C]/15 flex items-center justify-center text-[#DC143C] text-sm font-bold flex-shrink-0">14</span>
+              {STORE_NAME} store terms
+            </h2>
+            <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
+              <p>{STORE_NAME} is the Hush online store for adult products. These store terms apply to every order placed in it, in addition to the rest of these Terms.</p>
+              <p><strong className="text-white">18+ only.</strong> You may only buy from {STORE_NAME} if you are 18 or older. By placing an order you confirm that you, and the person receiving the parcel, are adults. We may cancel and refund any order we reasonably believe was placed by or for a minor.</p>
+              <p><strong className="text-white">Prices and payment.</strong> Prices are in South African rand and include VAT at 15%. Delivery is charged separately at checkout (free above the threshold shown in the store). Payment is processed by PayFast; we never see or store your card details. An order is confirmed only once PayFast confirms the payment. Items are reserved for 30 minutes while you pay; unpaid orders are then cancelled and nothing is charged. If a product is mispriced or becomes unavailable after you pay, we will contact you and refund you in full.</p>
+              <p><strong className="text-white">Delivery.</strong> We deliver within South Africa only, by courier, to the address you give. Delivery times are estimates. Risk passes to you on delivery. With discreet packaging (on by default) your parcel ships in a plain outer box with no product names or logos, and the sender is shown as a neutral trading name.</p>
+              <p><strong className="text-white">Changing your mind (cooling-off).</strong> Under section 44 of the Electronic Communications and Transactions Act you may cancel an online purchase within 7 days of receiving the goods. Because intimate products cannot be resold once opened, this right applies only to items returned <strong className="text-white">unopened, in their original sealed packaging</strong>. Email us first; you pay the direct cost of sending the item back, and we refund you within 30 days of receiving it.</p>
+              <p><strong className="text-white">Defective goods.</strong> Under the Consumer Protection Act (sections 55 and 56) you may return a product that is defective, unsafe or not as described within <strong className="text-white">6 months</strong> of delivery, and choose a repair, replacement or refund. This applies whether or not the product has been opened. Please clean the item before returning it and contact us first so we can arrange collection or a returns address. Damage caused by misuse, or by using the wrong lubricant with a product, is not a defect.</p>
+              <p><strong className="text-white">Hygiene.</strong> For health reasons we cannot accept opened or used intimate, personal-care or hygiene products for any reason other than a defect, and we never resell returned items.</p>
+              <p><strong className="text-white">Privacy.</strong> We use your order details (name, delivery address, phone and email) only to process, deliver and support your order and to meet our legal record-keeping duties, in line with the Protection of Personal Information Act (POPIA). We share them only with PayFast and the courier, as needed. Your purchases are not shown on your profile, not visible to other members, and never used for third-party marketing. Order notifications show only the order number, never product names. See our <Link href="/privacy" className="text-[#DC143C] hover:underline">Privacy Policy</Link>.</p>
+              <p><strong className="text-white">Product use.</strong> Follow the instructions supplied with each product. Products are for adult personal use. If you have a medical condition, check with a healthcare professional first.</p>
+              <p>Questions or returns: <a href={`mailto:${SUPPORT_EMAIL}`} className="text-[#DC143C] hover:underline">{SUPPORT_EMAIL}</a> — please quote your order number.</p>
             </div>
           </section>
 

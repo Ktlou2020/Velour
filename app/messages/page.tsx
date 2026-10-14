@@ -5,12 +5,16 @@ import ProtectedImage from '@/components/ProtectedImage';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import EmptyState from '@/components/EmptyState';
+import { refreshUnread } from '@/components/notifications/unread-store';
 import MessageBubble, { type ChatMessage } from '@/components/chat/MessageBubble';
 import ExpiryCountdown from '@/components/chat/ExpiryCountdown';
 import Icebreakers from '@/components/chat/Icebreakers';
 import GameBubble from '@/components/chat/GameBubble';
 import GameSheet, { type NewGame } from '@/components/chat/GameSheet';
 import VoiceRecorderBar from '@/components/chat/VoiceRecorderBar';
+import ViewOnceBubble, { ViewOnceIcon } from '@/components/chat/ViewOnceBubble';
+import ViewOnceViewer, { type ViewOnceOpen } from '@/components/chat/ViewOnceViewer';
+import type { ViewOnceInfo } from '@/lib/view-once';
 import { useVoiceRecorder } from '@/components/chat/useVoiceRecorder';
 import { useReviewAsk, ReviewAskButton, ReviewPromptCard } from '@/components/chat/ReviewAsk';
 import { useSession } from 'next-auth/react';
@@ -254,6 +258,10 @@ export default function MessagesPage() {
   const [holding, setHolding] = useState(false);
   const [voiceSending, setVoiceSending] = useState(false);
   const [welcomeDismissed, setWelcomeDismissed] = useState(true);
+  // View once: toggle for the attached photo/video; the open viewer; the bubble being opened
+  const [viewOnceOn, setViewOnceOn] = useState(false);
+  const [viewOnceOpen, setViewOnceOpen] = useState<ViewOnceOpen | null>(null);
+  const [openingVo, setOpeningVo] = useState<string | null>(null);
   const recorder = useVoiceRecorder((m) => setError(m));
   // Reviews: "Ask for a review" in the header + a gentle prompt after a long chat
   const reviewAsk = useReviewAsk(activeConvId, messages.length);
@@ -358,6 +366,9 @@ export default function MessagesPage() {
         }));
         setMessages(msgs);
         applyReceipt(data.receipt as Receipt | null);
+        // Opening the chat marked it read server-side → badges drop now
+        setConversations(prev => prev.map(c => (c.id === convId && c.unreadCount ? { ...c, unreadCount: 0 } : c)));
+        refreshUnread();
       }
     } finally { setLoadingMsgs(false); }
   }, [myId, applyReceipt]);
@@ -379,6 +390,8 @@ export default function MessagesPage() {
     setPickerFor(null);
     setPendingImage(null);
     setPendingVideo(null);
+    setViewOnceOn(false);
+    setViewOnceOpen(null);
     setError(null);
     setPriorityOn(false);
     setPriorityNudge(false);
@@ -417,6 +430,8 @@ export default function MessagesPage() {
               return [...filtered, msg];
             });
             fetchConversations();
+            // The stream marks incoming messages read right after sending them
+            if (!msg.isSent) setTimeout(() => { refreshUnread(); }, 1200);
           } else if (data.type === 'typing') {
             if (data.userId !== myId) {
               const uid = data.userId as string;
@@ -430,6 +445,8 @@ export default function MessagesPage() {
             applyReceipt(data as Receipt);
           } else if (data.type === 'game') {
             setMessages(prev => prev.map(m => m.id === data.messageId ? { ...m, meta: data.meta as GameMeta } : m));
+          } else if (data.type === 'viewonce') {
+            setMessages(prev => prev.map(m => m.id === data.messageId ? { ...m, viewOnce: data.viewOnce as ViewOnceInfo } : m));
           } else if (data.type === 'reaction') {
             setMessages(prev => prev.map(m => m.id === data.messageId ? { ...m, reactions: data.reactions as Reactions } : m));
           } else if (data.type === 'participants') {
@@ -628,24 +645,35 @@ export default function MessagesPage() {
     const text = input.trim();
     const image = pendingImage;
     const video = pendingVideo;
+    const vo = viewOnceOn && (!!image || !!video);
     const as = coupleNames.length >= 2 && sendAs ? sendAs : null;
     setInput('');
     setPendingImage(null);
     setPendingVideo(null);
+    setViewOnceOn(false);
     setSending(true);
     setError(null);
     lastTypingSentRef.current = 0;
 
     const tempId = `temp-${Date.now()}`;
-    setMessages(prev => [...prev, {
+    setMessages(prev => [...prev, vo ? {
+      // View once: even the sender's own bubble is sealed (no preview)
+      id: tempId, content: text, imageUrl: null, isSent: true, senderId: myId, senderPartnerName: as,
+      createdAt: new Date().toISOString(), isPriority: priorityOn && !priorityLocked,
+      kind: video ? 'VIDEO' : 'IMAGE', meta: video ? { durationSec: video.durationSec } : null,
+      viewOnce: { kind: video ? 'video' : 'photo', durationSec: video?.durationSec ?? null, expiresAt: null, state: 'delivered', views: [] },
+    } : {
       id: tempId, content: text, imageUrl: video ? null : image?.url ?? null, isSent: true, senderId: myId,
       senderPartnerName: as, createdAt: new Date().toISOString(), isPriority: priorityOn && !priorityLocked,
       ...(video ? { kind: 'VIDEO', meta: { videoUrl: video.url, durationSec: video.durationSec } } : {}),
     }]);
 
-    const err = await postMessage(video
-      ? { kind: 'VIDEO', videoUrl: video.url, videoDurationSec: video.durationSec, content: text }
-      : { content: text, ...(image ? { imageUrl: image.url } : {}) }, tempId);
+    const err = await postMessage({
+      ...(video
+        ? { kind: 'VIDEO', videoUrl: video.url, videoDurationSec: video.durationSec, content: text }
+        : { content: text, ...(image ? { imageUrl: image.url } : {}) }),
+      ...(vo ? { viewOnce: true } : {}),
+    }, tempId);
     if (err === null) {
       if (image) URL.revokeObjectURL(image.preview);
       if (video) URL.revokeObjectURL(video.preview);
@@ -653,8 +681,35 @@ export default function MessagesPage() {
       setInput(text);
       if (image) setPendingImage(image);
       if (video) setPendingVideo(video);
+      if (vo) setViewOnceOn(true);
     }
     setSending(false);
+  }
+
+  // ── View once: open (one time) ────────────────────────────────────────────
+  async function openViewOnce(msg: Message) {
+    if (!activeConvId || openingVo || viewOnceOpen) return;
+    setOpeningVo(msg.id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/conversations/${activeConvId}/messages/${msg.id}/open`, { method: 'POST', cache: 'no-store' });
+      const data = await res.json().catch(() => ({})) as Partial<ViewOnceOpen> & { error?: string; state?: 'opened' | 'expired' };
+      if (res.ok && data.mediaUrl && data.kind) {
+        const openedAt = new Date().toISOString();
+        setMessages(prev => prev.map(m => m.id === msg.id && m.viewOnce ? { ...m, viewOnce: { ...m.viewOnce, state: 'opened', openedAt } } : m));
+        setViewOnceOpen({ mediaUrl: data.mediaUrl, kind: data.kind, durationSec: data.durationSec ?? null, viewSec: data.viewSec ?? null });
+        return;
+      }
+      if (res.status === 410) {
+        const state = data.state === 'expired' ? 'expired' : 'opened';
+        setMessages(prev => prev.map(m => m.id === msg.id && m.viewOnce ? { ...m, viewOnce: { ...m.viewOnce, state } } : m));
+      }
+      setError(data.error || 'Couldn’t open this view-once message');
+    } catch {
+      setError('Couldn’t open this view-once message — check your connection');
+    } finally {
+      setOpeningVo(null);
+    }
   }
 
   /**
@@ -908,6 +963,20 @@ export default function MessagesPage() {
 
   const filtered = conversations.filter(c =>
     (c.displayName || c.username || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  const viewOnceToggle = (
+    <button
+      type="button"
+      onClick={() => setViewOnceOn(v => !v)}
+      aria-pressed={viewOnceOn}
+      aria-label={viewOnceOn ? 'View once on — tap to turn off' : 'Send as view once'}
+      title="View once: they can open it one time"
+      className={`flex-shrink-0 inline-flex items-center gap-1.5 rounded-full pl-1.5 pr-2.5 py-1 text-xs font-medium border transition-colors ${viewOnceOn ? 'bg-[#DC143C] border-[#DC143C] text-white' : 'bg-white/5 border-white/15 text-white/70 hover:text-white hover:border-white/30'}`}
+    >
+      <ViewOnceIcon size={18} filled={viewOnceOn} />
+      View once
+    </button>
   );
 
   // ── Conversation list ─────────────────────────────────────────────────────
@@ -1166,13 +1235,24 @@ export default function MessagesPage() {
               avatar={senderAvatar(msg, !showSenders || runStart)}
               senderLabel={label}
               fromPartner={!!msg.senderId && !!participants[msg.senderId]?.isMyPartner}
-              footer={msg.isSent && !msg.id.startsWith('temp-') ? receiptFor(msg) : null}
+              footer={msg.isSent && !msg.id.startsWith('temp-') && !msg.viewOnce ? receiptFor(msg) : null}
               pickerOpen={pickerFor === msg.id}
               onOpenPicker={() => setPickerFor(msg.id)}
               onClosePicker={() => setPickerFor(p => (p === msg.id ? null : p))}
               onReact={(emoji) => handleReact(msg.id, emoji)}
               onImageLoad={msg.id === messages[messages.length - 1]?.id ? scrollToEnd : undefined}
               dimmed={!!msgQ && !searchMatches.has(msg.id)}
+              viewOnceNode={msg.viewOnce ? (
+                <ViewOnceBubble
+                  info={msg.viewOnce}
+                  sent={!!msg.isSent}
+                  pending={msg.id.startsWith('temp-')}
+                  multi={participantCount > 2}
+                  nameOf={(uid) => nameOf(uid)}
+                  opening={openingVo === msg.id}
+                  onOpen={() => openViewOnce(msg)}
+                />
+              ) : undefined}
               gameNode={game && msg.senderId ? (
                 <GameBubble
                   meta={game}
@@ -1228,6 +1308,11 @@ export default function MessagesPage() {
             </label>
           </div>
         )}
+        {(pendingImage || pendingVideo) && !uploading && viewOnceOn && (
+          <p className="mb-1.5 text-[11px] text-white/55 leading-snug" role="status">
+            <span className="text-[#FF4D6D] font-medium">View once</span> — they can open it one time, then it&rsquo;s deleted. No preview, no saving; their screen carries a watermark.
+          </p>
+        )}
         {pendingVideo && !uploading && (
           <div className="mb-2 flex items-center gap-2">
             <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-black flex items-center justify-center">
@@ -1241,9 +1326,10 @@ export default function MessagesPage() {
                 <X size={12} />
               </button>
             </div>
-            <span className="text-white/60 text-xs">
+            <span className="text-white/60 text-xs flex-1 min-w-0">
               Video attached{pendingVideo.durationSec != null ? ` · ${Math.max(1, Math.round(pendingVideo.durationSec))}s` : ''} — add a caption or send
             </span>
+            {viewOnceToggle}
           </div>
         )}
         {(pendingImage || uploading) && (
@@ -1266,7 +1352,8 @@ export default function MessagesPage() {
                 </button>
               )}
             </div>
-            <span className="text-white/60 text-xs">{uploading ? 'Uploading…' : 'Photo attached'}</span>
+            <span className="text-white/60 text-xs flex-1 min-w-0">{uploading ? 'Uploading…' : 'Photo attached'}</span>
+            {pendingImage && !uploading && viewOnceToggle}
           </div>
         )}
         {priority && (priorityOn || priorityNudge) && (
@@ -1446,6 +1533,7 @@ export default function MessagesPage() {
       </main>
       {/* Outside the glass (backdrop-filter) panels so position:fixed is relative to the viewport */}
       <GameSheet open={gameOpen && !!activeConv} name={name} onClose={() => setGameOpen(false)} onSend={sendGame} />
+      {viewOnceOpen && <ViewOnceViewer open={viewOnceOpen} onClose={() => setViewOnceOpen(null)} />}
     </div>
   );
 }

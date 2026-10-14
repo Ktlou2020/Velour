@@ -6,6 +6,7 @@ import { REACTION_EMOJIS, type Reactions } from '@/lib/reactions';
 import VoiceNotePlayer from '@/components/chat/VoiceNotePlayer';
 import VideoBubble from '@/components/chat/VideoBubble';
 import { NO_SAVE_STYLE, useViewerMark, watermarkBackground } from '@/components/ProtectedImage';
+import type { ViewOnceInfo } from '@/lib/view-once';
 
 export interface ChatMessage {
   id: string;
@@ -29,6 +30,8 @@ export interface ChatMessage {
   /** VOICE: { waveform }, GAME: GameMeta (redacted for the viewer by the server) */
   meta?: unknown;
   isPriority?: boolean;
+  /** View-once photo/video: no URL is ever sent, only this state */
+  viewOnce?: ViewOnceInfo | null;
 }
 
 function videoOf(meta: unknown): { url: string; durationSec: number | null } | null {
@@ -63,6 +66,8 @@ interface Props {
   onImageLoad?: () => void;
   /** Rendered in place of the text for GAME messages */
   gameNode?: ReactNode;
+  /** Rendered in place of the media for view-once messages (sealed bubble) */
+  viewOnceNode?: ReactNode;
   /** Search: dim bubbles that don't match */
   dimmed?: boolean;
 }
@@ -70,7 +75,7 @@ interface Props {
 const LONG_PRESS_MS = 450;
 
 export default function MessageBubble({
-  msg, myId, blurReceivedImages, avatar, senderLabel, fromPartner = false, footer, pickerOpen, onOpenPicker, onClosePicker, onReact, onImageLoad, gameNode, dimmed = false,
+  msg, myId, blurReceivedImages, avatar, senderLabel, fromPartner = false, footer, pickerOpen, onOpenPicker, onClosePicker, onReact, onImageLoad, gameNode, viewOnceNode, dimmed = false,
 }: Props) {
   const sent = msg.isSent ?? false;
   const isTemp = msg.id.startsWith('temp-');
@@ -84,7 +89,8 @@ export default function MessageBubble({
   const reactionEntries = Object.entries(msg.reactions ?? {}).filter(([, ids]) => ids.length > 0);
   const isVoice = msg.kind === 'VOICE' && !!msg.audioUrl;
   const isGame = msg.kind === 'GAME' && !!gameNode;
-  const video = msg.kind === 'VIDEO' ? videoOf(msg.meta) : null;
+  const isViewOnce = !!msg.viewOnce;
+  const video = msg.kind === 'VIDEO' && !isViewOnce ? videoOf(msg.meta) : null;
   const priorityRing = msg.isPriority ? 'ring-1 ring-[#D4AF37]/70 shadow-[0_0_18px_-6px_rgba(212,175,55,0.6)]' : '';
 
   function startPress() {
@@ -143,7 +149,10 @@ export default function MessageBubble({
           onContextMenu={(e) => { if (pickerOpen) e.preventDefault(); }}
         >
           {picker}
-          {msg.imageUrl && (
+          {isViewOnce && viewOnceNode && (
+            <div className={`${msg.content ? 'mb-1' : ''} rounded-2xl ${sent ? 'rounded-tr-sm' : 'rounded-tl-sm'} ${priorityRing}`}>{viewOnceNode}</div>
+          )}
+          {msg.imageUrl && !isViewOnce && (
             <div
               data-protected=""
               className={`relative overflow-hidden rounded-2xl ${sent ? 'rounded-tr-sm' : 'rounded-tl-sm'} ${msg.content ? 'mb-1' : ''} ${isTemp ? 'opacity-60' : ''} bg-white/5`}

@@ -3,7 +3,7 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { sendPushToUser } from '@/lib/push'
 import { findMatchesBetween, getPartnerMap, isBlockedBetween, sideOf } from '@/lib/couples'
-import { startOfDaySAST } from '@/lib/plans'
+import { entitlements, startOfDaySAST } from '@/lib/plans'
 import { getBlockedIds, getCallerContext, memberSelect, toMemberResult } from '@/app/api/members/search'
 import {
   countLikesToday, countSuperLikesInPeriod, dayResetsAt, getAllowance, loadPlan, superLikeResetsAt,
@@ -148,8 +148,29 @@ export async function POST(req: NextRequest) {
         const sevenDays = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         await db.match.create({ data: { user1Id, user2Id, expiresAt: sevenDays } })
 
-        // Notify everyone on both sides (both partners of a linked couple)
+        // Notify everyone on both sides (both partners of a linked couple).
+        // Deep link to the chat when one already exists between the sides.
         const meId = session.user.id
+        const existingConv = await db.conversation.findFirst({
+          where: {
+            AND: [
+              { participants: { some: { userId: { in: mySide } } } },
+              { participants: { some: { userId: { in: theirSide } } } },
+            ],
+          },
+          orderBy: { lastMessageAt: 'desc' },
+          select: { id: true },
+        })
+        const names = await db.user.findMany({
+          where: { id: { in: [meId, toUserId] } },
+          select: { id: true, username: true, profile: { select: { displayName: true } } },
+        })
+        const nameOf = (id: string) => {
+          const u = names.find((x) => x.id === id)
+          return u?.profile?.displayName || u?.username || 'someone'
+        }
+        const usernameOf = (id: string) => names.find((x) => x.id === id)?.username ?? ''
+        const matchUrl = existingConv ? `/messages?conv=${existingConv.id}` : '/matches'
         const notify = [
           ...mySide.map((u) => ({ userId: u, matchedUserId: toUserId })),
           ...theirSide.map((u) => ({ userId: u, matchedUserId: meId })),
@@ -159,13 +180,18 @@ export async function POST(req: NextRequest) {
             userId: n.userId,
             type: 'MATCH',
             title: "It's a Match!",
-            body: "You have a new match!",
-            data: { matchedUserId: n.matchedUserId },
+            body: `You and ${nameOf(n.matchedUserId)} liked each other — say hi before the match expires.`,
+            data: {
+              matchedUserId: n.matchedUserId,
+              matchedUsername: usernameOf(n.matchedUserId),
+              url: matchUrl,
+              ...(existingConv ? { conversationId: existingConv.id } : {}),
+            },
           })),
         })
 
         for (const n of notify) {
-          sendPushToUser(n.userId, { title: "It's a Match! 🎉", body: "You have a new match on Hush!", url: '/matches', tag: `match-${user1Id}-${user2Id}` }).catch(() => {})
+          sendPushToUser(n.userId, { title: "It's a Match! 🎉", body: `You and ${nameOf(n.matchedUserId)} liked each other on Hush`, url: matchUrl, tag: `match-${user1Id}-${user2Id}` }).catch(() => {})
         }
         matched = true
       } else {
@@ -173,15 +199,41 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Push notification for a plain like/wink (not for a repeated tap)
-    if (!matched && !repeat) {
-      const labels: Record<string, string> = { LIKE: 'liked', SUPERLIKE: 'super liked', WINK: 'winked at' }
-      sendPushToUser(toUserId, {
-        title: 'New Activity — Hush',
-        body: `Someone ${labels[type] ?? 'liked'} you!`,
-        url: '/members',
-        tag: `like-${session.user.id}`,
-      }).catch(() => {})
+    // In-app notification + push for a plain like / wink / super like (not for a
+    // repeated tap, a match — that has its own — or across a block). Names are
+    // only shown to members whose plan can see who liked them.
+    if (!matched && !repeat && !sameCouple && !(await isBlockedBetween(mySide, theirSide))) {
+      try {
+        const [liker, owner] = await Promise.all([
+          db.user.findUnique({ where: { id: userId }, select: { username: true, profile: { select: { displayName: true } } } }),
+          db.user.findUnique({ where: { id: toUserId }, select: { role: true, profile: { select: { membershipTier: true } } } }),
+        ])
+        const canSee = !!owner && entitlements(owner.profile?.membershipTier, owner.role).seeWhoLikedYou
+        const who = canSee ? (liker?.profile?.displayName || liker?.username || 'Someone') : 'Someone'
+        const copy: Record<string, { title: string; body: string }> = {
+          LIKE: { title: `${who} liked you`, body: canSee ? 'Like them back for an instant match.' : 'Upgrade to Gold to see who — or keep swiping in Discover.' },
+          SUPERLIKE: { title: `${who} super liked you ⭐`, body: canSee ? 'They really want to meet you. Like them back for an instant match.' : 'Someone really wants to meet you. Upgrade to Gold to see who.' },
+          WINK: { title: `${who} winked at you 😉`, body: canSee ? 'Wink back or say hi.' : 'Upgrade to Gold to see who.' },
+        }
+        const c = copy[type] ?? copy.LIKE
+        await db.notification.create({
+          data: {
+            userId: toUserId,
+            type,
+            title: c.title,
+            body: c.body,
+            data: { url: '/matches#liked-you', fromUserId: userId, ...(canSee && liker ? { fromUsername: liker.username } : {}) },
+          },
+        })
+        sendPushToUser(toUserId, {
+          title: `${c.title} — Hush`,
+          body: c.body,
+          url: '/matches#liked-you',
+          tag: `like-${userId}`,
+        }).catch(() => {})
+      } catch (e) {
+        console.error('like notification failed:', e instanceof Error ? e.message : e)
+      }
     }
 
     return NextResponse.json({ liked: true, matched, allowance })

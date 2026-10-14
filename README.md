@@ -35,6 +35,8 @@ npm run dev
 | `/auth/signin` | Sign in |
 | `/upgrade` | Premium membership |
 | `/safety` | Safety centre: meeting tips, SA emergency numbers, "Share my date" |
+| `/store` | Toystory, the adult store (members only): catalogue, cart, checkout, `/store/orders` |
+| `/admin/store` | Store admin: products, categories, orders, 30-day sales |
 
 ## Scheduled jobs (cron)
 
@@ -66,6 +68,65 @@ reviews are read, so a missed run only delays notifications.
 ```bash
 curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/reviews
 ```
+
+View-once chat media is cleaned up by `GET /api/cron/view-once` (same secret, POST also works; hourly):
+deletes the stored file of every view-once photo/video that all recipients have opened (once their
+viewing window has ended) or that is older than 14 days, and sets `Message.mediaDeletedAt`. The same
+clean-up also runs lazily after each opening and whenever a chat is read, so the cron only catches stragglers.
+
+```bash
+curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/view-once
+```
+
+Store housekeeping runs from `GET /api/cron/store` (same secret, POST also works; every 10–15 minutes):
+cancels unpaid store orders older than 30 minutes and puts their stock back. Store pages also run it
+lazily (at most once a minute per instance), so a missed run only delays the release.
+
+```bash
+curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/store
+```
+
+## Notifications & push
+
+In-app notifications are `Notification` rows (type, title, body, `data.url` deep link). One helper set
+lives in `lib/notifications.ts`; link resolution (with per-type fallbacks) in `lib/notification-links.ts`.
+
+- **Bell (navbar):** unread *activity*: likes, winks, super likes, matches, profile views, couple,
+  albums, photo likes, reviews, events, membership and verification. It **excludes `MESSAGE`**, because
+  messages have their own badge, and `REPORT`, which is the admin queue in `/admin/reports`. Mobile
+  shows a bell link to `/notifications` in the top bar.
+- **Messages badges (navbar + mobile tab bar):** unread **messages** (sum of
+  `ConversationParticipant.unreadCount`, skipping blocked conversations), not notifications.
+- **`/notifications`:** everything except `REPORT`, with All / Activity / Messages tabs, day grouping
+  and "Load more". There is one `MESSAGE` row per conversation while it's unread ("Thandi sent you 3
+  messages"). Opening the chat marks it read.
+- **Live updates:** `GET /api/notifications/stream` (SSE) pushes `counts` and new notifications. If the
+  stream is down, clients poll `GET /api/notifications/unread` every 25 s. Badges also refresh on tab
+  focus, after anything is marked read, and when a push arrives.
+
+### Web push (optional)
+
+Push is off unless VAPID keys are set. Without them, `sendPushToUser` is a silent no-op,
+`GET /api/push` returns `{ enabled: false }` and the "Enable notifications" prompt is never shown.
+In-app notifications work either way. To turn push on:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+On Railway, open the web service, go to **Variables**, and add:
+
+| Variable | Value |
+| --- | --- |
+| `VAPID_PUBLIC_KEY` | the generated *Public Key* |
+| `VAPID_PRIVATE_KEY` | the generated *Private Key* (secret) |
+| `VAPID_SUBJECT` | optional, e.g. `mailto:hello@hush.dating` (the default) |
+
+`NEXT_PUBLIC_VAPID_PUBLIC_KEY` is also accepted for the public key, but you don't need it: the browser
+fetches the key from `GET /api/push` at runtime, so you don't have to rebuild. Redeploy after you set
+the keys. Don't change them afterwards: existing browser subscriptions are tied to the key pair, so
+members would have to opt in again. `public/sw.js` shows the notification and, on click, focuses or
+opens the `url` from the payload (same-origin paths only).
 
 ## Media storage
 
@@ -139,6 +200,65 @@ Real screenshot blocking needs a native shell. The planned route is to wrap the 
   - common hardening trick: render sensitive views inside a secure `UITextField` layer
     (`isSecureTextEntry = true`), which iOS omits from screenshots and recordings.
 - Keep the server-side per-viewer watermark in the native apps too: it is the part that works everywhere.
+
+## Store (Toystory)
+
+The adult store lives at `/store` (login required, so 18+ like the rest of the app). Its name is the single
+constant `STORE_NAME` in `lib/store/config.ts` (with `STORE_TAGLINE`) — rename it there and every page,
+email, admin label and PayFast item name follows. Order numbers use `ORDER_NUMBER_PREFIX` (`TS-10023`).
+
+- **Catalogue**: `ProductCategory` / `Product` (prices in cents, VAT-inclusive). Search covers name,
+  description, tags and category; filters for category, price range and stock; sorts featured / newest / price.
+  Descriptions are plain text (tags stripped, rendered as text with line breaks).
+- **Photos**: admins upload with `POST /api/upload` `purpose=product` (403 for anyone else). They live in the
+  uploader's hidden `__store` album, are visible to every logged-in member and are served **without** the
+  per-viewer watermark (they are catalogue images, not members' content). Products without photos show a
+  neutral icon tile.
+- **Cart**: `localStorage` per member (`hush_store_cart:<userId>`), re-priced by `POST /api/store/cart/quote`.
+  The server never trusts client prices.
+- **Checkout** (`POST /api/store/checkout`): validates delivery details (SA phone, 4-digit postal code, the 9
+  provinces), re-prices from the database, then reserves stock atomically (`UPDATE … WHERE stock >= qty` in a
+  transaction, so the last unit can't be sold twice) and creates a `PENDING_PAYMENT` order. Unpaid orders are
+  cancelled and restocked after 30 minutes (cron above + lazily). A member has at most one unpaid order —
+  checking out again replaces it.
+- **Delivery fee**: `STORE_SHIPPING_CENTS` (default R 99), free from `STORE_FREE_SHIPPING_OVER_CENTS`
+  (default R 1 000). Parcels default to discreet packaging with sender `STORE_DISCREET_SENDER`.
+- **Orders**: members see `/store/orders`; status emails + in-app notifications (`STORE_ORDER`) go out on
+  Paid, Shipped (with tracking), Delivered, Cancelled and Refunded. Notification text never names products.
+- **Admin** (`/admin/store`): products (photos, reorder, stock, featured/live toggles; stock edits are applied
+  as a delta so concurrent checkouts aren't overwritten), categories (order), orders (Processing → Shipped
+  with courier + tracking number or link → Delivered; Cancel/Refund put unshipped items back in stock —
+  the refund itself is done in the PayFast dashboard), low stock and 30-day sales. "Create sample
+  catalogue" seeds 4 categories and 8 text-only sample products tagged `sample`.
+- **Legal copy**: `/terms#store-terms` (18+, VAT, SA-only delivery, ECTA cooling-off for sealed items,
+  CPA 6-month defective-goods returns, hygiene, POPIA). Have it reviewed before launch, and only show
+  "incl. VAT" if the business is VAT-registered.
+
+## Payments (PayFast)
+
+`lib/payfast.ts` is shared by membership upgrades (`POST /api/payment/payfast`) and the store.
+
+| Variable | |
+|---|---|
+| `PAYFAST_MERCHANT_ID`, `PAYFAST_MERCHANT_KEY` | Required. Without them checkout answers 503 "Payments aren't set up yet". |
+| `PAYFAST_PASSPHRASE` | Set the same value in PayFast → Settings. Required for subscriptions. |
+| `PAYFAST_SANDBOX=true` | Use `sandbox.payfast.co.za` (test merchant 10000100 / 46f0cd694581a / passphrase jt7NOE43FZPn). |
+| `PAYFAST_SKIP_VALIDATE=true` | Local tests only — skips the server-to-server ITN check; ignored for live payments in production. |
+| `NEXT_PUBLIC_APP_URL` | Must be the public https URL — return, cancel and notify URLs are built from it. |
+
+- **Checkout signature**: non-empty fields in PayFast's documented order (merchant → customer →
+  transaction → options → subscription), values trimmed and encoded like PHP `urlencode` (spaces `+`,
+  uppercase hex), `&passphrase=…` appended, md5. The browser posts a real `<form>` to `/eng/process`
+  (allowed by the CSP `form-action`). Store payments send `m_payment_id` = the order's `paymentRef`,
+  `custom_str1=store`, `custom_str2` = order number, and a discreet `item_name` ("Toystory order TS-10023").
+- **ITN** `POST /api/payment/payfast/notify`: parses the raw body in received order, verifies the signature
+  (400 if wrong), checks `merchant_id`, confirms with PayFast `/eng/query/validate` (503 on network trouble so
+  PayFast retries), then routes: `m_payment_id` matching an order → store (amount must equal the order total
+  ±R0.01, idempotent on `pf_payment_id`, `COMPLETE` → Paid + email + notification, `FAILED`/`CANCELLED` →
+  cancelled + restocked); otherwise membership (`custom_str1` = user id, tier from the item name, amount must
+  match a plan price). A payment that arrives just after a reservation lapsed re-reserves the stock if it is
+  still there, otherwise the order is flagged for a refund (`STORE_ADMIN_EMAIL` gets an alert).
+- Return/cancel URLs: `/store/thank-you?order=…` (polls until the ITN lands) and `/store/checkout?cancelled=1`.
 
 ## Security
 

@@ -79,7 +79,7 @@ export async function clearPendingInvitesFor(userIds: string[]) {
 
 export async function notify(userId: string, title: string, body: string, data: Record<string, string> = {}) {
   try {
-    await db.notification.create({ data: { userId, type: UPDATE_TYPE, title, body, data } })
+    await db.notification.create({ data: { userId, type: UPDATE_TYPE, title, body, data: { url: '/profile#couple', ...data } } })
     await sendPushToUser(userId, { title, body, url: '/profile#couple', tag: 'couple' })
   } catch {
     /* non-critical */

@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { sendPushToUser } from '@/lib/push'
+import { markConversationNotificationsRead, upsertMessageNotification } from '@/lib/notifications'
 import { isPaid } from '@/lib/premium'
 import { chatVideoRules, checkPriority, getMessageAllowance, messageLimitError } from '@/lib/chat-priority'
 import {
@@ -27,6 +28,15 @@ import {
   getPartnerMap,
   sideOf,
 } from '@/lib/couples'
+import {
+  VIEW_ONCE_SELECT,
+  VIEW_ONCE_TTL_MS,
+  canSendAsViewOnce,
+  isViewOnceMedia,
+  redactViewOnce,
+  sweepViewOnce,
+  viewOncePreview,
+} from '@/lib/view-once'
 
 const MAX_CONTENT = 2000
 const MAX_VOICE_SEC = 60
@@ -43,6 +53,7 @@ type Body = {
   waveform?: unknown
   game?: unknown
   isPriority?: unknown
+  viewOnce?: unknown
 }
 
 /** Up to 48 bar heights 0–100 recorded client-side for the voice-note waveform. */
@@ -138,12 +149,16 @@ export async function GET(
     }
     const paid = isPaid(participation.user.profile?.membershipTier, role)
 
+    // View-once media that is done (all viewed / 14 days) is deleted lazily on reads too
+    await sweepViewOnce({ conversationId, limit: 50 }).catch((e) => console.error('[view-once] lazy sweep failed:', e))
+
     const messages = await db.message.findMany({
       where: { conversationId },
       take: limit,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       orderBy: { createdAt: 'desc' },
       include: {
+        views: VIEW_ONCE_SELECT.views,
         sender: {
           select: {
             id: true,
@@ -180,6 +195,9 @@ export async function GET(
       ])
     }
 
+    // Opening the chat clears its MESSAGE notifications in the bell / list
+    await markConversationNotificationsRead(userId, conversationId)
+
     const nextCursor = messages.length === limit ? messages[messages.length - 1].id : null
 
     // Read receipts on your own sent messages are a paid feature
@@ -187,8 +205,9 @@ export async function GET(
     const receipt = paid ? await computeReceipt(conversationId, userId) : null
     const multi = access.userIds.length > 2
     const viewerSide = sideOf(userId, await getPartnerMap(access.userIds))
+    const now = Date.now()
     const out = messages.reverse().map((raw) => {
-      const m = messageForViewer(raw, userId, viewerSide)
+      const m = redactViewOnce(messageForViewer(raw, userId, viewerSide), userId, access.userIds, now)
       if (m.senderId !== userId) return m
       if (!paid) return { ...m, isRead: false, readAt: null }
       if (multi) {
@@ -221,6 +240,8 @@ export async function POST(
     const { content: rawContent, imageUrl: rawImageUrl, senderPartnerName: rawPartnerName } = body
     const kind = body.kind === 'VOICE' || body.kind === 'GAME' || body.kind === 'VIDEO' ? body.kind : 'TEXT'
     const isPriority = body.isPriority === true
+    // View once: a chat photo or video each recipient can open one time
+    const viewOnce = body.viewOnce === true
 
     // Text, or an optional caption on a video
     const content = (kind === 'TEXT' || kind === 'VIDEO') && typeof rawContent === 'string' ? rawContent.trim() : ''
@@ -274,6 +295,14 @@ export async function POST(
 
     if (kind === 'TEXT' && !content && !imageUrl) {
       return NextResponse.json({ error: 'content or imageUrl is required' }, { status: 400 })
+    }
+    const mediaUrlSent = videoMeta?.videoUrl ?? imageUrl
+    if (viewOnce) {
+      if (!mediaUrlSent || !(await canSendAsViewOnce(mediaUrlSent, userId))) {
+        return NextResponse.json({ error: 'View once works with a newly attached photo or video' }, { status: 400 })
+      }
+    } else if (mediaUrlSent && await isViewOnceMedia(mediaUrlSent)) {
+      return NextResponse.json({ error: 'This photo or video was sent as view once' }, { status: 400 })
     }
     if (content.length > MAX_CONTENT) {
       return NextResponse.json({ error: `Message must be under ${MAX_CONTENT} characters` }, { status: 400 })
@@ -354,11 +383,13 @@ export async function POST(
         audioUrl,
         audioDurationSec,
         isPriority,
+        ...(viewOnce ? { viewOnce: true, viewOnceExpiresAt: new Date(Date.now() + VIEW_ONCE_TTL_MS) } : {}),
         ...(gameMeta ? { meta: gameMeta as unknown as Prisma.InputJsonValue } : {}),
         ...(waveform ? { meta: { waveform } } : {}),
         ...(videoMeta ? { meta: videoMeta } : {}),
       },
       include: {
+        views: VIEW_ONCE_SELECT.views,
         sender: {
           select: {
             id: true,
@@ -372,14 +403,16 @@ export async function POST(
     })
 
     const videoLen = videoMeta?.durationSec != null ? ` (${fmtDuration(videoMeta.durationSec)})` : ''
-    const listPreview = kind === 'VOICE'
+    // View once: never the caption, never "photo"/"video" details beyond the label
+    const voPreview = viewOnce ? viewOncePreview(videoMeta ? 'video' : 'photo') : null
+    const listPreview = voPreview ? voPreview : kind === 'VOICE'
       ? voicePreview(audioDurationSec)
       : videoMeta
         ? `🎥 Video${videoLen}`
         : gameMeta
         ? gamePreview(gameMeta.game)
         : content ? content.slice(0, 100) : '📷 Photo'
-    const preview = kind === 'VOICE'
+    const preview = voPreview ? voPreview : kind === 'VOICE'
       ? `Sent you a voice note 🎤 (${fmtDuration(audioDurationSec)})`
       : videoMeta
         ? `Sent you a video 🎥${videoLen}`
@@ -399,7 +432,35 @@ export async function POST(
       if (pn) senderLabel = `${myName} (${myName} & ${pn})`
     }
 
-    // Update conversation last message; stop the sender's typing indicator
+    for (const participant of otherParticipants) {
+      await db.conversationParticipant.update({
+        where: { conversationId_userId: { conversationId, userId: participant.userId } },
+        data: { unreadCount: { increment: 1 } },
+      })
+
+      // One unread MESSAGE notification per conversation ("Thandi sent you 3 messages")
+      await upsertMessageNotification({
+        userId: participant.userId,
+        conversationId,
+        senderId: userId,
+        senderLabel,
+        preview,
+        isPriority,
+        senderPartnerName,
+        multi: access.userIds.length > 2,
+      })
+      sendPushToUser(participant.userId, {
+        title: isPriority ? `⚡ ${senderLabel} — Hush` : `${senderLabel} — Hush`,
+        body: preview,
+        url: `/messages?conv=${conversationId}`,
+        tag: `message-${conversationId}`,
+      }).catch(() => {})
+    }
+
+    // Update conversation last message; stop the sender's typing indicator.
+    // Done after the recipients' unread counts / notifications so a recipient
+    // with this chat open (whose SSE stream reacts to updatedAt and marks the
+    // message read) never ends up with a stale unread badge.
     await db.$transaction([
       db.conversation.update({
         where: { id: conversationId },
@@ -411,33 +472,6 @@ export async function POST(
       }),
     ])
 
-    for (const participant of otherParticipants) {
-      await db.conversationParticipant.update({
-        where: { conversationId_userId: { conversationId, userId: participant.userId } },
-        data: { unreadCount: { increment: 1 } },
-      })
-
-      await db.notification.create({
-        data: {
-          userId: participant.userId,
-          type: 'MESSAGE',
-          title: isPriority ? `⚡ Priority message from ${senderLabel}` : `New message from ${senderLabel}`,
-          body: preview,
-          data: {
-            conversationId, senderId: userId,
-            ...(senderPartnerName ? { senderPartnerName } : {}),
-            ...(isPriority ? { priority: true } : {}),
-          },
-        },
-      })
-      sendPushToUser(participant.userId, {
-        title: isPriority ? `⚡ ${senderLabel} — Hush` : `${senderLabel} — Hush`,
-        body: preview,
-        url: `/messages?conv=${conversationId}`,
-        tag: `message-${conversationId}`,
-      }).catch(() => {})
-    }
-
     // Extend match expiry — once conversation is active the match never expires
     if (sideMatches.some((m) => m.expiresAt)) {
       db.match.updateMany({
@@ -447,7 +481,7 @@ export async function POST(
     }
 
     const messageAllowance = quota.limit === null ? quota : await getMessageAllowance(userId)
-    return NextResponse.json({ message, messageAllowance }, { status: 201 })
+    return NextResponse.json({ message: redactViewOnce(message, userId, access.userIds), messageAllowance }, { status: 201 })
   } catch (error) {
     console.error('POST /api/conversations/[id]/messages error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

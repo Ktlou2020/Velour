@@ -105,6 +105,12 @@ export default function MatchesPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Deep link from a "liked you" notification: /matches#liked-you (rendered after the fetch)
+  useEffect(() => {
+    if (!likedYou || typeof window === 'undefined' || window.location.hash !== '#liked-you') return;
+    requestAnimationFrame(() => document.getElementById('liked-you')?.scrollIntoView({ block: 'start' }));
+  }, [likedYou]);
+
   async function likeBack(l: LikedYou, type: 'LIKE' | 'PASS') {
     setLikingBack(l.member.id);
     try {
@@ -126,7 +132,7 @@ export default function MatchesPage() {
     if (!likedYou || likedYou.count === 0) return null;
     if (likedYou.locked) {
       return (
-        <section aria-labelledby="liked-you-title" className="mb-10">
+        <section id="liked-you" aria-labelledby="liked-you-title" className="mb-10 scroll-mt-24">
           <h2 id="liked-you-title" className="flex items-center gap-2 text-white font-semibold mb-3">
             <Heart size={16} className="text-[#FF4D6D] fill-[#FF4D6D]" aria-hidden="true" /> Liked you
             <span className="text-white/55 font-normal text-sm">· {likedYou.count}</span>
@@ -140,7 +146,7 @@ export default function MatchesPage() {
       );
     }
     return (
-      <section aria-labelledby="liked-you-title" className="mb-10">
+      <section id="liked-you" aria-labelledby="liked-you-title" className="mb-10 scroll-mt-24">
         <h2 id="liked-you-title" className="flex items-center gap-2 text-white font-semibold mb-1">
           <Heart size={16} className="text-[#FF4D6D] fill-[#FF4D6D]" aria-hidden="true" /> Liked you
           <span className="text-white/55 font-normal text-sm">· {likedYou.count}</span>

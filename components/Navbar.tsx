@@ -1,18 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { STORE_NAME } from '@/lib/store/config';
 import Logo from './Logo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Menu, X, ChevronDown, LogOut, User, Crown, MessageCircle, Eye, Shield, CreditCard, ShieldCheck, BarChart3, CalendarDays, MessagesSquare } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, Crown, MessageCircle, Eye, Shield, CreditCard, ShieldCheck, BarChart3, CalendarDays, MessagesSquare, Bell , ShoppingBag } from 'lucide-react';
 import NotificationBell from './NotificationBell';
+import { useUnreadCounts } from './notifications/unread-store';
 import ProfileCompletionBanner from './ProfileCompletionBanner';
 import { useSparkToday } from './spark/useSparkToday';
-
-interface NavConversationCount {
-  unreadCount: number;
-}
 
 // `wide`: only shown in the desktop bar from xl up (they move into the account menu below that).
 const NAV_LINKS: { href: string; label: string; showBadge?: boolean; sparkDot?: boolean; wide?: boolean }[] = [
@@ -25,12 +23,12 @@ const NAV_LINKS: { href: string; label: string; showBadge?: boolean; sparkDot?: 
   { href: '/gallery', label: 'Gallery' },
   { href: '/events', label: 'Events', wide: true },
   { href: '/forums', label: 'Forums', wide: true },
+  { href: '/store', label: STORE_NAME, wide: true },
 ];
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [unreadMessages, setUnreadMessages] = useState(0);
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const spark = useSparkToday();
@@ -45,23 +43,9 @@ export default function Navbar() {
   const initials = username.slice(0, 2).toUpperCase() || 'U';
   const userRole = (session?.user as { role?: string })?.role;
 
-  useEffect(() => {
-    if (status !== 'authenticated') return;
-    async function fetchUnread() {
-      try {
-        const res = await fetch('/api/conversations');
-        if (res.ok) {
-          const data = await res.json();
-          const conversations: NavConversationCount[] = data.conversations || data || [];
-          const total = conversations.reduce((sum: number, c: NavConversationCount) => sum + (c.unreadCount || 0), 0);
-          setUnreadMessages(total);
-        }
-      } catch { /* ignore */ }
-    }
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
-    return () => clearInterval(interval);
-  }, [status]);
+  // Live counts (SSE + polling fallback) shared with the bell and the mobile tab bar.
+  // Messages badge = unread messages (ConversationParticipant.unreadCount), not notifications.
+  const { unreadMessages, notifications: unreadNotifications } = useUnreadCounts(status === 'authenticated');
 
   return (
     <>
@@ -181,6 +165,13 @@ export default function Navbar() {
                         <MessagesSquare size={14} />Forums
                       </Link>
                       <Link
+                        href="/store"
+                        className="flex xl:hidden items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <ShoppingBag size={14} />{STORE_NAME}
+                      </Link>
+                      <Link
                         href="/views"
                         className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
                         onClick={() => setUserMenuOpen(false)}
@@ -231,6 +222,23 @@ export default function Navbar() {
               </>
             )}
           </div>
+
+          {/* Mobile: bell → /notifications (the dropdown bell lives in the md+ bar) */}
+          {status === 'authenticated' && (
+            <Link
+              href="/notifications"
+              className="md:hidden relative w-10 h-10 ml-auto flex items-center justify-center rounded-lg text-white/70 hover:text-white"
+              aria-label={`Notifications${unreadNotifications > 0 ? ` (${unreadNotifications} unread)` : ''}`}
+              aria-current={pathname.startsWith('/notifications') ? 'page' : undefined}
+            >
+              <Bell size={20} aria-hidden="true" />
+              {unreadNotifications > 0 && (
+                <span aria-hidden="true" className="absolute top-1 right-0.5 min-w-4 h-4 bg-[#DC143C] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1">
+                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                </span>
+              )}
+            </Link>
+          )}
 
           {/* Mobile Toggle */}
           <button
@@ -290,6 +298,18 @@ export default function Navbar() {
                   onClick={() => setMobileOpen(false)}
                 >
                   <CreditCard size={14} />Subscription
+                </Link>
+                <Link
+                  href="/notifications"
+                  className="flex items-center gap-2 px-4 py-2 glass border border-white/10 rounded-lg text-white/70 text-sm"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <Bell size={14} />Notifications
+                  {unreadNotifications > 0 && (
+                    <span className="ml-auto min-w-5 h-5 bg-[#DC143C] rounded-full text-white text-xs font-bold flex items-center justify-center px-1">
+                      {unreadNotifications}
+                    </span>
+                  )}
                 </Link>
                 <Link
                   href="/views"

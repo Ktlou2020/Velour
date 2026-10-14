@@ -6,6 +6,8 @@ import { isPaid } from '@/lib/premium'
 import { normalizeReactions } from '@/lib/reactions'
 import { computeReceipt, getPartnerMap, getTypingAs, sideOf } from '@/lib/couples'
 import { messageForViewer, redactGameMeta } from '@/lib/chat-games'
+import { markConversationNotificationsRead } from '@/lib/notifications'
+import { VIEW_ONCE_SELECT, redactViewOnce, viewOnceInfo } from '@/lib/view-once'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +22,8 @@ const POLL_MS = 1500
  *        for the caller's latest message — "Seen" once every other participant read it)
  *  { type: 'reaction', messageId, reactions }
  *  { type: 'game', messageId, meta }   (someone played a chat game; meta redacted for the caller)
+ *  { type: 'viewonce', messageId, viewOnce }   (a view-once photo/video was opened, expired or
+ *        deleted; `viewOnce` is the caller's ViewOnceInfo — never a media URL)
  *  { type: 'participants' }   (someone joined/left, e.g. a partner was linked)
  *  { type: 'revoked' }        (the caller is no longer a participant)
  *
@@ -56,6 +60,8 @@ export async function GET(
   const typingState = new Map<string, string>()
   const reactionCache = new Map<string, string>()
   const gameCache = new Map<string, string>()
+  const viewOnceCache = new Map<string, string>()
+  let participantIds: string[] = [userId]
   let viewerSide: string[] = [userId]
   const GAME_WINDOW = 60
   const loadGames = () => db.message.findMany({
@@ -64,8 +70,16 @@ export async function GET(
     take: GAME_WINDOW,
     select: { id: true, senderId: true, meta: true },
   })
+  const VIEW_ONCE_WINDOW = 60
+  const loadViewOnce = () => db.message.findMany({
+    where: { conversationId, viewOnce: true },
+    orderBy: { createdAt: 'desc' },
+    take: VIEW_ONCE_WINDOW,
+    select: { id: true, senderId: true, kind: true, imageUrl: true, meta: true, ...VIEW_ONCE_SELECT },
+  })
   const refreshSide = async () => {
     const ps = await db.conversationParticipant.findMany({ where: { conversationId }, select: { userId: true } })
+    participantIds = ps.map((p) => p.userId)
     viewerSide = sideOf(userId, await getPartnerMap(ps.map((p) => p.userId)))
   }
   let closed = false
@@ -86,7 +100,7 @@ export async function GET(
       send({ type: 'connected' })
 
       // Seed state with the current latest
-      const [latest, conv, reacted, games] = await Promise.all([
+      const [latest, conv, reacted, games, viewOnces] = await Promise.all([
         db.message.findFirst({
           where: { conversationId },
           orderBy: { createdAt: 'desc' },
@@ -98,8 +112,10 @@ export async function GET(
           select: { id: true, reactions: true },
         }),
         loadGames(),
+        loadViewOnce(),
         refreshSide(),
       ])
+      for (const v of viewOnces) viewOnceCache.set(v.id, JSON.stringify(viewOnceInfo(v, userId, participantIds)))
       lastMessageId = latest?.id ?? null
       for (const g of games) gameCache.set(g.id, JSON.stringify(redactGameMeta(g.meta, g.senderId, userId, viewerSide)))
       lastUpdatedAt = conv?.updatedAt.getTime() ?? 0
@@ -168,7 +184,7 @@ export async function GET(
           if (updatedAt !== lastUpdatedAt) {
             lastUpdatedAt = updatedAt
 
-            const [newMessages, reacted, games] = await Promise.all([
+            const [newMessages, reacted, games, viewOnces] = await Promise.all([
               db.message.findMany({
                 where: {
                   conversationId,
@@ -197,6 +213,7 @@ export async function GET(
                   readAt: true,
                   reactions: true,
                   createdAt: true,
+                  ...VIEW_ONCE_SELECT,
                 },
               }),
               db.message.findMany({
@@ -204,12 +221,15 @@ export async function GET(
                 select: { id: true, reactions: true },
               }),
               loadGames(),
+              loadViewOnce(),
             ])
+            const pIds = conv.participants.map((p) => p.userId)
 
             // ── New messages ────────────────────────────────────────────
             const incomingIds: string[] = []
             for (const raw of newMessages) {
-              const msg = messageForViewer(raw, userId, viewerSide)
+              const msg = redactViewOnce(messageForViewer(raw, userId, viewerSide), userId, pIds)
+              if (msg.viewOnce) viewOnceCache.set(msg.id, JSON.stringify(msg.viewOnce))
               if (msg.kind === 'GAME') gameCache.set(msg.id, JSON.stringify(msg.meta))
               const own = msg.senderId === userId
               send({
@@ -237,6 +257,7 @@ export async function GET(
                   data: { updatedAt: new Date() },
                 }),
               ])
+              await markConversationNotificationsRead(userId, conversationId)
             }
 
             // ── Reactions ───────────────────────────────────────────────
@@ -257,6 +278,16 @@ export async function GET(
               }
             }
 
+            // ── View once: opened / expired / deleted ───────────────────
+            for (const v of viewOnces) {
+              const info = viewOnceInfo(v, userId, pIds)
+              const key = JSON.stringify(info)
+              if (viewOnceCache.get(v.id) !== key) {
+                viewOnceCache.set(v.id, key)
+                send({ type: 'viewonce', messageId: v.id, viewOnce: info })
+              }
+            }
+
             // ── Game answers ────────────────────────────────────────────
             for (const g of games) {
               const meta = redactGameMeta(g.meta, g.senderId, userId, viewerSide)
@@ -272,7 +303,10 @@ export async function GET(
           if (++ticks % 10 === 0 && !closed) {
             try { controller.enqueue(enc.encode(': ping\n\n')) } catch { closed = true }
           }
-        } catch { clearInterval(poll); closed = true; try { controller.close() } catch { /* ignore */ } }
+        } catch (e) {
+          console.error('[conversation stream] poll failed:', e instanceof Error ? e.message : e)
+          clearInterval(poll); closed = true; try { controller.close() } catch { /* ignore */ }
+        }
         finally { polling = false }
       }, POLL_MS)
 

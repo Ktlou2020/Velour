@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Home, Compass, MessageCircle, Images, User } from 'lucide-react';
 import { useSparkToday } from './spark/useSparkToday';
+import { useUnreadCounts } from './notifications/unread-store';
 
 // Explore (the public photo gallery) earns a tab; Spark and Events live in the
 // menu and on the Members page.
@@ -22,27 +22,11 @@ const HIDDEN_ON = ['/onboarding', '/auth', '/admin'];
 export default function MobileNav() {
   const pathname = usePathname();
   const { status } = useSession();
-  const [unread, setUnread] = useState(0);
+  // Messages tab badge = unread MESSAGES (ConversationParticipant.unreadCount,
+  // live via the shared SSE store) — not the notification count.
+  const { unreadMessages: unread } = useUnreadCounts(status === 'authenticated');
   const spark = useSparkToday();
   const sparkPending = !!spark && !spark.answered;
-
-  useEffect(() => {
-    if (status !== 'authenticated') return;
-
-    async function fetchUnread() {
-      try {
-        const res = await fetch('/api/notifications');
-        if (res.ok) {
-          const data = await res.json();
-          setUnread(data.unreadCount ?? data.count ?? 0);
-        }
-      } catch { /* ignore */ }
-    }
-
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
-    return () => clearInterval(interval);
-  }, [status]);
 
   if (status !== 'authenticated') return null;
   // Focused flows (onboarding, auth, admin) get the full screen.
@@ -64,7 +48,7 @@ export default function MobileNav() {
               key={href}
               href={href}
               className="flex-1 flex flex-col items-center justify-center gap-0.5 relative"
-              aria-label={showBadge && unread > 0 ? `${label} (${unread} unread)` : sparkDot && sparkPending ? `${label} (new question)` : label}
+              aria-label={showBadge && unread > 0 ? `${label} (${unread} unread message${unread === 1 ? '' : 's'})` : sparkDot && sparkPending ? `${label} (new question)` : label}
               aria-current={isActive ? 'page' : undefined}
             >
               <div className="relative">
@@ -77,7 +61,7 @@ export default function MobileNav() {
                   <span aria-hidden="true" className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-[#D4AF37] border border-[#0A0A0F]" />
                 )}
                 {showBadge && unread > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 bg-[#DC143C] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1">
+                  <span aria-hidden="true" className="absolute -top-1.5 -right-1.5 min-w-4 h-4 bg-[#DC143C] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1">
                     {unread > 9 ? '9+' : unread}
                   </span>
                 )}

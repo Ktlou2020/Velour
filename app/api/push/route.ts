@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
+import { pushEnabled, vapidPublicKey } from '@/lib/push'
 
 // POST: Save a push subscription
 export async function POST(req: NextRequest) {
@@ -10,13 +11,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json()
-    const { endpoint, keys } = body as {
-      endpoint: string
-      keys: { p256dh: string; auth: string }
+    if (!pushEnabled()) {
+      return NextResponse.json({ error: 'Push notifications are not available' }, { status: 503 })
     }
 
-    if (!endpoint || !keys?.p256dh || !keys?.auth) {
+    const body = await req.json().catch(() => ({}))
+    const { endpoint, keys } = body as {
+      endpoint?: unknown
+      keys?: { p256dh?: unknown; auth?: unknown }
+    }
+
+    if (
+      typeof endpoint !== 'string' || !/^https:\/\//.test(endpoint) || endpoint.length > 2000 ||
+      typeof keys?.p256dh !== 'string' || typeof keys?.auth !== 'string' ||
+      keys.p256dh.length > 200 || keys.auth.length > 100
+    ) {
       return NextResponse.json({ error: 'Invalid subscription' }, { status: 400 })
     }
 
@@ -46,9 +55,9 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { endpoint } = await req.json() as { endpoint: string }
+    const { endpoint } = (await req.json().catch(() => ({}))) as { endpoint?: unknown }
 
-    if (endpoint) {
+    if (typeof endpoint === 'string' && endpoint) {
       await db.pushSubscription.deleteMany({
         where: { endpoint, userId: session.user.id },
       })
@@ -61,9 +70,12 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
-// GET: Return VAPID public key for client subscription
+// GET: { enabled, publicKey } — the client only offers "Enable notifications"
+// when enabled is true (VAPID keys configured on the server).
 export async function GET() {
-  return NextResponse.json({
-    publicKey: process.env.VAPID_PUBLIC_KEY ?? '',
-  })
+  const enabled = pushEnabled()
+  return NextResponse.json(
+    { enabled, publicKey: enabled ? vapidPublicKey() : '' },
+    { headers: { 'Cache-Control': 'no-store' } },
+  )
 }

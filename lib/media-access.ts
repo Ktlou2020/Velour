@@ -9,6 +9,8 @@
  *       participants of a conversation containing a message with that image/audio/video
  *       (videos: Message.meta.videoUrl)
  *   - profile video (hidden "__video" album): any logged-in member
+ *   - store product photo (hidden "__store" album, admin uploads): any logged-in
+ *       member, regardless of blocks or the uploading admin's account state
  *   - photo in a user album: public album → any logged-in member;
  *       private album → members with AlbumAccess GRANTED
  *   - photo in no album: public → any logged-in member; private → owner only
@@ -17,7 +19,7 @@
  */
 import { db } from '@/lib/db'
 import { sendPushToUser } from '@/lib/push'
-import { CHAT_ALBUM_NAME, VIDEO_ALBUM_NAME, isOwnMediaUrl, isSystemAlbumName, mediaIdFromUrl, mediaUrl } from '@/lib/media'
+import { CHAT_ALBUM_NAME, STORE_ALBUM_NAME, VIDEO_ALBUM_NAME, isOwnMediaUrl, isSystemAlbumName, mediaIdFromUrl, mediaUrl } from '@/lib/media'
 
 export const ACCESS = {
   INVITED: 'INVITED',
@@ -98,6 +100,8 @@ export async function photoVisibility(photo: MediaPhoto, viewer: Viewer | null):
   }
 
   if (viewer.role === 'ADMIN') return 'private'
+  // Store product photos belong to the shop, not to the admin who uploaded them.
+  if (albumName === STORE_ALBUM_NAME) return 'members'
   if (!photo.user.isActive) return null
   if (await isBlockedBetween(viewer.id, photo.userId)) return null
 
@@ -117,8 +121,13 @@ export async function photoVisibility(photo: MediaPhoto, viewer: Viewer | null):
   return null
 }
 
+/** True for store product photos (served to members without a per-viewer watermark). */
+export function isStoreMedia(photo: { album: { name: string } | null }): boolean {
+  return photo.album?.name === STORE_ALBUM_NAME
+}
+
 /** Get (or create) one of the user's hidden system albums. */
-export async function systemAlbumId(userId: string, name: typeof CHAT_ALBUM_NAME | typeof VIDEO_ALBUM_NAME): Promise<string> {
+export async function systemAlbumId(userId: string, name: typeof CHAT_ALBUM_NAME | typeof VIDEO_ALBUM_NAME | typeof STORE_ALBUM_NAME): Promise<string> {
   const existing = await db.album.findFirst({ where: { ownerId: userId, name }, select: { id: true } })
   if (existing) return existing.id
   const created = await db.album.create({

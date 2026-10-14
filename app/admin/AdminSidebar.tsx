@@ -2,13 +2,18 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Flag, ArrowLeft, Star } from 'lucide-react';
+import { LayoutDashboard, Users, Flag, ArrowLeft, Star, Store, Boxes, Tags, ReceiptText } from 'lucide-react';
+import { STORE_NAME } from '@/lib/store/config';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/reports', label: 'Reports', icon: Flag },
   { href: '/admin/reviews', label: 'Reviews', icon: Star },
+  { href: '/admin/store', label: STORE_NAME, icon: Store },
+  { href: '/admin/store/products', label: 'Products', icon: Boxes },
+  { href: '/admin/store/categories', label: 'Categories', icon: Tags },
+  { href: '/admin/store/orders', label: 'Store orders', icon: ReceiptText },
 ];
 
 export default function AdminSidebar() {
@@ -23,7 +28,7 @@ export default function AdminSidebar() {
 
       <nav className="flex-1 px-2 space-y-1">
         {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href;
+          const active = pathname === href || (href.startsWith('/admin/store/') && pathname.startsWith(href + '/'));
           return (
             <Link
               key={href}

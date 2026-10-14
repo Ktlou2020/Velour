@@ -59,48 +59,72 @@ self.addEventListener('fetch', (event) => {
 });
 
 // ── Push Notifications ───────────────────────────────────────────────────────
+// Payload (lib/push.ts): { title, body, url, tag, icon, badge }
 self.addEventListener('push', (event) => {
   let data = {};
   try {
     data = event.data ? event.data.json() : {};
-  } catch { /* ignore */ }
+  } catch {
+    data = { body: event.data ? event.data.text() : '' };
+  }
 
   const title = data.title || 'Hush';
   const options = {
     body: data.body || 'You have a new notification',
     icon: data.icon || '/icon-192.png',
     badge: data.badge || '/icon-192.png',
-    tag: data.tag || 'velour-notification',
-    data: { url: data.url || '/members' },
+    tag: data.tag || 'hush-notification',
+    // Same tag (e.g. one chat) replaces the old alert — still buzz for the new one
+    renotify: !!data.tag,
+    data: { url: safeUrl(data.url) },
     vibrate: [200, 100, 200],
     requireInteraction: false,
     silent: false,
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(Promise.all([
+    self.registration.showNotification(title, options),
+    // Open tabs refresh their badges straight away
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((list) => list.forEach((c) => c.postMessage({ type: 'hush:push', tag: options.tag })))
+      .catch(() => {}),
+  ]));
 });
+
+/** Only same-origin paths; anything else opens /notifications. */
+function safeUrl(raw) {
+  try {
+    if (typeof raw !== 'string' || !raw.startsWith('/') || raw.startsWith('//')) return '/notifications';
+    const u = new URL(raw, self.location.origin);
+    return u.origin === self.location.origin ? u.pathname + u.search + u.hash : '/notifications';
+  } catch {
+    return '/notifications';
+  }
+}
 
 // ── Notification Click ───────────────────────────────────────────────────────
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || '/members';
+  const target = new URL(safeUrl(event.notification.data && event.notification.data.url), self.location.origin).href;
 
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Focus existing window if open
-      for (const client of windowClients) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.focus();
-          client.navigate(targetUrl);
-          return;
-        }
+  event.waitUntil((async () => {
+    const windowClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    // Prefer a tab already on the target, then any Hush tab (focus + navigate)
+    const exact = windowClients.find((c) => c.url === target);
+    if (exact && 'focus' in exact) return exact.focus();
+    for (const client of windowClients) {
+      if (new URL(client.url).origin !== self.location.origin) continue;
+      try {
+        const focused = 'focus' in client ? await client.focus() : client;
+        if ('navigate' in focused) return await focused.navigate(target);
+        return focused;
+      } catch {
+        // navigate() can fail for an uncontrolled client — open a new window instead
+        break;
       }
-      // Open new window
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
-      }
-    })
-  );
+    }
+    if (self.clients.openWindow) return self.clients.openWindow(target);
+  })());
 });
 
 // ── Background Sync ──────────────────────────────────────────────────────────

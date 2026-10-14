@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
         type: INVITE_TYPE,
         title: 'Couple invitation',
         body: `@${me.username} would like to link profiles with you as a couple`,
-        data: { inviterId: me.id, inviterUsername: me.username, status: 'PENDING' },
+        data: { inviterId: me.id, inviterUsername: me.username, status: 'PENDING', url: '/profile#couple' },
       },
     })
     sendPushToUser(partner.id, {

@@ -90,7 +90,7 @@ async function handler(req: NextRequest) {
             type: 'EVENT_REMINDER',
             title: 'Event tomorrow',
             body: `${event.title} — ${when}`.slice(0, 200),
-            data: { eventId: event.id },
+            data: { eventId: event.id, url },
           },
         })
 

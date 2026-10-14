@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
-import { auth } from '@/auth'
+import { auth, requireAdmin } from '@/auth'
 import { db } from '@/lib/db'
 import { isPlatinum } from '@/lib/premium'
 import { getClientIp, rateLimit, TOO_MANY_REQUESTS_MESSAGE } from '@/lib/rate-limit'
 import { MAX_AUDIO_BYTES, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, MediaError, deleteFiles, photoFileKeys, saveAudio, saveImage, saveVideo, sniffVideo, videoDurationSec } from '@/lib/storage'
 import { CHAT_VIDEO_MAX_BYTES, chatVideoRules, getMessageAllowance, messageLimitError } from '@/lib/chat-priority'
-import { CHAT_ALBUM_NAME, VIDEO_ALBUM_NAME, isSystemAlbumName, mediaThumbUrl, mediaUrl } from '@/lib/media'
+import { CHAT_ALBUM_NAME, STORE_ALBUM_NAME, VIDEO_ALBUM_NAME, isSystemAlbumName, mediaThumbUrl, mediaUrl } from '@/lib/media'
 import { systemAlbumId } from '@/lib/media-access'
 import { isValidId } from '@/lib/security'
 
@@ -61,7 +61,7 @@ async function sweepUnsentChatImages(userId: string, albumId: string) {
 /**
  * POST /api/upload  (multipart/form-data)
  *   file     the image or video
- *   purpose  "gallery" (default) | "chat" | "voice" | "chatvideo" | "video"   (legacy: kind=video)
+ *   purpose  "gallery" (default) | "chat" | "voice" | "chatvideo" | "video" | "product"   (legacy: kind=video)
  *   albumId  optional, gallery uploads only: put the photo straight into one of my albums
  *
  * Gallery photos are created immediately as normal Photo rows owned by the
@@ -73,6 +73,9 @@ async function sweepUnsentChatImages(userId: string, albumId: string) {
  * 201 (purpose=voice) → { url, id, mimeType }   (WebM / MP4·M4A / Ogg, ≤ 5MB)
  * 201 (purpose=chatvideo) → { url, id, mimeType, durationSec }  (MP4 / MOV / WebM; size and
  *     length capped per plan — the length is read from the file itself)
+ * 201 (purpose=product, admins only — 403 otherwise) → { url, thumbnailUrl, id, width, height }
+ *     Store product photo in the uploader's hidden "__store" album; visible to every
+ *     logged-in member and served without a per-viewer watermark.
  * Chat uploads are refused (429) when the Free plan's message allowance is
  * used up, so nobody uploads for nothing — POST messages enforces it again.
  */
@@ -101,7 +104,27 @@ export async function POST(req: NextRequest) {
     if (!formData || !file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
     const rawPurpose = formData.get('purpose') ?? (formData.get('kind') === 'video' ? 'video' : 'gallery')
-    const purpose = rawPurpose === 'chat' || rawPurpose === 'video' || rawPurpose === 'voice' || rawPurpose === 'chatvideo' ? rawPurpose : 'gallery'
+    const purpose = rawPurpose === 'chat' || rawPurpose === 'video' || rawPurpose === 'voice' || rawPurpose === 'chatvideo' || rawPurpose === 'product' ? rawPurpose : 'gallery'
+
+    if (purpose === 'product') {
+      // Role checked against the database, not just the session token.
+      if (!(await requireAdmin())) return NextResponse.json({ error: 'Only admins can upload product photos' }, { status: 403 })
+      if (file.size > MAX_IMAGE_BYTES) return NextResponse.json({ error: 'Images must be under 10MB' }, { status: 413 })
+      const stored = await saveImage(Buffer.from(await file.arrayBuffer()))
+      const albumId = await systemAlbumId(userId, STORE_ALBUM_NAME)
+      const id = newMediaId()
+      const url = mediaUrl(id)
+      const thumbnailUrl = mediaThumbUrl(id)
+      try {
+        await db.photo.create({
+          data: { id, userId, url, thumbnailUrl, albumId, isPrivate: true, storageKey: stored.key, mimeType: stored.mimeType, sizeBytes: stored.sizeBytes },
+        })
+      } catch (e) {
+        await deleteFiles([stored.key, stored.thumbKey])
+        throw e
+      }
+      return NextResponse.json({ url, thumbnailUrl, id, width: stored.width, height: stored.height }, { status: 201 })
+    }
 
     if (purpose === 'chat' || purpose === 'voice' || purpose === 'chatvideo') {
       const allowance = await getMessageAllowance(userId)

@@ -59,7 +59,9 @@ export function mediaThumbUrl(id: string): string {
  */
 export const CHAT_ALBUM_NAME = '__chat'
 export const VIDEO_ALBUM_NAME = '__video'
-export const SYSTEM_ALBUM_NAMES = [CHAT_ALBUM_NAME, VIDEO_ALBUM_NAME]
+/** Store product photos (uploaded by admins, purpose=product). */
+export const STORE_ALBUM_NAME = '__store'
+export const SYSTEM_ALBUM_NAMES = [CHAT_ALBUM_NAME, VIDEO_ALBUM_NAME, STORE_ALBUM_NAME]
 
 export function isSystemAlbumName(name: string | null | undefined): boolean {
   return !!name && name.startsWith('__')

@@ -3,8 +3,10 @@ import type { Readable } from 'stream'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { openStream, statFile, storedFilePath, thumbKey } from '@/lib/storage'
-import { photoVisibility, type Visibility } from '@/lib/media-access'
+import { isStoreMedia, photoVisibility, type Visibility } from '@/lib/media-access'
 import { getWatermarked, sastDate, watermarkHash, type WatermarkSpec } from '@/lib/watermark'
+import { viewOnceGate } from '@/lib/view-once'
+import { serveViewOnce } from '@/lib/view-once-serve'
 
 export const runtime = 'nodejs'
 
@@ -95,7 +97,8 @@ function parseRange(header: string | null, size: number): { start: number; end: 
  * Images are served clean only to their owner. Everyone else gets a copy with
  * a forensic watermark burned in (lib/watermark.ts): "@viewer · hush · date"
  * for members and admins, a generic "HUSH" mark for logged-out visitors
- * (public main photos on the landing page). Watermarked images are always
+ * (public main photos on the landing page). Store product photos (the
+ * "__store" album) are served clean to every logged-in member. Watermarked images are always
  * sent whole (no ranges) and never shared between viewers in caches.
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -120,6 +123,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const visibility = await photoVisibility(photo, viewer)
     if (!visibility) return notFound()
 
+    // View-once chat media: only inside the recipient's open window, never cached (lib/view-once.ts)
+    const viewOnce = await viewOnceGate(photo, viewer)
+    if (viewOnce === 'deny') return notFound()
+    if (viewOnce && viewer) return serveViewOnce(req, photo, viewer)
+
     const isImage = photo.mimeType.startsWith('image/')
     const wantThumb = isImage && req.nextUrl.searchParams.get('size') === 'thumb'
     const key = wantThumb ? thumbKey(photo.storageKey) : photo.storageKey
@@ -127,7 +135,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!st) return notFound()
 
     const isOwner = !!viewer && viewer.id === photo.userId
-    if (isImage && !isOwner) {
+    // Store product photos are catalogue images, not members' content: no per-viewer mark.
+    if (isImage && !isOwner && !isStoreMedia(photo)) {
       const username = viewer ? await viewerUsername(viewer.id, session?.user) : null
       const spec: WatermarkSpec = viewer
         ? { kind: 'viewer', viewerId: viewer.id, username: username ?? viewer.id.slice(-8) }

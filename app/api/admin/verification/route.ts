@@ -77,6 +77,7 @@ export async function PATCH(req: NextRequest) {
         body: action === 'approve'
           ? 'Your profile has been verified. Your verified badge is now visible to other members.'
           : `Your verification was not approved.${notes ? ` Reason: ${notes}` : ''}`,
+        data: { url: '/profile', status: newStatus },
       },
     })
 

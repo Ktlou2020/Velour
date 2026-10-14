@@ -51,33 +51,55 @@ export default function PWAInstall() {
     return () => clearTimeout(t);
   }, []);
 
-  const doSubscribe = useCallback(async () => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  // Server push config: null = unknown yet. Push is only offered when the
+  // server has VAPID keys (GET /api/push → { enabled, publicKey }).
+  const [pushKey, setPushKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    let cancelled = false;
+    fetch('/api/push', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { enabled?: boolean; publicKey?: string } | null) => {
+        if (!cancelled) setPushKey(d?.enabled && d.publicKey ? d.publicKey : '');
+      })
+      .catch(() => { if (!cancelled) setPushKey(''); });
+    return () => { cancelled = true; };
+  }, [status]);
+
+  const doSubscribe = useCallback(async (publicKey: string) => {
+    if (!publicKey || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
     setPushBusy(true);
     try {
-      const keyRes = await fetch('/api/push');
-      if (!keyRes.ok) return;
-      const { publicKey } = await keyRes.json() as { publicKey: string };
-      if (!publicKey) return;
       const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
+      const sub = (await reg.pushManager.getSubscription()) ?? await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey) as unknown as BufferSource,
       });
-      await fetch('/api/push', {
+      const res = await fetch('/api/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sub.toJSON()),
       });
       setPushStatus('granted');
-      localStorage.setItem('velour_push_ok', '1');
+      if (res.ok) {
+        try { localStorage.setItem('velour_push_ok', '1'); } catch { /* ignore */ }
+      }
     } catch { /* denied or error */ }
     finally { setPushBusy(false); }
   }, []);
 
+  // Already allowed in this browser but not saved yet → subscribe quietly
+  useEffect(() => {
+    if (!pushKey || typeof window === 'undefined' || !('Notification' in window)) return;
+    let ok = false;
+    try { ok = !!localStorage.getItem('velour_push_ok'); } catch { /* ignore */ }
+    if (Notification.permission === 'granted' && !ok) doSubscribe(pushKey);
+  }, [pushKey, doSubscribe]);
+
   useEffect(() => {
     if (typeof window === 'undefined' || status !== 'authenticated') return;
-    if (localStorage.getItem('velour_pwa_dismissed')) setDismissed(true);
+    try { if (localStorage.getItem('velour_pwa_dismissed')) setDismissed(true); } catch { /* ignore */ }
 
     // Register SW
     if ('serviceWorker' in navigator) {
@@ -87,9 +109,6 @@ export default function PWAInstall() {
     // Push permission state
     if ('Notification' in window) {
       setPushStatus(Notification.permission as 'default' | 'granted' | 'denied');
-      if (Notification.permission === 'granted' && !localStorage.getItem('velour_push_ok')) {
-        doSubscribe();
-      }
     }
 
     // Android install banner
@@ -103,7 +122,7 @@ export default function PWAInstall() {
     }
 
     return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, [status, doSubscribe]);
+  }, [status]);
 
   function dismiss() {
     localStorage.setItem('velour_pwa_dismissed', '1');
@@ -120,8 +139,9 @@ export default function PWAInstall() {
   }
 
   async function enablePush() {
+    if (!pushKey) return;
     const perm = await Notification.requestPermission();
-    if (perm === 'granted') await doSubscribe();
+    if (perm === 'granted') await doSubscribe(pushKey);
     else setPushStatus('denied');
   }
 
@@ -173,7 +193,7 @@ export default function PWAInstall() {
   }
 
   // Push notification opt-in
-  if (status === 'authenticated' && !dismissed && pushStatus === 'default' && 'Notification' in window) {
+  if (status === 'authenticated' && !dismissed && !!pushKey && pushStatus === 'default' && 'Notification' in window && 'PushManager' in window) {
     return (
       <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 z-40 glass border border-[#DC143C]/20 rounded-xl px-4 py-3 flex items-center gap-3 shadow-xl">
         <div className="w-9 h-9 rounded-lg bg-[#DC143C]/20 flex items-center justify-center flex-shrink-0">
