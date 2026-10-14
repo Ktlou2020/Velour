@@ -563,6 +563,8 @@ model Review {
   reliability   Int
   overall       Int
   comment       String
+  // Reviewer marked the comment as containing explicit details (shown blurred until tapped)
+  isExplicit    Boolean        @default(false)
   response      String?
   responseAt    DateTime?
   publishedAt   DateTime?
