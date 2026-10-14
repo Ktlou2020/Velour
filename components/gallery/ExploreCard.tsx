@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import ProtectedImage from '@/components/ProtectedImage';
 import { Compass, Heart, Trophy, ChevronRight } from 'lucide-react';
 import { useToast } from '@/lib/toast-context';
 import { api, type GalleryPhoto } from './types';
@@ -72,8 +73,7 @@ export default function ExploreCard({ photos, onOpenPhoto }: { photos: GalleryPh
         <div className="flex items-center gap-3 sm:border-l sm:border-white/10 sm:pl-4">
           {best ? (
             <button type="button" onClick={() => onOpenPhoto(best.id)} className="flex items-center gap-2.5 rounded-xl bg-black/25 hover:bg-black/40 p-1.5 pr-3 text-left" aria-label={`Your most liked photo, ${best.likeCount} likes`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={best.thumbnailUrl ?? best.url} alt="" className="h-11 w-11 rounded-lg object-cover" draggable={false} />
+              <ProtectedImage src={best.thumbnailUrl ?? best.url} alt="" className="h-11 w-11 rounded-lg shrink-0" />
               <span>
                 <span className="flex items-center gap-1 text-[11px] text-[#D4AF37] font-semibold"><Trophy size={11} aria-hidden="true" /> Your most liked</span>
                 <span className="flex items-center gap-1 text-white text-sm font-semibold tabular-nums"><Heart size={13} className="fill-[#DC143C] text-[#DC143C]" aria-hidden="true" />{best.likeCount}</span>

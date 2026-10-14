@@ -11,6 +11,7 @@ import {
   ageFrom, categoryOf, coupleTypeBadge, effectiveInterestedIn, legacyValuesWanting,
   parseCoupleMembers, LEGACY_WHO_VALUES, type Category, type CoupleType,
 } from '@/lib/identity'
+import { trustAdjustedCompat, trustAdjustedKm, trustScore } from '@/lib/reviews'
 
 export interface ProfilePrompt {
   question: string
@@ -51,6 +52,10 @@ export interface MemberResult {
   visiting?: { city: string; until: string }
   /** Platinum spotlight slot. */
   isSpotlight?: boolean
+  /** Listed in the "Further away" section (beyond the selected radius, within the plan cap). */
+  beyondRadius?: boolean
+  /** Review score — only when the member has at least one published review. */
+  rating?: { avg: number; count: number }
 }
 
 export interface CallerContext {
@@ -245,6 +250,8 @@ export const memberSelect = {
       statusUntil: true,
       travelCity: true,
       travelUntil: true,
+      ratingAvg: true,
+      ratingCount: true,
       partner: { select: { dateOfBirth: true } },
     },
   },
@@ -362,6 +369,7 @@ export function toMemberResult(u: SelectedUser, caller: CallerContext, promptLim
     ...(km !== undefined && !visiting ? { distance: formatDistance(km) ?? undefined, distanceKm: Math.round(km) } : {}),
     ...(status ? { status } : {}),
     ...(visiting ? { visiting } : {}),
+    ...(p && p.ratingCount > 0 && p.ratingAvg != null ? { rating: { avg: Math.round(p.ratingAvg * 10) / 10, count: p.ratingCount } } : {}),
   }
 }
 
@@ -432,6 +440,12 @@ export interface SearchResult {
   unknownDistance: number
   /** Advanced filters that were requested but not applied because the plan doesn't include them. */
   ignoredFilters: string[]
+  /** Members with a known distance inside the radius. */
+  inRadius: number
+  /** Members beyond the radius appended in the "Further away" section (at the very end). */
+  furtherAway: number
+  /** How far "Further away" reaches (plan cap); null = no limit. Only meaningful with a radius. */
+  furtherAwayMaxKm: number | null
 }
 
 export type SortKey = 'nearest' | 'active' | 'new' | 'match'
@@ -482,7 +496,8 @@ export async function searchMembers(caller: CallerContext, params: SearchParamsI
   const callerHasLocation = caller.latitude != null && caller.longitude != null
   const sort = sortKeyOf(params.sort, callerHasLocation)
   // Legacy maxKm param still works as a radius
-  const radiusParam = params.radius ?? params.maxKm ?? null
+  // Admins (support) default to Anywhere.
+  const radiusParam = params.radius ?? params.maxKm ?? (caller.role === 'ADMIN' ? 'any' : null)
   const radiusKm = callerHasLocation ? resolveRadius(radiusParam, caller.ent) : null
 
   // City: an explicit city filter (Gold+), or the travel destination when the
@@ -545,6 +560,8 @@ export async function searchMembers(caller: CallerContext, params: SearchParamsI
     youngestDob.setFullYear(youngestDob.getFullYear() - ageMin)
     and.push({ dateOfBirth: { lte: youngestDob } })
   }
+  // Everything so far is shared by the in-radius query and the "Further away" query.
+  const baseAnd = [...and]
   if (radiusKm !== null) {
     // Within the bounding box, or no coordinates at all ("Distance unknown")
     const box = boundingBox(caller.latitude!, caller.longitude!, radiusKm)
@@ -611,36 +628,91 @@ export async function searchMembers(caller: CallerContext, params: SearchParamsI
   const lastSeen = (x: Row) => x.r.profile?.lastSeen?.getTime() ?? 0
   const priority = (x: Row) => (x.member.isBoosted ? 10 : 0) + TIER_RANK[x.member.membershipTier ?? 'FREE']
   const known = (x: Row) => (x.km === undefined ? 0 : 1)
+  // Review trust score (lib/reviews.ts): a modest ranking factor. It changes
+  // order only — radius filtering above always uses the real distance.
+  const ravg = (x: Row) => x.r.profile?.ratingAvg ?? null
+  const rcount = (x: Row) => x.r.profile?.ratingCount ?? 0
+  const trust = (x: Row) => trustScore(ravg(x), rcount(x))
+  const isDefaultSort = !params.sort
+  const DAY_MS = 24 * 60 * 60 * 1000
+  const dayBucket = (x: Row) => Math.floor((now.getTime() - lastSeen(x)) / DAY_MS)
 
   inRange.sort((x, y) => {
     // Members with a distance always come before "Distance unknown" when a radius applies
     if ((radiusKm !== null || sort === 'nearest') && known(x) !== known(y)) return known(y) - known(x)
     switch (sort) {
-      case 'nearest':
+      case 'nearest': {
         if (x.member.isBoosted !== y.member.isBoosted) return x.member.isBoosted ? -1 : 1
-        if (x.km !== undefined && y.km !== undefined && Math.round(x.km) !== Math.round(y.km)) return x.km - y.km
+        if (x.km !== undefined && y.km !== undefined) {
+          // Default ordering: distance nudged by trust; explicit "Nearest": trust only breaks ties.
+          const ex = isDefaultSort ? trustAdjustedKm(x.km, ravg(x), rcount(x)) : x.km
+          const ey = isDefaultSort ? trustAdjustedKm(y.km, ravg(y), rcount(y)) : y.km
+          if (Math.round(ex) !== Math.round(ey)) return ex - ey
+        }
+        const t = trust(y) - trust(x)
+        if (t) return t
         break
+      }
       case 'new':
         return (createdById.get(y.r.id) ?? 0) - (createdById.get(x.r.id) ?? 0)
-      case 'match':
-        if (x.member.compatibility !== y.member.compatibility) return y.member.compatibility - x.member.compatibility
+      case 'match': {
+        const d = trustAdjustedCompat(y.member.compatibility, ravg(y), rcount(y)) - trustAdjustedCompat(x.member.compatibility, ravg(x), rcount(x))
+        if (d) return d
         break
+      }
       case 'active': {
         const p = priority(y) - priority(x)
         if (p) return p
         const o = Number(!!y.member.isOnline) - Number(!!x.member.isOnline)
         if (o) return o
+        if (isDefaultSort) {
+          // Default without a location: within the same day of activity, trust first.
+          const b = dayBucket(x) - dayBucket(y)
+          if (b) return b
+          const t = trust(y) - trust(x)
+          if (t) return t
+        }
         break
       }
     }
     return lastSeen(y) - lastSeen(x)
   })
 
-  const members = inRange.slice((page - 1) * limit, page * limit).map((x) => x.member)
+  // "Further away": a small, growing community should never see an empty page
+  // when someone eligible exists. Members beyond the radius (same filters),
+  // nearest first, up to the plan's maximum distance (Free 250 km; paid/admin
+  // no limit), after the in-radius and "Distance unknown" groups.
+  const furtherAwayMaxKm = caller.ent.maxSearchRadiusKm
+  let further: Row[] = []
+  if (radiusKm !== null && (furtherAwayMaxKm === null || furtherAwayMaxKm > radiusKm)) {
+    const farAnd: Prisma.ProfileWhereInput[] = [...baseAnd, { latitude: { not: null } }, { longitude: { not: null } }]
+    if (furtherAwayMaxKm !== null) {
+      const box = boundingBox(caller.latitude!, caller.longitude!, furtherAwayMaxKm)
+      farAnd.push({ latitude: { gte: box.minLat, lte: box.maxLat }, longitude: { gte: box.minLng, lte: box.maxLng } })
+    }
+    const inIds = rows.map((r) => r.id)
+    const farRows = await db.user.findMany({
+      where: { ...userWhere, id: { not: caller.userId, notIn: [...excludedIds, ...inIds] }, profile: { AND: farAnd } },
+      select: memberSelect,
+      orderBy: [{ profile: { lastSeen: 'desc' } }, { id: 'asc' }],
+      take: CANDIDATE_CAP,
+    })
+    further = farRows
+      .map((r) => {
+        const member = toMemberResult(r, caller, 1, effectiveCity ?? caller.city)
+        return { r, member: { ...member, beyondRadius: true }, km: member.distanceKm }
+      })
+      .filter((x) => x.km !== undefined && x.km > radiusKm + 0.5 && (furtherAwayMaxKm === null || x.km <= furtherAwayMaxKm + 0.5))
+      .sort((x, y) => (x.km! - y.km!) || (trust(y) - trust(x)) || (lastSeen(y) - lastSeen(x)))
+  }
+
+  const all = [...inRange, ...further]
+  const members = all.slice((page - 1) * limit, page * limit).map((x) => x.member)
   const unknownDistance = radiusKm !== null ? inRange.filter((x) => x.km === undefined).length : 0
   return {
-    members, total: inRange.length, page, limit, callerHasLocation, effectiveCity,
+    members, total: all.length, page, limit, callerHasLocation, effectiveCity,
     radiusKm, sort, unknownDistance, ignoredFilters,
+    inRadius: inRange.length - unknownDistance, furtherAway: further.length, furtherAwayMaxKm,
   }
 }
 

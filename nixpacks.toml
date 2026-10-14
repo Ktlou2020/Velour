@@ -1,0 +1,11 @@
+# Nixpacks build config (Railway). Everything else — the Node provider and
+# version (package.json "engines": Node 22), install and build commands, and
+# the start command in railway.toml — stays as auto-detected.
+#
+# "..." keeps the provider's default Nix packages (nodejs_22, npm); we only add
+# ffmpeg (includes ffprobe, libx264 and the AAC encoder). It is used to
+# re-encode uploaded videos with the owner's watermark burned in
+# (lib/storage.ts). If it is ever missing, uploads still work: videos are
+# stored as uploaded and the server logs "ffmpeg not available".
+[phases.setup]
+nixPkgs = ["...", "ffmpeg"]

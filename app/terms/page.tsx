@@ -8,7 +8,7 @@ export const metadata = {
 }
 
 export default function TermsPage() {
-  const lastUpdated = '1 June 2025'
+  const lastUpdated = '14 October 2026'
 
   return (
     <div className="min-h-screen bg-[#0A0A0F] text-white">
@@ -111,9 +111,11 @@ export default function TermsPage() {
                 <li>Upload malware, viruses, or any code that could harm the Service or other users</li>
                 <li>Attempt to gain unauthorised access to any part of the Service or another user&apos;s account</li>
                 <li>Scrape, crawl, or otherwise collect user data without our written consent</li>
+                <li>Screenshot, screen-record, download, save, copy or share another member&apos;s photos, videos, messages or profile content outside Hush, by any means, without that member&apos;s explicit permission</li>
                 <li>Use the Service in any way that violates South African law or any other applicable law</li>
               </ul>
               <p className="mt-3">Violation of these prohibitions may result in immediate account termination and may be reported to law enforcement authorities.</p>
+              <p id="content-protection" className="mt-3 scroll-mt-24"><strong className="text-white">Members&apos; content stays on Hush.</strong> Every photo you view on Hush carries a watermark specific to you (your username and the date), and members&apos; videos carry the owner&apos;s mark plus your username on screen. A saved, screenshotted or recorded copy therefore identifies the account that made it. Sharing members&apos; content outside Hush leads to a permanent ban, and we may share the identifying information with the affected member and with law enforcement, including under the Cybercrimes Act 19 of 2020 and the Protection of Personal Information Act. Members can report leaked content from a member&apos;s profile or a photo (&quot;Shared my photos/videos outside Hush&quot;) or by emailing <a href="mailto:support@hush.dating" className="text-[#DC143C] hover:underline">support@hush.dating</a>.</p>
             </div>
           </section>
 

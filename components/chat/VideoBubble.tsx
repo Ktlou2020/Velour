@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { EyeOff, Play, Video } from 'lucide-react';
 import { fmtDuration } from '@/lib/chat-games';
+import ProtectedVideo from '@/components/ProtectedVideo';
 
 interface Props {
   src: string;
@@ -17,7 +18,8 @@ interface Props {
 /**
  * Inline chat video: first frame as the poster (preload=metadata, with a
  * #t=0.1 fragment so iOS paints a frame), tap to play with native controls,
- * playsInline for iOS, never autoplays.
+ * playsInline for iOS, never autoplays. Rendered through ProtectedVideo: no
+ * download / PiP / cast, no context menu, viewer watermark on received videos.
  */
 export default function VideoBubble({ src, durationSec, sent, blurred, pending = false, onLoaded }: Props) {
   const ref = useRef<HTMLVideoElement>(null);
@@ -38,18 +40,17 @@ export default function VideoBubble({ src, durationSec, sent, blurred, pending =
 
   return (
     <div className={`relative overflow-hidden rounded-2xl ${sent ? 'rounded-tr-sm' : 'rounded-tl-sm'} bg-black/60 w-[240px] max-w-full ${pending ? 'opacity-60' : ''}`}>
-      <video
-        ref={ref}
+      <ProtectedVideo
+        videoRef={ref}
         src={`${src}#t=0.1`}
         preload="metadata"
-        playsInline
         muted={false}
-        controlsList="nodownload noplaybackrate"
-        disablePictureInPicture
-        onContextMenu={(e) => e.preventDefault()}
         onLoadedMetadata={onLoaded}
         onError={() => setFailed(true)}
-        className={`block w-full max-h-80 object-cover bg-black transition-[filter] duration-300 ${hidden ? 'blur-2xl scale-110' : ''}`}
+        // Your own videos don't need your name over them
+        watermark={!sent}
+        fullscreenButton={started}
+        videoClassName={`block w-full max-h-80 object-cover bg-black transition-[filter] duration-300 ${hidden ? 'blur-2xl scale-110' : ''}`}
         aria-label="Video message"
       />
       {/* Light watermark, like protected photos */}

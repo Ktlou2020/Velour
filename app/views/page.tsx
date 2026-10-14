@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import ProtectedImage from '@/components/ProtectedImage';
 import { redirect } from 'next/navigation';
 import { Eye, Check } from 'lucide-react';
 import Navbar from '@/components/Navbar';
@@ -140,7 +141,7 @@ export default async function ViewsPage() {
                           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-rose-900 to-red-700 flex items-center justify-center overflow-hidden">
                             {photo ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img src={photo} alt="" loading="lazy" decoding="async" width={64} height={64} className="w-full h-full object-cover" />
+                              <ProtectedImage src={photo} alt="" className="w-full h-full" />
                             ) : (
                               <span className="text-white font-bold text-xl">{name.slice(0, 2).toUpperCase()}</span>
                             )}

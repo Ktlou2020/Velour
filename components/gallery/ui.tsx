@@ -2,6 +2,7 @@
 
 import { Heart, Lock, Star, Trophy } from 'lucide-react';
 import type { GalleryPhoto } from './types';
+import ProtectedImage from '@/components/ProtectedImage';
 
 export function Switch({ checked, onChange, label, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
   return (
@@ -25,8 +26,7 @@ export function Spinner({ size = 16 }: { size?: number }) {
 
 export function Avatar({ url, name, size = 36 }: { url: string | null; name: string; size?: number }) {
   return url ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={url} alt="" width={size} height={size} className="rounded-full object-cover bg-white/10 shrink-0" style={{ width: size, height: size }} />
+    <ProtectedImage src={url} alt="" className="rounded-full bg-white/10 shrink-0" style={{ width: size, height: size }} />
   ) : (
     <span aria-hidden="true" className="rounded-full bg-gradient-to-br from-[#DC143C]/40 to-[#D4AF37]/30 text-white/90 font-semibold flex items-center justify-center shrink-0" style={{ width: size, height: size, fontSize: size * 0.4 }}>
       {name.slice(0, 1).toUpperCase()}
@@ -50,8 +50,7 @@ export function PhotoTile({ photo, onClick, albumName, children, selected, showL
   const label = `${photo.caption || 'Photo'}${photo.isProfile ? ', main photo' : ''}${photo.isPrivate ? ', private' : ''}${albumName ? `, in ${albumName}` : ''}${showLikes && likes > 0 ? `, ${likes} like${likes === 1 ? '' : 's'}` : ''}${mostLiked ? ', your most liked photo' : ''}`;
   return (
     <div className={`relative aspect-square rounded-xl overflow-hidden bg-white/5 group ${selected ? 'ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#0A0A0F]' : mostLiked ? 'ring-2 ring-[#D4AF37]/80' : ''}`}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={photo.thumbnailUrl ?? photo.url} alt="" loading="lazy" decoding="async" draggable={false} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+      <ProtectedImage src={photo.thumbnailUrl ?? photo.url} alt="" className="w-full h-full" imgClassName="w-full h-full object-cover pointer-events-none transition-transform duration-300 group-hover:scale-[1.03]" />
       {onClick && (
         <button type="button" onClick={onClick} aria-label={label} className="absolute inset-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#D4AF37] focus-visible:-outline-offset-2 rounded-xl" />
       )}

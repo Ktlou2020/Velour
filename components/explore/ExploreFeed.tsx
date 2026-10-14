@@ -11,6 +11,7 @@ import { useToast } from '@/lib/toast-context';
 import ExploreStyles from './ExploreStyles';
 import ExploreTile from './ExploreTile';
 import TopStrip from './TopStrip';
+import ProtectionNote from '@/components/gallery/ProtectionNote';
 import PhotoViewer from './PhotoViewer';
 import ReportPhotoDialog from './ReportPhotoDialog';
 import { distribute, tileRatio, useColumns } from './useColumns';
@@ -240,6 +241,7 @@ export default function ExploreFeed() {
           <ShieldCheck size={14} className="mt-px shrink-0 text-emerald-400" aria-hidden="true" />
           <span>Only photos members chose to make public appear here. Private albums never do. <Link href="/gallery#explore-settings" className="text-[#D4AF37] hover:underline whitespace-nowrap">Your Explore settings</Link></span>
         </p>
+        <ProtectionNote className="mt-3" />
       </header>
 
       <TopStrip photos={topList} period={topPeriod} watermark={watermark} onOpen={openTop} />

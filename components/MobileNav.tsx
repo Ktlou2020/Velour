@@ -4,14 +4,15 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Home, Compass, MessageCircle, Sparkles, User } from 'lucide-react';
+import { Home, Compass, MessageCircle, Images, User } from 'lucide-react';
 import { useSparkToday } from './spark/useSparkToday';
 
-// Events lives in the top menu; the daily Spark earns the tab-bar slot.
+// Explore (the public photo gallery) earns a tab; Spark and Events live in the
+// menu and on the Members page.
 const TABS: { href: string; label: string; icon: typeof Home; showBadge?: boolean; sparkDot?: boolean }[] = [
   { href: '/members', label: 'Home', icon: Home },
   { href: '/discover', label: 'Discover', icon: Compass },
-  { href: '/spark', label: 'Spark', icon: Sparkles, sparkDot: true },
+  { href: '/gallery/explore', label: 'Explore', icon: Images },
   { href: '/messages', label: 'Messages', icon: MessageCircle, showBadge: true },
   { href: '/profile', label: 'Profile', icon: User },
 ];

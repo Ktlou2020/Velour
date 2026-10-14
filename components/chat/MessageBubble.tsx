@@ -5,6 +5,7 @@ import { EyeOff, Zap } from 'lucide-react';
 import { REACTION_EMOJIS, type Reactions } from '@/lib/reactions';
 import VoiceNotePlayer from '@/components/chat/VoiceNotePlayer';
 import VideoBubble from '@/components/chat/VideoBubble';
+import { NO_SAVE_STYLE, useViewerMark, watermarkBackground } from '@/components/ProtectedImage';
 
 export interface ChatMessage {
   id: string;
@@ -75,6 +76,7 @@ export default function MessageBubble({
   const isTemp = msg.id.startsWith('temp-');
   const time = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
   const [revealed, setRevealed] = useState(false);
+  const viewerMark = useViewerMark(true);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressed = useRef(false);
 
@@ -142,15 +144,27 @@ export default function MessageBubble({
         >
           {picker}
           {msg.imageUrl && (
-            <div className={`relative overflow-hidden rounded-2xl ${sent ? 'rounded-tr-sm' : 'rounded-tl-sm'} ${msg.content ? 'mb-1' : ''} ${isTemp ? 'opacity-60' : ''} bg-white/5`}>
+            <div
+              data-protected=""
+              className={`relative overflow-hidden rounded-2xl ${sent ? 'rounded-tr-sm' : 'rounded-tl-sm'} ${msg.content ? 'mb-1' : ''} ${isTemp ? 'opacity-60' : ''} bg-white/5`}
+              style={NO_SAVE_STYLE}
+              onContextMenu={(e) => e.preventDefault()}
+              onDragStart={(e) => e.preventDefault()}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={msg.imageUrl}
                 alt="Photo"
                 onLoad={onImageLoad}
-                className={`block max-h-80 w-auto max-w-full object-cover transition-[filter] duration-300 ${blurred ? 'blur-2xl scale-110' : ''}`}
+                className={`block max-h-80 w-auto max-w-full object-cover pointer-events-none transition-[filter] duration-300 ${blurred ? 'blur-2xl scale-110' : ''}`}
+                style={NO_SAVE_STYLE}
                 draggable={false}
               />
+              {/* Takes long-presses / right-clicks instead of the <img> (no "Save image") */}
+              {!blurred && <span aria-hidden="true" className="absolute inset-0" style={{ touchAction: 'manipulation', ...NO_SAVE_STYLE }} />}
+              {!blurred && !sent && viewerMark && (
+                <span aria-hidden="true" className="absolute inset-0 pointer-events-none" style={watermarkBackground(viewerMark)} />
+              )}
               {blurred && (
                 <button
                   type="button"

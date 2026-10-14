@@ -8,10 +8,17 @@
  * Images are re-encoded with sharp: EXIF orientation applied, ALL metadata
  * (GPS, camera, timestamps) stripped, max 2048px long edge, plus a 480px
  * square thumbnail stored next to it as `<key>_t.webp`.
+ *
+ * Videos are re-encoded with ffmpeg when it is installed (nixpacks.toml adds
+ * it in production): H.264/AAC MP4 with faststart, max 1280 px, and the
+ * owner's "hush · @username" burned in, hopping between corners every 4 s.
+ * Without ffmpeg they are stored as uploaded.
  */
+import { spawn } from 'child_process'
 import crypto from 'crypto'
 import fs from 'fs'
 import fsp from 'fs/promises'
+import os from 'os'
 import path from 'path'
 import sharp from 'sharp'
 
@@ -158,16 +165,157 @@ export function sniffVideo(buf: Buffer): StoredVideo['mimeType'] | null {
   return null
 }
 
-/** Store a video as-is after checking its type and size. */
-export async function saveVideo(input: Buffer, maxBytes = MAX_VIDEO_BYTES): Promise<StoredVideo> {
+/**
+ * Store a video after checking its type and size. With `watermark` and
+ * ffmpeg available it is re-encoded with the owner mark burned in (see
+ * transcodeVideo); otherwise, or if that fails, the original is stored.
+ */
+export async function saveVideo(
+  input: Buffer,
+  maxBytes = MAX_VIDEO_BYTES,
+  watermark?: { ownerUsername: string; durationSec: number | null },
+): Promise<StoredVideo & { transcoded: boolean }> {
   if (input.length === 0) throw new MediaError('The file is empty')
   if (input.length > maxBytes) throw new MediaError(`Video must be under ${Math.round(maxBytes / 1024 / 1024)}MB`, 413)
   const mimeType = sniffVideo(input)
   if (!mimeType) throw new MediaError('Please upload an MP4, MOV or WebM video', 415)
+
+  if (watermark) {
+    const out = await transcodeVideo(input, watermark.ownerUsername, watermark.durationSec)
+    if (out) {
+      const key = newKey('mp4')
+      await writeFile(key, out)
+      return { key, mimeType: 'video/mp4', sizeBytes: out.length, transcoded: true }
+    }
+  }
+
   const ext = mimeType === 'video/webm' ? 'webm' : mimeType === 'video/quicktime' ? 'mov' : 'mp4'
   const key = newKey(ext)
   await writeFile(key, input)
-  return { key, mimeType, sizeBytes: input.length }
+  return { key, mimeType, sizeBytes: input.length, transcoded: false }
+}
+
+// ── ffmpeg ─────────────────────────────────────────────────────────────────
+
+const FFMPEG = process.env.FFMPEG_PATH?.trim() || 'ffmpeg'
+const FFPROBE = process.env.FFPROBE_PATH?.trim() || 'ffprobe'
+/** Longest video we re-encode (longer ones are stored as uploaded). */
+const TRANSCODE_MAX_SEC = 185
+const TRANSCODE_TIMEOUT_MS = Number(process.env.TRANSCODE_TIMEOUT_MS) || 150_000
+const TRANSCODE_MAX_EDGE = 1280
+
+function run(cmd: string, args: string[], timeoutMs: number): Promise<{ code: number | null; stdout: string; stderr: string }> {
+  return new Promise((resolve) => {
+    let stdout = ''
+    let stderr = ''
+    let child: ReturnType<typeof spawn>
+    try {
+      child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+    } catch {
+      resolve({ code: -1, stdout, stderr: 'spawn failed' })
+      return
+    }
+    const timer = setTimeout(() => child.kill('SIGKILL'), timeoutMs)
+    child.stdout?.on('data', (d: Buffer) => { if (stdout.length < 1_000_000) stdout += d.toString() })
+    child.stderr?.on('data', (d: Buffer) => { stderr = (stderr + d.toString()).slice(-4000) })
+    child.on('error', () => { clearTimeout(timer); resolve({ code: -1, stdout, stderr }) })
+    child.on('close', (code) => { clearTimeout(timer); resolve({ code, stdout, stderr }) })
+  })
+}
+
+let ffmpegCheck: Promise<boolean> | null = null
+
+/** True when ffmpeg (with libx264 + aac) and ffprobe are on the PATH. Checked once per process. */
+export function ffmpegAvailable(): Promise<boolean> {
+  if (!ffmpegCheck) {
+    ffmpegCheck = (async () => {
+      const enc = await run(FFMPEG, ['-hide_banner', '-encoders'], 10_000)
+      const probe = await run(FFPROBE, ['-version'], 10_000)
+      const ok = enc.code === 0 && /\blibx264\b/.test(enc.stdout) && /\baac\b/.test(enc.stdout) && probe.code === 0
+      console.info(`[storage] ffmpeg ${ok ? 'available — videos are re-encoded with an owner watermark' : 'not available — videos are stored as uploaded'}`)
+      return ok
+    })()
+  }
+  return ffmpegCheck
+}
+
+// One encode at a time per process: keeps the web server responsive.
+let encodeQueue: Promise<unknown> = Promise.resolve()
+
+function serialised<T>(job: () => Promise<T>): Promise<T> {
+  const next = encodeQueue.then(job, job)
+  encodeQueue = next.catch(() => {})
+  return next
+}
+
+/**
+ * Re-encode to H.264/AAC MP4 (faststart, ≤ 1280 px, ≤ 30 fps) with
+ * "hush · @owner" burned in, moving corner every 4 s so it can't be blurred
+ * out of one spot. Also normalises MOV/WebM for iOS. Returns null (store the
+ * original) when ffmpeg is missing, the length is unknown or too long, or
+ * anything fails.
+ */
+export async function transcodeVideo(input: Buffer, ownerUsername: string, durationSec: number | null): Promise<Buffer | null> {
+  if (durationSec === null || durationSec > TRANSCODE_MAX_SEC) return null
+  if (!(await ffmpegAvailable())) return null
+  return serialised(async () => {
+    const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'hush-vid-'))
+    const started = Date.now()
+    try {
+      const src = path.join(dir, 'in')
+      const mark = path.join(dir, 'mark.png')
+      const out = path.join(dir, 'out.mp4')
+      await fsp.writeFile(src, input)
+
+      const probe = await run(FFPROBE, ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height,r_frame_rate', '-of', 'json', src], 15_000)
+      const stream = (() => { try { return JSON.parse(probe.stdout).streams?.[0] } catch { return null } })()
+      const w = Number(stream?.width) || 0
+      const h = Number(stream?.height) || 0
+      if (!w || !h) return null
+      const [num, den] = String(stream?.r_frame_rate ?? '').split('/').map(Number)
+      const fps = num && den ? num / den : 0
+      // Imported here: lib/watermark imports this module (uploadDir)
+      const { labelPng, videoLabelText } = await import('@/lib/watermark')
+      // Size of the mark relative to the output's short edge
+      const scale = Math.min(1, TRANSCODE_MAX_EDGE / Math.max(w, h))
+      const short = Math.round(Math.min(w, h) * scale)
+      const label = await labelPng(videoLabelText(ownerUsername), Math.max(12, Math.round(short * 0.035)), 0.55)
+      await fsp.writeFile(mark, label.png)
+
+      const m = Math.max(8, Math.round(short * 0.03))
+      // Corner index 0..3 changes every 4 s: bottom-right, bottom-left, top-left, top-right
+      const i = 'mod(floor(t/4),4)'
+      const x = `if(eq(${i},0)+eq(${i},3),W-w-${m},${m})`
+      const y = `if(lt(${i},2),H-h-${m},${m})`
+      const filter =
+        `[0:v]scale=w='min(${TRANSCODE_MAX_EDGE},iw)':h='min(${TRANSCODE_MAX_EDGE},ih)':force_original_aspect_ratio=decrease:force_divisible_by=2,${fps > 31 ? 'fps=30,' : ''}format=yuv420p[v];` +
+        `[v][1:v]overlay=x='${x}':y='${y}':format=auto[o]`
+      const res = await run(FFMPEG, [
+        '-hide_banner', '-loglevel', 'error', '-nostdin', '-y',
+        '-i', src, '-i', mark,
+        '-filter_complex', filter,
+        '-map', '[o]', '-map', '0:a:0?',
+        '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
+        '-c:a', 'aac', '-b:a', '128k', '-ac', '2',
+        '-map_metadata', '-1', '-movflags', '+faststart',
+        '-t', String(Math.ceil(durationSec) + 1),
+        out,
+      ], TRANSCODE_TIMEOUT_MS)
+      if (res.code !== 0) {
+        console.warn('[storage] video transcode failed — storing original:', res.stderr.trim().split('\n').slice(-3).join(' | '))
+        return null
+      }
+      const data = await fsp.readFile(out)
+      if (sniffVideo(data) !== 'video/mp4') return null
+      console.info(`[storage] video transcoded in ${Date.now() - started} ms (${(input.length / 1e6).toFixed(1)} MB → ${(data.length / 1e6).toFixed(1)} MB, ${durationSec.toFixed(1)} s)`)
+      return data
+    } catch (e) {
+      console.warn('[storage] video transcode error — storing original:', e instanceof Error ? e.message : e)
+      return null
+    } finally {
+      fsp.rm(dir, { recursive: true, force: true }).catch(() => {})
+    }
+  })
 }
 
 export interface StoredAudio {
@@ -366,6 +514,11 @@ export async function statFile(key: string): Promise<{ size: number; mtime: Date
   } catch {
     return null
   }
+}
+
+/** Absolute path of a stored file (validated key). For sharp / ffmpeg input. */
+export function storedFilePath(key: string): string {
+  return resolveKey(key)
 }
 
 /** Read stream over a stored file (optionally a byte range, inclusive). */

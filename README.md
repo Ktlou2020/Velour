@@ -58,6 +58,15 @@ reminded once (`EventAttendee.reminderSentAt`), so running it more often is safe
    - **Anything else:** cron-job.org, GitHub Actions `schedule:`, or a server crontab can hit the same URL
      with the `Authorization` header.
 
+Reviews housekeeping runs from `GET /api/cron/reviews` (same secret, POST also works; hourly or daily):
+expires review requests older than 30 days, publishes double-blind reviews after 14 days (notifying the
+reviewee) and re-syncs every member's review score. Expiry and publishing also happen lazily whenever
+reviews are read, so a missed run only delays notifications.
+
+```bash
+curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/reviews
+```
+
 ## Media storage
 
 Photos, chat images and Platinum profile videos are stored **by Hush itself on disk** and served through
@@ -80,6 +89,56 @@ file. Nothing is publicly reachable by guessing a path.
   the member is notified and can leave); members can request access (owner approves/declines).
 - **Legacy:** older Cloudinary URLs keep rendering; set `CLOUDINARY_CLOUD_NAME` so they still validate.
 - **Backups:** back up the volume together with the database — rows without files render as broken images.
+
+## Content protection (watermarks, no-save, privacy shield)
+
+No website can block OS screenshots; Hush makes stolen copies pointless and traceable instead.
+
+- **Per-viewer image watermarks** (`lib/watermark.ts`, used by `GET /api/media/<id>`): every image (full and
+  `?size=thumb`) served to anyone but its owner gets `@viewer · hush · YYYY-MM-DD` (SAST) tiled diagonally across
+  the whole picture at ~13% white with a faint dark outline, plus a solid `HUSH · @viewer` corner mark. Admins
+  get their own username too; logged-out visitors (public main photos on the landing page) get a generic `HUSH`
+  mark. Owners see the clean original. Text is drawn from embedded glyph outlines (`lib/watermark-glyphs.ts`,
+  Inter, OFL) so no server fonts are needed. Responses are `Cache-Control: private, max-age=300`,
+  `Vary: Cookie`, with a per-viewer-per-day ETag, sent whole (no ranges).
+- **Watermark cache:** rendered copies live in `${UPLOAD_DIR}/.wm-cache/<photoId>/<full|thumb>/<sha256>.webp`,
+  swept hourly (files older than 2 days, oldest first above `WM_CACHE_MAX_BYTES`, default 2 GB). Decoded
+  originals are kept in memory for re-use across viewers (`WM_DECODE_CACHE_BYTES`, default 96 MB).
+  Deleting `.wm-cache` at any time is safe.
+- **Videos:** chat videos and the profile video are re-encoded on upload when ffmpeg is installed
+  (`nixpacks.toml` adds it): H.264/AAC MP4 with faststart, ≤ 1280 px, ≤ 30 fps, with `hush · @owner` burned in,
+  hopping corner every 4 s. Length checks run on the original bytes first. Without ffmpeg (or if encoding fails
+  or takes over `TRANSCODE_TIMEOUT_MS`, default 150 s) the original is stored as before. One encode runs at a
+  time per instance. Optional `FFMPEG_PATH` / `FFPROBE_PATH`.
+- **No-save UI:** `components/ProtectedImage.tsx` / `components/ProtectedVideo.tsx` block the context menu,
+  drag, selection and iOS long-press save; videos have no download / playback-rate / cast / picture-in-picture
+  controls and fullscreen goes through a wrapper so the on-screen viewer watermark stays on top.
+- **Privacy shield** (`components/PrivacyShield.tsx`, mounted in `app/layout.tsx`): blurs every
+  `[data-protected]` element while the tab is hidden or the window loses focus (app-switcher previews, most
+  capture tools), for 1.5 s after screenshot shortcuts (PrintScreen, ⌘⇧3/4/5, Win+Shift+S, with a reminder
+  toast), and hides them when printing.
+- **Policy:** Terms §4 and the Safety Centre ("Content protection") prohibit capturing/sharing members' content;
+  reports use the reason "Shared my photos/videos outside Hush".
+
+## Screenshot blocking in native apps
+
+Real screenshot blocking needs a native shell. The planned route is to wrap the web app with **Capacitor**
+(same Next.js UI in a WebView) and add a small native plugin:
+
+- **Android:** set `WindowManager.LayoutParams.FLAG_SECURE` on the activity window
+  (`getWindow().setFlags(FLAG_SECURE, FLAG_SECURE)`). The OS then blocks screenshots and screen recording,
+  shows a black frame to casting / screen sharing, and hides the content in the recent-apps switcher. It can be
+  toggled per screen (e.g. only on profiles, galleries and chats) through a plugin method.
+- **iOS:** screenshots can't be prevented, but recording can be detected and reacted to:
+  - observe `UIScreen.capturedDidChangeNotification` and check `UIScreen.main.isCaptured` — while the screen is
+    being recorded, mirrored or AirPlayed, hide or blur members' media (e.g. tell the web layer to add the
+    `hush-shield` class that PrivacyShield already uses);
+  - observe `UIApplication.userDidTakeScreenshotNotification` — it fires just after a screenshot is taken:
+    show a warning, and log the event server-side (who, which screen/profile) so repeat offenders can be
+    reviewed, and optionally notify the member whose content was on screen;
+  - common hardening trick: render sensitive views inside a secure `UITextField` layer
+    (`isSecureTextEntry = true`), which iOS omits from screenshots and recordings.
+- Keep the server-side per-viewer watermark in the native apps too: it is the part that works everywhere.
 
 ## Security
 

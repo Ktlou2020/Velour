@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Flag, CheckCircle, Ban } from 'lucide-react';
 
 interface Report {
@@ -85,7 +86,7 @@ export default function AdminReportsClient({ reports: initialReports }: Props) {
           </div>
         ) : (
           pending.map((r) => {
-            const data = r.data as { reportedUserId?: string; reportedUsername?: string; reason?: string } | null;
+            const data = r.data as { reportedUserId?: string; reportedUsername?: string; reason?: string; kind?: string; reviewId?: string } | null;
             return (
               <div key={r.id} className="glass rounded-2xl p-5 border border-orange-500/20">
                 <div className="flex items-start justify-between gap-4">
@@ -104,6 +105,9 @@ export default function AdminReportsClient({ reports: initialReports }: Props) {
                     )}
                     {data?.reason && (
                       <p className="text-white/50 text-sm mt-1 italic">&ldquo;{data.reason}&rdquo;</p>
+                    )}
+                    {data?.kind === 'REVIEW' && (
+                      <Link href="/admin/reviews" className="inline-block text-xs text-[#D4AF37] hover:underline mt-1">Review report — moderate in Reviews →</Link>
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">

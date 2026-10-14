@@ -361,3 +361,45 @@ body {
     height: 100dvh;
   }
 }
+
+/* ── Content protection (components/PrivacyShield.tsx) ─────────────────────
+   Members' media carries data-protected (ProtectedImage, ProtectedVideo, chat
+   images). Blur it while the app is in the background / unfocused or right
+   after a screenshot shortcut; hide it when printing. */
+[data-protected] img,
+[data-protected] video {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+[data-protected] {
+  transition: filter 0.2s ease-out;
+}
+html.hush-shield [data-protected],
+html.hush-shield-flash [data-protected] {
+  /* Instant on (so a capture right now gets the blur), eased off */
+  filter: blur(28px) saturate(0.6) !important;
+  transition: none !important;
+}
+.hush-print-notice {
+  display: none;
+}
+@media print {
+  [data-protected] {
+    visibility: hidden !important;
+  }
+  .hush-print-notice {
+    display: block !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 16px;
+    font: 600 14px/1.4 Inter, system-ui, sans-serif;
+    color: #000;
+    background: #fff;
+    border-bottom: 1px solid #ccc;
+    z-index: 2147483647;
+  }
+}

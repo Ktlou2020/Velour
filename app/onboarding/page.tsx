@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ProtectedImage from '@/components/ProtectedImage';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { ChevronLeft, ChevronRight, Check, Upload, X, Camera, User, Users, Plus, Trash2, Link2, Info } from 'lucide-react';
@@ -579,7 +580,7 @@ export default function OnboardingPage() {
                 {photos.map((photo) => (
                   <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden group">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photo.url} alt="Your uploaded photo" className="w-full h-full object-cover" />
+                    <ProtectedImage src={photo.url} alt="Your uploaded photo" className="w-full h-full" />
                     <button
                       type="button"
                       onClick={() => setPhotos((prev) => prev.filter((p) => p.id !== photo.id))}

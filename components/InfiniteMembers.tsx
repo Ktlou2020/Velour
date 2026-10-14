@@ -6,6 +6,7 @@ import { MapPin, Check, Zap, Navigation, Plane, Sparkles } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import ProtectedImage from '@/components/ProtectedImage';
 import StatusPill from '@/components/status/StatusPill';
+import { RatingChip } from '@/components/reviews/Stars';
 import type { MemberData } from '@/app/members/page';
 
 type FilterState = Record<string, string | undefined> & {
@@ -116,15 +117,20 @@ export function MemberTile({ member, watermark }: { member: MemberData; watermar
           </div>
         )}
 
-        {/* Compatibility badge */}
-        {typeof member.compatibility === 'number' && member.compatibility > 0 && (
-          <div
-            className={`absolute bottom-2 left-2 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded-md glass ${
-              member.compatibility >= 70 ? 'text-[#D4AF37]' : 'text-white/70'
-            }`}
-            title={member.compatibilityReasons?.join(' · ') || 'Compatibility'}
-          >
-            {member.compatibility}% match
+        {/* Compatibility + review score */}
+        {((typeof member.compatibility === 'number' && member.compatibility > 0) || member.rating) && (
+          <div className="absolute bottom-2 left-2 right-8 z-10 flex flex-wrap items-center gap-1">
+            {typeof member.compatibility === 'number' && member.compatibility > 0 && (
+              <div
+                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md glass ${
+                  member.compatibility >= 70 ? 'text-[#D4AF37]' : 'text-white/70'
+                }`}
+                title={member.compatibilityReasons?.join(' · ') || 'Compatibility'}
+              >
+                {member.compatibility}% match
+              </div>
+            )}
+            <RatingChip rating={member.rating} className="!py-0.5" />
           </div>
         )}
 
@@ -259,12 +265,20 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
           // With a radius applied, members without a location come last under their own heading.
           const firstUnknown = !!filters.radius && member.distanceKm === undefined && !member.visiting
             && (idx === 0 || members[idx - 1].distanceKm !== undefined || !!members[idx - 1].visiting);
+          // Members beyond the radius come at the very end under "Further away".
+          const firstFurther = !!member.beyondRadius && (idx === 0 || !members[idx - 1].beyondRadius);
           return (
             <Fragment key={`${member.username}-${idx}`}>
               {firstUnknown && (
                 <div className="col-span-full pt-4">
                   <h3 className="text-white/80 text-sm font-semibold">Distance unknown</h3>
                   <p className="text-white/50 text-xs">These members haven&apos;t shared a location yet, so we can&apos;t say how far away they are.</p>
+                </div>
+              )}
+              {firstFurther && (
+                <div className="col-span-full pt-4">
+                  <h3 className="text-white/80 text-sm font-semibold">Further away</h3>
+                  <p className="text-white/50 text-xs">Outside {filters.radius && filters.radius !== 'any' ? `${filters.radius} km` : 'your search radius'}, nearest first.</p>
                 </div>
               )}
               <MemberTile member={member} watermark={watermark} />

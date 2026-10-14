@@ -19,6 +19,14 @@ function newMediaId(): string {
   return 'm' + crypto.randomBytes(15).toString('hex').slice(0, 24)
 }
 
+/** Username for the burned-in video watermark. */
+async function ownerUsername(userId: string, session: unknown): Promise<string> {
+  const fromSession = (session as { user?: { username?: string } } | null)?.user?.username
+  if (fromSession) return fromSession
+  const u = await db.user.findUnique({ where: { id: userId }, select: { username: true } })
+  return u?.username ?? 'member'
+}
+
 /** Delete this user's chat images / voice notes that were uploaded > 1 day ago but never sent. */
 async function sweepUnsentChatImages(userId: string, albumId: string) {
   const stale = await db.photo.findMany({
@@ -125,7 +133,9 @@ export async function POST(req: NextRequest) {
           upgrade: rules.plan !== 'PLATINUM',
         }, { status: 422 })
       }
-      const stored = await saveVideo(input, rules.maxBytes)
+      // Duration was checked on the original bytes above; now re-encode with the
+      // owner's watermark burned in (stored as uploaded when ffmpeg is missing).
+      const stored = await saveVideo(input, rules.maxBytes, { ownerUsername: await ownerUsername(userId, session), durationSec: duration })
       // Serve MOV as MP4: same ISO-BMFF container, and Chrome/Android play it as video/mp4
       const mimeType = stored.mimeType === 'video/quicktime' ? 'video/mp4' : stored.mimeType
       const albumId = await systemAlbumId(userId, CHAT_ALBUM_NAME)
@@ -177,7 +187,12 @@ export async function POST(req: NextRequest) {
       }
       if (file.size > MAX_VIDEO_BYTES) return NextResponse.json({ error: 'Video must be under 30MB' }, { status: 413 })
 
-      const stored = await saveVideo(Buffer.from(await file.arrayBuffer()))
+      const input = Buffer.from(await file.arrayBuffer())
+      const sniffed = sniffVideo(input)
+      const stored = await saveVideo(input, MAX_VIDEO_BYTES, {
+        ownerUsername: await ownerUsername(userId, session),
+        durationSec: sniffed ? videoDurationSec(input, sniffed) : null,
+      })
       const albumId = await systemAlbumId(userId, VIDEO_ALBUM_NAME)
       const id = newMediaId()
       const url = mediaUrl(id)

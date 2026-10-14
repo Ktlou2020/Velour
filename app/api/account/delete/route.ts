@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, signOut } from '@/auth'
 import { db } from '@/lib/db'
+import { recomputeRating } from '@/lib/reviews'
 import { rateLimit, TOO_MANY_REQUESTS_MESSAGE } from '@/lib/rate-limit'
 import { deleteFiles, photoFileKeys } from '@/lib/storage'
 
@@ -25,6 +26,9 @@ export async function POST(req: NextRequest) {
       select: { storageKey: true, mimeType: true },
     })
 
+    // Reviews this member wrote are deleted with them; re-score those members afterwards.
+    const reviewed = await db.review.findMany({ where: { reviewerId: userId }, select: { revieweeId: true } })
+
     await db.$transaction(async (tx) => {
       // Conversations aren't owned by a user, so they'd survive the cascade
       // (with lastMessage previews). Remove every conversation this user was
@@ -42,6 +46,8 @@ export async function POST(req: NextRequest) {
       // verification request, OAuth accounts) is onDelete: Cascade.
       await tx.user.delete({ where: { id: userId } })
     })
+
+    for (const r of reviewed) await recomputeRating(r.revieweeId).catch(() => {})
 
     // Best effort: a failure here must not fail the (already committed) deletion.
     await deleteFiles(storedPhotos.flatMap(photoFileKeys)).catch((e) =>

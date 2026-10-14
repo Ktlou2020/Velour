@@ -139,6 +139,32 @@ export default async function SafetyPage() {
           </div>
         </section>
 
+        {/* Content protection */}
+        <section id="content-protection" aria-labelledby="protection-heading" className="mb-12 scroll-mt-24">
+          <h2 id="protection-heading" className="text-2xl font-serif font-bold text-white mb-4 flex items-center gap-3">
+            <span className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-[#D4AF37] flex-shrink-0">
+              <Lock className="w-4 h-4" />
+            </span>
+            Content protection
+          </h2>
+          <div className="space-y-3 text-gray-300 leading-relaxed pl-11">
+            <p>
+              <strong className="text-white">Screenshots, screen recordings, saving and sharing members&apos; photos or videos are not allowed.</strong>{' '}
+              Saving is blocked across Hush: no right-click or long-press &ldquo;Save image&rdquo;, no video downloads, picture-in-picture or casting, and photos blur when you switch apps or print.
+            </p>
+            <p>
+              <strong className="text-white">Every copy is traceable.</strong> Each photo is served with a watermark of the viewer&apos;s username and the date burned into the image itself, so a screenshot or saved copy names the account that took it. Videos carry their owner&apos;s mark in the file and the viewer&apos;s username on screen. Your own photos look clean to you.
+            </p>
+            <p>
+              <strong className="text-white">To be honest about the limits:</strong> no website can fully stop a screenshot or a phone pointed at a screen. What we can do is make a copy useless to a thief and lead straight back to them.
+            </p>
+            <p>
+              <strong className="text-white">If your content was shared outside Hush:</strong> report the member from their profile (flag icon) or from the photo, and choose <em>&ldquo;Shared my photos/videos outside Hush&rdquo;</em>. If you have the leaked copy, email it to{' '}
+              <a href="mailto:support@hush.dating" className="text-[#DC143C] hover:underline">support@hush.dating</a> — the watermark tells us who saved it. Confirmed leaks lead to a permanent ban.
+            </p>
+          </div>
+        </section>
+
         {/* Report & block */}
         <section aria-labelledby="report-heading" className="mb-12">
           <h2 id="report-heading" className="text-2xl font-serif font-bold text-white mb-4 flex items-center gap-3">

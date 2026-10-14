@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import ProtectedVideo from '@/components/ProtectedVideo';
 import Link from 'next/link';
 import {
   Quote, Edit2, Trash2, Plus, Video, Upload, MapPin, LocateFixed, X,
@@ -210,7 +211,7 @@ export function VideoProfileCard({ initialUrl, platinum }: { initialUrl: string 
       </div>
 
       {videoUrl && (
-        <video src={videoUrl} controls playsInline preload="metadata" className="w-full max-h-[360px] rounded-xl bg-black mb-4" />
+        <ProtectedVideo src={videoUrl} controls preload="metadata" watermark={false} className="rounded-xl mb-4" videoClassName="w-full max-h-[360px] rounded-xl bg-black" />
       )}
 
       {platinum ? (

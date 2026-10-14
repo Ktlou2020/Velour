@@ -33,6 +33,9 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; href
   PAYMENT:      { icon: CreditCard,     color: 'text-[#D4AF37]',  href: () => '/subscription' },
   VERIFIED:     { icon: Shield,         color: 'text-emerald-400',href: () => '/account' },
   STREAK:       { icon: Flame,          color: 'text-orange-400', href: () => '/account' },
+  REVIEW_REQUEST:  { icon: Star,        color: 'text-[#D4AF37]',  href: (n) => (typeof n.data?.url === 'string' && n.data.url.startsWith('/') ? n.data.url : '/reviews') },
+  REVIEW_RECEIVED: { icon: Star,        color: 'text-[#D4AF37]',  href: (n) => (typeof n.data?.url === 'string' && n.data.url.startsWith('/') ? n.data.url : '/reviews') },
+  REVIEW_PUBLISHED:{ icon: Star,        color: 'text-emerald-400',href: (n) => (typeof n.data?.url === 'string' && n.data.url.startsWith('/') ? n.data.url : '/reviews') },
   DEFAULT:      { icon: Bell,           color: 'text-white/65' },
 };
 

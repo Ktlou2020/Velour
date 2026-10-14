@@ -1,39 +1,84 @@
 'use client';
 
-import { useRef } from 'react';
+import { useSession } from 'next-auth/react';
 
 interface Props {
   src: string;
   alt: string;
   className?: string;
+  /**
+   * Show the on-screen viewer watermark. Any non-empty value turns it on and
+   * renders "@<your username> · hush" (an email is never shown on screen);
+   * "" or undefined leaves it off. The server burns its own per-viewer mark
+   * into the image file regardless.
+   */
   watermark?: string;
   style?: React.CSSProperties;
   /** Defaults to lazy; pass "eager" for above-the-fold hero images. */
   loading?: 'lazy' | 'eager';
+  /** Extra classes for the <img> (default: object-cover filling the box). */
+  imgClassName?: string;
+  onLoad?: React.ReactEventHandler<HTMLImageElement>;
+}
+
+function block(e: React.SyntheticEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+  return false;
+}
+
+/** Styles that stop drag, selection and the iOS long-press "Save image" sheet. */
+export const NO_SAVE_STYLE = {
+  WebkitUserDrag: 'none',
+  WebkitUserSelect: 'none',
+  userSelect: 'none',
+  WebkitTouchCallout: 'none',
+} as React.CSSProperties;
+
+/**
+ * Text for the on-screen watermark: the viewer's @username. Falls back to the
+ * given text unless it looks like an email address (never shown on screen).
+ */
+export function useViewerMark(requested?: string | boolean): string | null {
+  const { data } = useSession();
+  if (!requested) return null;
+  const username = (data?.user as { username?: string } | undefined)?.username;
+  if (username) return `@${username} · hush`;
+  if (typeof requested === 'string' && !requested.includes('@')) return requested;
+  return 'hush';
 }
 
 /**
- * Renders a user photo with download/save protections:
- * - Right-click disabled
- * - Drag disabled
- * - Touch-hold save blocked (touch-action: none on overlay)
- * - Pointer events captured by overlay so img is never directly interactable
- * - Semi-transparent watermark burned into the view (not the file)
+ * Tiled, rotated text as a CSS background (an SVG data URI, so it costs one
+ * layer instead of dozens of DOM nodes). Very faint: the file itself carries
+ * the forensic mark; this one shows on screen recordings of any media.
  */
-export default function ProtectedImage({ src, alt, className, watermark, style, loading = 'lazy' }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
+export function watermarkBackground(text: string, opacity = 0.09): React.CSSProperties {
+  const safe = text.replace(/[^A-Za-z0-9_.@ ·-]/g, '').slice(0, 48);
+  const svg =
+    `<svg xmlns='http://www.w3.org/2000/svg' width='240' height='150'>` +
+    `<text x='120' y='80' text-anchor='middle' transform='rotate(-30 120 75)' font-family='Inter,system-ui,sans-serif' font-size='12' font-weight='600' letter-spacing='1' fill='white' fill-opacity='${opacity}' stroke='black' stroke-opacity='${(opacity * 0.6).toFixed(3)}' stroke-width='0.5'>${safe}</text>` +
+    `</svg>`;
+  return { backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(svg)}")`, backgroundRepeat: 'repeat' };
+}
 
-  function block(e: React.SyntheticEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    return false;
-  }
+/**
+ * A member's photo with save protections:
+ * - right-click, drag, text selection and the iOS long-press menu blocked
+ *   (a transparent layer sits over the <img>, so a long-press never targets it)
+ * - page scrolling and pinch-zoom still work on touch screens
+ * - `data-protected`: blurred by PrivacyShield in the app switcher / during
+ *   screenshot shortcuts, hidden when printing
+ * - optional on-screen viewer watermark
+ */
+export default function ProtectedImage({ src, alt, className, watermark, style, loading = 'lazy', imgClassName, onLoad }: Props) {
+  const mark = useViewerMark(watermark);
 
   return (
     <div
-      ref={containerRef}
+      data-protected=""
       className={`relative overflow-hidden select-none ${className ?? ''}`}
-      style={{ WebkitUserSelect: 'none', userSelect: 'none', ...style }}
+      style={{ ...NO_SAVE_STYLE, ...style }}
       onContextMenu={block}
       onDragStart={block}
     >
@@ -43,46 +88,25 @@ export default function ProtectedImage({ src, alt, className, watermark, style, 
         alt={alt}
         loading={loading}
         decoding="async"
-        className="w-full h-full object-cover pointer-events-none"
-        style={{
-          WebkitUserDrag: 'none',
-          userSelect: 'none',
-          WebkitUserSelect: 'none',
-        } as React.CSSProperties}
+        className={imgClassName ?? 'w-full h-full object-cover pointer-events-none'}
+        style={NO_SAVE_STYLE}
         draggable={false}
         onContextMenu={block}
         onDragStart={block}
+        onLoad={onLoad}
       />
 
-      {/* Transparent overlay — captures all pointer events so the img can't be right-clicked or dragged */}
+      {/* Transparent layer: receives every touch/click instead of the <img>. */}
       <div
         className="absolute inset-0"
-        style={{ touchAction: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}
+        style={{ touchAction: 'manipulation', ...NO_SAVE_STYLE }}
         onContextMenu={block}
         onDragStart={block}
+        aria-hidden="true"
       />
 
-      {/* Watermark grid */}
-      {watermark && (
-        <div
-          className="absolute inset-0 pointer-events-none overflow-hidden"
-          aria-hidden="true"
-          style={{ touchAction: 'none' } as React.CSSProperties}
-        >
-          {/* Repeated diagonal watermark pattern */}
-          <div
-            className="absolute inset-0 flex flex-wrap content-start gap-x-8 gap-y-6 p-2 rotate-[-30deg] scale-[1.6] origin-center"
-          >
-            {Array.from({ length: 30 }).map((_, i) => (
-              <span
-                key={i}
-                className="text-white/[0.07] text-[10px] font-semibold tracking-widest uppercase whitespace-nowrap select-none"
-              >
-                {watermark}
-              </span>
-            ))}
-          </div>
-        </div>
+      {mark && (
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true" style={watermarkBackground(mark)} />
       )}
     </div>
   );

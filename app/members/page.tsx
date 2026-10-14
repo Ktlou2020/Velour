@@ -98,6 +98,8 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             maxRadiusKm={caller.ent.maxSearchRadiusKm}
             sort={result.sort}
             unknownDistance={result.unknownDistance}
+            inRadius={result.inRadius}
+            furtherAway={result.furtherAway}
             homeLat={callerProfile?.latitude ?? null}
             homeLng={callerProfile?.longitude ?? null}
             profileCity={profileCity}

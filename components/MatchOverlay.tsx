@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import ProtectedImage from '@/components/ProtectedImage';
 import Link from 'next/link';
 
 interface Props {
@@ -103,7 +104,7 @@ export default function MatchOverlay({ show, matchedUser, onMessage, onClose }: 
             >
               {matchedUser.photo ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={matchedUser.photo} alt={matchedUser.name} className="w-full h-full object-cover" />
+                <ProtectedImage src={matchedUser.photo} alt={matchedUser.name} className="w-full h-full" />
               ) : (
                 <span className="text-white text-xl font-bold font-serif">{initials}</span>
               )}

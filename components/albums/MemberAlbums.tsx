@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import ProtectedImage from '@/components/ProtectedImage';
 import { Images, Lock, Clock, FolderLock } from 'lucide-react';
 import AlbumViewer from './AlbumViewer';
 import { api } from '@/components/gallery/types';
@@ -101,8 +102,7 @@ export default function MemberAlbums({ username, title = 'Albums', className = '
                   <span className="text-white/60 text-xs">{a.photoCount} private photo{a.photoCount === 1 ? '' : 's'}</span>
                 </div>
               ) : a.coverUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={a.coverUrl} alt="" loading="lazy" draggable={false} className="w-full h-full object-cover pointer-events-none select-none" onContextMenu={(e) => e.preventDefault()} />
+                <ProtectedImage src={a.coverUrl} alt="" className="w-full h-full" watermark="on" />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center"><Images size={26} className="text-white/20" aria-hidden="true" /></div>
               )}

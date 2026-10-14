@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import ProtectedVideo from '@/components/ProtectedVideo';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -19,6 +20,7 @@ import type { ActiveStatus } from '@/components/status/status';
 import BadgeRow from '@/components/badges/BadgeRow';
 import SparkAnswers, { type SparkAnswerView } from '@/components/spark/SparkAnswers';
 import type { Badge } from '@/lib/badges';
+import ReviewsSection from '@/components/reviews/ReviewsSection';
 
 interface Photo {
   id: string;
@@ -55,6 +57,9 @@ interface Profile {
   status?: ActiveStatus | null;
   badges?: Badge[];
   sparkAnswers?: SparkAnswerView[];
+  reviewName?: string;
+  /** Review score (only when there's at least one published review). */
+  rating?: { avg: number; count: number } | null;
 }
 
 interface Props {
@@ -66,6 +71,7 @@ interface Props {
 const REPORT_REASONS = [
   'Fake profile / Catfishing',
   'Inappropriate content',
+  'Shared my photos/videos outside Hush',
   'Harassment or abuse',
   'Spam or scam',
   'Underage user',
@@ -224,6 +230,12 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                 <span className="flex items-center gap-1.5"><MapPin size={13} />{location}</span>
                 {p.distance && <span className="flex items-center gap-1.5"><Navigation size={13} />{p.distance}</span>}
                 {ageText && <span className="flex items-center gap-1.5"><Calendar size={13} />{ageText}</span>}
+                {p.rating && (
+                  <a href="#reviews" className="flex items-center gap-1.5 text-[#F5D77A] hover:text-white font-semibold">
+                    <Star size={13} className="fill-[#D4AF37] text-[#D4AF37]" aria-hidden="true" />
+                    {p.rating.avg.toFixed(1)} · {p.rating.count} review{p.rating.count === 1 ? '' : 's'}
+                  </a>
+                )}
                 {p.isOnline
                   ? <span className="flex items-center gap-1.5 text-emerald-400"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Online now</span>
                   : p.memberSince && <span className="flex items-center gap-1.5"><UserCheck size={13} />Since {p.memberSince}</span>
@@ -365,13 +377,12 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                 <Video size={16} className="text-purple-400" />
                 Video Profile
               </h2>
-              <video
+              <ProtectedVideo
                 src={p.videoUrl}
                 controls
-                playsInline
                 preload="metadata"
-                controlsList="nodownload"
-                className="w-full max-h-[480px] rounded-xl bg-black"
+                className="rounded-xl"
+                videoClassName="w-full max-h-[480px] rounded-xl bg-black"
               />
             </div>
           )}
@@ -424,6 +435,9 @@ export default function MemberProfileClient({ username, profile: raw, session }:
               </div>
             </div>
           )}
+
+          {/* Reviews (Airbnb-style; members who've chatted can review each other) */}
+          {session?.user && <ReviewsSection username={username} name={p.reviewName || displayName} />}
 
           {/* Photo Gallery */}
           {photos.length > 0 && (

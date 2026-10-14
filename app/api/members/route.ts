@@ -47,6 +47,9 @@ export async function GET(req: NextRequest) {
       radiusKm: result.radiusKm,
       sort: result.sort,
       unknownDistance: result.unknownDistance,
+      // Sections, in list order: inRadius → unknownDistance → furtherAway (members flagged beyondRadius)
+      sections: { inRadius: result.inRadius, unknownDistance: result.unknownDistance, furtherAway: result.furtherAway },
+      furtherAwayMaxKm: result.furtherAwayMaxKm,
       travel: caller.travel ? { city: caller.travel.city, until: caller.travel.until } : null,
       // Advanced filters need Gold+; for other plans they're ignored, not errors.
       ...(result.ignoredFilters.length ? { ignoredFilters: result.ignoredFilters, upgrade: true } : {}),

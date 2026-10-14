@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import ProtectedImage from '@/components/ProtectedImage';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import EmptyState from '@/components/EmptyState';
@@ -11,8 +12,9 @@ import GameBubble from '@/components/chat/GameBubble';
 import GameSheet, { type NewGame } from '@/components/chat/GameSheet';
 import VoiceRecorderBar from '@/components/chat/VoiceRecorderBar';
 import { useVoiceRecorder } from '@/components/chat/useVoiceRecorder';
+import { useReviewAsk, ReviewAskButton, ReviewPromptCard } from '@/components/chat/ReviewAsk';
 import { useSession } from 'next-auth/react';
-import { Search, Send, Heart, ArrowLeft, ImagePlus, X, Crown, Users, ChevronDown, Mic, Dices, Zap, Lock } from 'lucide-react';
+import { Search, Send, Heart, ArrowLeft, ImagePlus, X, Crown, Users, ChevronDown, ChevronRight, Mic, Dices, Zap, Lock } from 'lucide-react';
 import type { Reactions } from '@/lib/reactions';
 import { parseGameMeta, type GameMeta } from '@/lib/chat-games';
 import { PLANS } from '@/lib/plans';
@@ -160,7 +162,7 @@ function Face({ name, photo, seed, size, ring = false, grayscale = false, oneLet
   const ringCls = ring ? 'ring-2 ring-[#0A0A0F]' : '';
   if (photo) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={photo} alt="" width={size} height={size} loading="lazy" style={{ width: size, height: size }} className={`rounded-full object-cover flex-shrink-0 ${ringCls} ${grayscale ? 'grayscale' : ''}`} />;
+    return <ProtectedImage src={photo} alt="" className={`rounded-full flex-shrink-0 ${ringCls} ${grayscale ? 'grayscale' : ''}`} style={{ width: size, height: size }} />;
   }
   return (
     <div style={style} className={`rounded-full bg-gradient-to-br ${gradientFor(seed)} flex items-center justify-center flex-shrink-0 ${ringCls}`}>
@@ -184,6 +186,31 @@ function AvatarStack({ avatars, size, grayscale }: { avatars: Avatar[]; size: nu
       <div className="absolute bottom-0 right-0">
         <Face name={avatars[1].name} photo={avatars[1].photo} seed={avatars[1].username || avatars[1].name} size={small} ring grayscale={grayscale} oneLetter />
       </div>
+    </div>
+  );
+}
+
+/** Header avatar(s), each face linking to that member's profile. */
+function HeaderAvatars({ avatars, size }: { avatars: Avatar[]; size: number }) {
+  const linkCls = 'block rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D4AF37] hover:opacity-90';
+  if (avatars.length < 2) {
+    const a = avatars[0] ?? { name: '?' };
+    const face = <Face name={a.name} photo={a.photo} seed={a.username || a.name} size={size} />;
+    return a.username
+      ? <Link href={`/members/${a.username}`} className={linkCls} aria-label={`View ${a.name}'s profile`}>{face}</Link>
+      : face;
+  }
+  const small = Math.round(size * 0.7);
+  const one = (a: Avatar, back: boolean) => {
+    const face = <Face name={a.name} photo={a.photo} seed={a.username || a.name} size={small} ring={!back} oneLetter back={back} />;
+    return a.username
+      ? <Link href={`/members/${a.username}`} className={linkCls} aria-label={`View ${a.name}'s profile`}>{face}</Link>
+      : face;
+  };
+  return (
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <div className="absolute top-0 left-0">{one(avatars[0], true)}</div>
+      <div className="absolute bottom-0 right-0">{one(avatars[1], false)}</div>
     </div>
   );
 }
@@ -228,6 +255,8 @@ export default function MessagesPage() {
   const [voiceSending, setVoiceSending] = useState(false);
   const [welcomeDismissed, setWelcomeDismissed] = useState(true);
   const recorder = useVoiceRecorder((m) => setError(m));
+  // Reviews: "Ask for a review" in the header + a gentle prompt after a long chat
+  const reviewAsk = useReviewAsk(activeConvId, messages.length);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -452,6 +481,9 @@ export default function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
   useEffect(() => { scrollToEnd(); }, [messages.length, someoneTyping, scrollToEnd]);
+  // The review prompt card arrives after the messages; keep it in view.
+  const reviewPromptId = reviewAsk.promptPerson?.person.id ?? null;
+  useEffect(() => { if (reviewPromptId) scrollToEnd(); }, [reviewPromptId, scrollToEnd]);
 
   // ── Close reaction picker on outside tap ──────────────────────────────────
   useEffect(() => {
@@ -979,6 +1011,14 @@ export default function MessagesPage() {
       ? activeConv.avatars
       : activeConv ? [{ name, photo: activeConv.profilePhoto, username: activeConv.username }] : [];
   const headerIsCouple = sides.length ? sides.some(s => s.isCouple) : !!activeConv?.isCouple;
+  // Header names as profile links: per side, each linked partner by name; a
+  // shared couple account (one login) links its label to the account.
+  const headerPeople: { label: string; username: string }[][] = sides.length
+    ? sides.map(s => (s.kind === 'linked' && s.members.length > 1
+        ? s.members.map(m => ({ label: m.name, username: m.username }))
+        : s.members[0] ? [{ label: s.label, username: s.members[0].username }] : []))
+      .filter(x => x.length > 0)
+    : activeConv ? [[{ label: activeConv.displayName || activeConv.username, username: activeConv.username }]] : [];
   const onlineMembers = sides.flatMap(s => s.members).filter(m => m.isOnline);
   const anyOnline = sides.length ? onlineMembers.length > 0 : !!activeConv?.isOnline;
   const memberCount = sides.reduce((n, s) => n + s.members.length, 0);
@@ -1004,9 +1044,12 @@ export default function MessagesPage() {
     const n = msg.senderPartnerName || p?.name || msg.sender?.profile?.displayName || msg.sender?.username;
     if (!n) return null;
     const suffix = p?.isMyPartner ? 'your partner' : (p?.coupleLabel || msg.senderPartnerName) ? 'couple' : null;
+    const username = p?.username || msg.sender?.username;
     return (
       <>
-        <span className="text-white/75 font-medium">{n}</span>
+        {username
+          ? <Link href={`/members/${username}`} className="text-white/75 font-medium hover:text-white hover:underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#D4AF37] rounded-sm">{n}</Link>
+          : <span className="text-white/75 font-medium">{n}</span>}
         {suffix && <span className={p?.isMyPartner ? 'text-[#D4AF37]/75' : 'text-white/45'}> · {suffix}</span>}
       </>
     );
@@ -1020,12 +1063,29 @@ export default function MessagesPage() {
           <ArrowLeft size={20} aria-hidden="true" />
         </button>
         <div className="relative flex-shrink-0">
-          <AvatarStack avatars={headerAvatars} size={40} />
-          {anyOnline && <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-[#0A0A0F] rounded-full" />}
+          <HeaderAvatars avatars={headerAvatars} size={40} />
+          {anyOnline && <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-[#0A0A0F] rounded-full pointer-events-none" />}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-white font-semibold text-sm truncate">{name}</span>
+            <span className="text-white font-semibold text-sm truncate">
+              {headerPeople.length === 0 ? name : headerPeople.map((side, si) => (
+                <span key={si}>
+                  {si > 0 && ', '}
+                  {side.map((m, mi) => (
+                    <span key={m.username}>
+                      {mi > 0 && ' & '}
+                      <Link href={`/members/${m.username}`} className="hover:underline underline-offset-2 decoration-white/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#D4AF37] rounded-sm" title={`View ${m.label}'s profile`}>{m.label}</Link>
+                    </span>
+                  ))}
+                </span>
+              ))}
+            </span>
+            {headerPeople.length === 1 && headerPeople[0].length === 1 && (
+              <Link href={`/members/${headerPeople[0][0].username}`} className="flex-shrink-0 text-white/40 hover:text-white -ml-0.5" aria-label={`View ${headerPeople[0][0].label}'s profile`} tabIndex={-1}>
+                <ChevronRight size={14} aria-hidden="true" />
+              </Link>
+            )}
             {headerIsCouple && <CoupleBadge />}
           </div>
           <div className="text-xs truncate">
@@ -1040,6 +1100,7 @@ export default function MessagesPage() {
         {expiresAt && (
           <ExpiryCountdown expiresAt={expiresAt} nudge className="items-end text-right flex-shrink-0" />
         )}
+        {!blocked && <ReviewAskButton askable={reviewAsk.askable} onAsk={reviewAsk.ask} />}
         {messages.length > 0 && (
           <button
             type="button"
@@ -1137,6 +1198,11 @@ export default function MessagesPage() {
               <span className="w-1.5 h-1.5 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
             </span>
             {showSenders ? typingText : `${name} is typing…`}
+          </div>
+        )}
+        {!blocked && !loadingMsgs && reviewAsk.promptPerson && (
+          <div className="pt-3">
+            <ReviewPromptCard person={reviewAsk.promptPerson} onAsk={reviewAsk.ask} onDismiss={reviewAsk.dismiss} />
           </div>
         )}
         <div ref={messagesEndRef} />

@@ -8,6 +8,8 @@ import {
   ChevronLeft, ChevronRight, ArrowUpDown, Check, X, AlertCircle, FolderOpen, Users, Compass, Clock,
 } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
+import ProtectedImage from '@/components/ProtectedImage';
+import ProtectionNote from './ProtectionNote';
 import Modal from '@/components/albums/Modal';
 import ShareAlbumDialog from '@/components/albums/ShareAlbumDialog';
 import AlbumViewer from '@/components/albums/AlbumViewer';
@@ -249,6 +251,8 @@ export default function GalleryManager() {
           </button>
         </div>
       </div>
+
+      <ProtectionNote className="mb-4" />
 
       <ExploreCard photos={photos} onOpenPhoto={(id) => { setFilter('all'); if (tab !== 'photos') setTab('photos'); setSheetId(id); }} />
 
@@ -606,8 +610,7 @@ function AlbumCard({ album, onOpen, owner }: { album: AlbumSummary; onOpen: () =
     <button type="button" onClick={onOpen} className="group w-full text-left focus-visible:outline-none" aria-label={`Open album ${album.name}, ${album.photoCount} photos${album.isPrivate ? ', private' : ''}`}>
       <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-white/5 border border-white/10 group-hover:border-white/25 group-focus-visible:ring-2 group-focus-visible:ring-[#D4AF37] transition-colors">
         {album.coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={album.coverUrl} alt="" loading="lazy" draggable={false} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+          <ProtectedImage src={album.coverUrl} alt="" className="w-full h-full" imgClassName="w-full h-full object-cover pointer-events-none transition-transform duration-300 group-hover:scale-[1.03]" />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-white/[0.04] to-transparent"><Images size={28} className="text-white/20" aria-hidden="true" /></div>
         )}

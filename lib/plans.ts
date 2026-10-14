@@ -247,6 +247,7 @@ export const PLAN_FEATURES: { group: string; items: { label: string; values: Rec
       { label: 'Photo gallery & albums', values: { FREE: true, GOLD: true, PLATINUM: true } },
       { label: 'Private albums', values: { FREE: '1', GOLD: 'Unlimited', PLATINUM: 'Unlimited' } },
       { label: 'Status, badges & profile strength', values: { FREE: true, GOLD: true, PLATINUM: true } },
+      { label: 'Reviews & trust score', values: { FREE: true, GOLD: true, PLATINUM: true } },
       { label: 'See who liked you', values: { FREE: false, GOLD: true, PLATINUM: true } },
       { label: 'See who viewed you', values: { FREE: false, GOLD: true, PLATINUM: true } },
       { label: 'Profile boost', values: { FREE: false, GOLD: 'Monthly', PLATINUM: 'Weekly' } },

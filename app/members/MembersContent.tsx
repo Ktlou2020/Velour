@@ -35,6 +35,9 @@ interface Props {
   maxRadiusKm?: number | null;
   sort?: 'nearest' | 'active' | 'new' | 'match';
   unknownDistance?: number;
+  /** Known-distance members inside the radius, and how many follow in "Further away". */
+  inRadius?: number;
+  furtherAway?: number;
   homeLat?: number | null;
   homeLng?: number | null;
 }
@@ -78,6 +81,7 @@ export default function MembersContent({
   members, total, searchParams, canChangeCity, profileCountry, callerHasLocation = false,
   advancedFilters = false, travel = null, canTravel = false, spotlight = [],
   radiusKm = null, maxRadiusKm = 250, sort: appliedSort = 'active', unknownDistance = 0, homeLat = null, homeLng = null,
+  inRadius, furtherAway = 0,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -143,7 +147,8 @@ export default function MembersContent({
     // Travellers browse their destination by default; "All cities" must say so.
     else if (canChangeCity && travel) params.set('anyCity', '1');
     if (om === '1') params.set('online', '1');
-    if (s) params.set('sort', s);
+    // Keep the default ordering unless a sort was actually chosen
+    if (s && (overrides?.sort || searchParams.sort)) params.set('sort', s);
     if (rad && callerHasLocation) params.set('radius', rad);
     if (advancedFilters) {
       if (heightMin) params.set('heightMin', heightMin);
@@ -478,13 +483,32 @@ export default function MembersContent({
         </section>
       )}
 
+      {radiusKm !== null && !searchParams.city && (inRadius ?? 0) < 12 && (maxRadiusKm === null || radiusKm < maxRadiusKm) && (
+        <div role="note" className="glass rounded-2xl px-4 py-3 mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 border border-white/10">
+          <p className="text-white/80 text-sm flex-1 min-w-[14rem]">
+            {(inRadius ?? 0) === 0 ? `No one within ${radiusKm} km yet` : `Only ${inRadius} ${inRadius === 1 ? 'person' : 'people'} within ${radiusKm} km`}
+            {furtherAway > 0 ? ' — showing more further away.' : ' — try a wider search.'}
+          </p>
+          <div className="flex gap-2">
+            {radiusKm < 250 && (maxRadiusKm === null || maxRadiusKm >= 250) && (
+              <button type="button" onClick={() => { setRadius('250'); storeRadius('250'); applyFilters({ radius: '250' }); }} className="glass border border-white/15 hover:border-white/30 text-white/85 px-3 py-1.5 rounded-lg text-xs font-semibold">Widen to 250 km</button>
+            )}
+            {anywhereAllowed ? (
+              <button type="button" onClick={() => { setRadius('any'); storeRadius('any'); applyFilters({ radius: 'any' }); }} className="bg-[#DC143C] hover:bg-[#FF1744] text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Anywhere</button>
+            ) : (
+              <button type="button" onClick={() => setNudge('radius')} className="text-[#D4AF37] hover:underline px-1 py-1.5 text-xs font-semibold">Anywhere (Gold)</button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <p className="text-white/65 text-sm">
           <span className="text-white">{total.toLocaleString()}</span> member{total === 1 ? '' : 's'}
           {searchParams.city
             ? <> in <span className="text-white">{searchParams.city}</span></>
             : radiusKm !== null
-              ? <> · <span className="text-white">{(total - unknownDistance).toLocaleString()}</span> within {radiusKm} km{unknownDistance > 0 && <span className="text-white/50"> · {unknownDistance} with distance unknown</span>}</>
+              ? <> · <span className="text-white">{(inRadius ?? total - unknownDistance - furtherAway).toLocaleString()}</span> within {radiusKm} km{unknownDistance > 0 && <span className="text-white/50"> · {unknownDistance} with distance unknown</span>}{furtherAway > 0 && <span className="text-white/50"> · {furtherAway} further away</span>}</>
               : !callerHasLocation && !travel
                 ? <span className="text-white/50"> · turn on location to sort by distance</span>
                 : null}
@@ -539,7 +563,9 @@ export default function MembersContent({
             ageMax: searchParams.ageMax,
             city: canChangeCity ? searchParams.city : undefined,
             online: searchParams.online,
-            sort: appliedSort,
+            // The sort as requested (not as applied): the default ordering differs
+            // slightly from an explicit one (review trust nudge), keep pages consistent.
+            sort: searchParams.sort,
             radius: callerHasLocation ? (searchParams.radius ?? (radiusKm === null ? 'any' : String(radiusKm))) : undefined,
             anyCity: searchParams.anyCity,
             ...(advancedFilters ? Object.fromEntries(ADV_KEYS.map((k) => [k, searchParams[k]])) : {}),

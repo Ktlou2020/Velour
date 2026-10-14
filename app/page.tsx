@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
   ArrowRight, BadgeCheck, CalendarHeart, Check, ChevronDown, EyeOff, Flag, Heart,
-  ImageOff, MessageCircle, MoonStar, ShieldCheck, Sparkles, UserPlus, Users,
+  ImageOff, MessageCircle, MoonStar, ShieldCheck, Sparkles, Star, UserPlus, Users,
 } from 'lucide-react';
 import LandingNav from './LandingNav';
 import MemberShowcase from './MemberShowcase';
@@ -55,6 +55,7 @@ const FEATURES = [
   { icon: CalendarHeart, title: 'Curated events', desc: 'Intimate member gatherings — sundowners, tastings, workshops — where introductions come naturally.' },
   { icon: MessageCircle, title: 'Conversation, not small talk', desc: 'Profile prompts and icebreakers give you something real to reply to, plus a members-only forum.' },
   { icon: Sparkles, title: 'A Daily Spark', desc: 'One light question a day — braai or salads, Joburg or Cape Town — answer it, see what others said, and reply to the ones that make you smile.' },
+  { icon: Star, title: 'Trusted by reviews', desc: 'Members who’ve met can review each other — respect, communication, authenticity and reliability. Reviews are double-blind and free for everyone.' },
   { icon: Heart, title: 'Status, badges & a little fun', desc: 'Let people know you’re “Up for coffee” tonight, earn badges as you go, and see what would make your profile shine. All free.' },
 ];
 
@@ -193,7 +194,7 @@ export default function LandingPage() {
             <SectionHeading id="features-heading" eyebrow="Thoughtfully made" title="Everything you need to connect" />
             <ul className="grid sm:grid-cols-2 gap-4 md:gap-6">
               {FEATURES.map(({ icon: Icon, title, desc }) => (
-                <li key={title} className="glass rounded-2xl p-6 md:p-7 flex gap-5 card-hover">
+                <li key={title} className="glass rounded-2xl p-6 md:p-7 flex gap-5 card-hover sm:last:odd:col-span-2">
                   <div className="w-12 h-12 rounded-xl bg-[#DC143C]/10 border border-[#DC143C]/20 flex items-center justify-center flex-shrink-0">
                     <Icon className="text-[#FF4D6D]" size={22} aria-hidden="true" />
                   </div>

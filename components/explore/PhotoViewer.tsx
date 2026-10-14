@@ -181,7 +181,7 @@ export default function PhotoViewer({ photos, index, watermark, hasMore, onIndex
               {/* Thumbnail underneath while the full photo loads */}
               {!loaded && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={photo.thumbUrl} alt="" aria-hidden="true" draggable={false} className="absolute inset-0 w-full h-full object-cover blur-md scale-105 opacity-60 pointer-events-none" />
+                <img src={photo.thumbUrl} alt="" aria-hidden="true" draggable={false} data-protected="" className="absolute inset-0 w-full h-full object-cover blur-md scale-105 opacity-60 pointer-events-none select-none" />
               )}
               <ProtectedImage
                 key={photo.id}

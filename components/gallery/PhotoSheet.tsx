@@ -3,6 +3,7 @@
 import { useEffect, useId, useState } from 'react';
 import { Star, Trash2, Lock, Globe, ImageIcon, ChevronLeft, ChevronRight, Heart, Trophy } from 'lucide-react';
 import Modal from '@/components/albums/Modal';
+import ProtectedImage from '@/components/ProtectedImage';
 import { api, type AlbumSummary, type GalleryPhoto } from './types';
 import { Spinner, Switch, btnDanger, btnGhost, btnPrimary } from './ui';
 import { useToast } from '@/lib/toast-context';
@@ -88,8 +89,7 @@ export default function PhotoSheet({ photo, albums, albumContext, onClose, onUpd
     <Modal open={!!photo} onClose={onClose} title="Edit photo" size="lg">
       <div className="grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-5">
         <div className="relative rounded-2xl overflow-hidden bg-black/40 aspect-[4/3] sm:aspect-[4/5]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={photo.url} alt={photo.caption || 'Selected photo'} className="w-full h-full object-contain" draggable={false} />
+          <ProtectedImage src={photo.url} alt={photo.caption || 'Selected photo'} className="w-full h-full" imgClassName="w-full h-full object-contain pointer-events-none" loading="eager" />
           {onPrev && (
             <button type="button" onClick={onPrev} aria-label="Previous photo" className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/60 text-white/80 hover:text-white"><ChevronLeft size={18} /></button>
           )}

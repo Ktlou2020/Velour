@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import ProtectedImage from '@/components/ProtectedImage';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import EmptyState from '@/components/EmptyState';
@@ -155,7 +156,7 @@ export default function MatchesPage() {
                 <Link href={`/members/${m.username}`} className="block aspect-[3/4] relative bg-gradient-to-br from-rose-950 to-[#0A0A0F]">
                   {m.profilePhotoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={m.profilePhotoUrl} alt={name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                    <ProtectedImage src={m.profilePhotoUrl} alt={name} className="w-full h-full" />
                   ) : (
                     <span className="absolute inset-0 flex items-center justify-center text-white/55 text-3xl font-bold font-serif">{name.slice(0, 2).toUpperCase()}</span>
                   )}
@@ -231,14 +232,11 @@ export default function MatchesPage() {
         <div className="aspect-[3/4] relative overflow-hidden">
           {profile?.profilePhoto ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <ProtectedImage
               src={profile.profilePhoto}
               alt={name}
-              loading="lazy"
-              decoding="async"
-              width={300}
-              height={400}
-              className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${expired ? 'grayscale' : ''}`}
+              className="w-full h-full"
+              imgClassName={`w-full h-full object-cover pointer-events-none group-hover:scale-105 transition-transform duration-300 ${expired ? 'grayscale' : ''}`}
             />
           ) : (
             <div className={`w-full h-full bg-gradient-to-br ${gradientFor(other.username)} flex items-center justify-center`}>

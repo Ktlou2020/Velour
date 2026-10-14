@@ -13,6 +13,7 @@ import { distanceKm, formatDistance } from '@/lib/geo';
 import { parsePrompts } from '@/app/profile/prompts';
 import { isPlatinum } from '@/lib/premium';
 import { categoryOf, effectiveInterestedIn, publicIdentity } from '@/lib/identity';
+import { firstName, reviewMaintenance } from '@/lib/reviews';
 
 const PERSON_FIELDS = {
   displayName: true, dateOfBirth: true, gender: true, genderLabel: true, pronouns: true,
@@ -50,6 +51,7 @@ export default async function MemberProfilePage({ params }: PageProps) {
           interestedIn: true, intentions: true, isCouple: true, coupleType: true,
           coupleMembers: true, hasChildren: true,
           statusText: true, statusEmoji: true, statusUntil: true,
+          ratingAvg: true, ratingCount: true,
           partner: { select: { ...PERSON_FIELDS, user: { select: { username: true, isActive: true } } } },
         },
       },
@@ -98,6 +100,8 @@ export default async function MemberProfilePage({ params }: PageProps) {
 
   // Track the view: deduped per 24h, never for incognito viewers; members
   // who can see their viewers are notified (all inside recordProfileView).
+  // Publish any reviews whose 14-day blind period is over (cheap; also run by cron).
+  await reviewMaintenance();
   const [badges, sparkAnswers] = await Promise.all([
     loadBadges(user.id),
     loadSparkAnswers(user.id, 3),
@@ -180,6 +184,10 @@ export default async function MemberProfilePage({ params }: PageProps) {
     // The hero already shows the Verified pill.
     badges: earnedForDisplay(badges).filter((b) => b.id !== 'verified'),
     sparkAnswers,
+    reviewName: firstName(user),
+    rating: user.profile && user.profile.ratingCount > 0 && user.profile.ratingAvg != null
+      ? { avg: Math.round(user.profile.ratingAvg * 10) / 10, count: user.profile.ratingCount }
+      : null,
   };
 
   return (

@@ -13,6 +13,7 @@ import UpgradeNudge from '@/components/plans/UpgradeNudge';
 import StatusPill from '@/components/status/StatusPill';
 import SparkCard from '@/components/spark/SparkCard';
 import LocationPrompt from '@/components/plans/LocationPrompt';
+import { RatingChip } from '@/components/reviews/Stars';
 
 function savedRadius(): string | null {
   try { return localStorage.getItem('hush_search_radius'); } catch { return null; }
@@ -42,6 +43,7 @@ interface Profile {
   status?: { text: string; emoji?: string };
   visiting?: { city: string; until: string };
   isSpotlight?: boolean;
+  rating?: { avg: number; count: number };
 }
 
 function shortDate(iso: string) {
@@ -389,6 +391,7 @@ export default function DiscoverPage() {
                             {pick.compatibility}%
                           </span>
                         )}
+                        <RatingChip rating={pick.rating} className="absolute top-1.5 left-1.5 !px-1 !py-0.5" />
                         {acted && (
                           <span className="absolute inset-0 flex items-center justify-center text-white/80 text-[10px] font-semibold">Seen</span>
                         )}
@@ -556,6 +559,7 @@ export default function DiscoverPage() {
                         {current.displayName || current.username}{agesText(current) ? `, ${agesText(current)}` : ''}
                         {current.pronouns && <span className="text-white/65 text-sm font-sans font-normal ml-2">({current.pronouns})</span>}
                       </h2>
+                      {current.rating && <RatingChip rating={current.rating} className="mt-1.5 mr-1.5 !text-[11px] align-middle" />}
                       {current.status && <StatusPill status={{ emoji: current.status.emoji ?? null, text: current.status.text }} size="sm" className="mt-1.5 mr-1.5" />}
                       {current.visiting && (
                         <span className="inline-flex items-center gap-1 mt-1.5 mr-1.5 bg-sky-400/15 border border-sky-300/30 text-sky-100 text-[11px] font-semibold px-2 py-0.5 rounded-full">

@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { Readable } from 'stream'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { openStream, statFile, thumbKey } from '@/lib/storage'
+import { openStream, statFile, storedFilePath, thumbKey } from '@/lib/storage'
 import { photoVisibility, type Visibility } from '@/lib/media-access'
+import { getWatermarked, sastDate, watermarkHash, type WatermarkSpec } from '@/lib/watermark'
 
 export const runtime = 'nodejs'
 
@@ -90,6 +91,12 @@ function parseRange(header: string | null, size: number): { start: number; end: 
  * GET /api/media/<id>[?size=thumb]
  * Streams a stored photo/video after checking that the viewer may see it.
  * Anything not visible is a 404 so existence isn't leaked.
+ *
+ * Images are served clean only to their owner. Everyone else gets a copy with
+ * a forensic watermark burned in (lib/watermark.ts): "@viewer · hush · date"
+ * for members and admins, a generic "HUSH" mark for logged-out visitors
+ * (public main photos on the landing page). Watermarked images are always
+ * sent whole (no ranges) and never shared between viewers in caches.
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -118,6 +125,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const key = wantThumb ? thumbKey(photo.storageKey) : photo.storageKey
     const st = await statFile(key)
     if (!st) return notFound()
+
+    const isOwner = !!viewer && viewer.id === photo.userId
+    if (isImage && !isOwner) {
+      const username = viewer ? await viewerUsername(viewer.id, session?.user) : null
+      const spec: WatermarkSpec = viewer
+        ? { kind: 'viewer', viewerId: viewer.id, username: username ?? viewer.id.slice(-8) }
+        : { kind: 'anon' }
+      return serveWatermarked(req, {
+        id, wantThumb, inputPath: storedFilePath(key), fileTag: `${st.size}-${st.mtime.getTime()}`, spec,
+        cacheControl: viewer ? 'private, max-age=300' : CACHE.public,
+      })
+    }
 
     const etag = `"${id}${wantThumb ? '-t' : ''}-${st.size}"`
     const headers: Record<string, string> = {
@@ -162,6 +181,54 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     console.error('GET /api/media error:', error instanceof Error ? error.message : error)
     return notFound()
   }
+}
+
+async function viewerUsername(viewerId: string, user: unknown): Promise<string | null> {
+  const fromSession = (user as { username?: string } | undefined)?.username
+  if (fromSession) return fromSession
+  const u = await db.user.findUnique({ where: { id: viewerId }, select: { username: true } })
+  return u?.username ?? null
+}
+
+/** Send a per-viewer watermarked copy (rendered once per viewer per day, then from the disk cache). */
+async function serveWatermarked(req: NextRequest, o: {
+  id: string
+  wantThumb: boolean
+  inputPath: string
+  fileTag: string
+  spec: WatermarkSpec
+  cacheControl: string
+}) {
+  const date = sastDate()
+  const hash = watermarkHash(o.spec, date, o.fileTag)
+  const etag = `"${o.id}${o.wantThumb ? '-t' : ''}-w${hash.slice(0, 24)}"`
+  const headers: Record<string, string> = {
+    'Content-Type': 'image/webp',
+    'Cache-Control': o.cacheControl,
+    'X-Content-Type-Options': 'nosniff',
+    'Content-Disposition': 'inline',
+    'Accept-Ranges': 'none',
+    'Cross-Origin-Resource-Policy': 'same-origin',
+    'Content-Security-Policy': "default-src 'none'; sandbox",
+    ETag: etag,
+    Vary: 'Cookie',
+  }
+  if (req.headers.get('if-none-match') === etag) {
+    return new NextResponse(null, { status: 304, headers })
+  }
+  if (req.method === 'HEAD') {
+    return new NextResponse(null, { status: 200, headers })
+  }
+  const { data } = await getWatermarked({
+    photoId: o.id,
+    variant: o.wantThumb ? 'thumb' : 'full',
+    inputPath: o.inputPath,
+    fileTag: o.fileTag,
+    spec: o.spec,
+    date,
+    hash,
+  })
+  return new NextResponse(new Uint8Array(data), { status: 200, headers: { ...headers, 'Content-Length': String(data.length) } })
 }
 
 export { GET as HEAD }

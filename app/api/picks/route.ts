@@ -5,6 +5,7 @@ import { PLANS } from '@/lib/plans'
 import {
   cityWhere, getBlockedIds, getCallerContext, hashString, memberSelect, mutualInterestWhere, notSnoozed, toMemberResult,
 } from '@/app/api/members/search'
+import { trustAdjustedCompat } from '@/lib/reviews'
 
 const POOL_SIZE = 200
 
@@ -12,7 +13,7 @@ const POOL_SIZE = 200
  * GET /api/picks — today's top-compatibility members for the caller.
  * Count comes from the plan (lib/plans.ts → dailyPicks: Free 5, Gold 10,
  * Platinum 15). Candidates are the 200 most recently active eligible members;
- * scored with lib/compat and tie-broken by a hash of caller + candidate + date
+ * scored with lib/compat (adjusted by the review trust score) and tie-broken by a hash of caller + candidate + date
  * so the order is stable through the day. Only mutually interested members
  * are considered. While travel mode is live, picks come from the destination
  * first (topped up from everywhere if the destination is quiet).
@@ -58,13 +59,15 @@ export async function GET() {
       .map((u) => {
         const member = toMemberResult(u, caller)
         const inDestination = !!travelCity && (member.city ?? '').toLowerCase().includes(travelCity)
-        return { member, inDestination, tie: hashString(`${userId}:${u.id}:${day}`) }
+        // Compatibility, adjusted by the review trust score (lib/reviews.ts)
+        const score = trustAdjustedCompat(member.compatibility, u.profile?.ratingAvg, u.profile?.ratingCount)
+        return { member, inDestination, score, tie: hashString(`${userId}:${u.id}:${day}`) }
       })
       // Stay within the plan's search radius (members without a location still qualify)
       .filter((p) => caller.ent.maxSearchRadiusKm === null || p.member.distanceKm === undefined || p.member.distanceKm <= caller.ent.maxSearchRadiusKm)
       .sort((a, b) =>
         Number(b.inDestination) - Number(a.inDestination) ||
-        b.member.compatibility - a.member.compatibility ||
+        b.score - a.score ||
         a.tie - b.tie)
       .slice(0, count)
       .map((p) => p.member)

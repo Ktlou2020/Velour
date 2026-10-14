@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import ProtectedImage from '@/components/ProtectedImage';
 import Link from 'next/link';
 import { MapPin, ArrowRight, Lock } from 'lucide-react';
 
@@ -82,14 +83,11 @@ export default async function MemberShowcase() {
               <li key={u.username} className="glass rounded-2xl overflow-hidden">
                 <div className="relative aspect-[4/5] bg-white/5 overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <ProtectedImage
                     src={photo}
                     alt=""
-                    width={300}
-                    height={375}
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-full object-cover blur-md scale-110"
+                    className="w-full h-full"
+                    imgClassName="w-full h-full object-cover blur-md scale-110 pointer-events-none"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   <span className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-black/40 backdrop-blur flex items-center justify-center">

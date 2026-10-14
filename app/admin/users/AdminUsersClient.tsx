@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import ProtectedImage from '@/components/ProtectedImage';
 import { Search, Shield, Ban, UserCheck, Crown } from 'lucide-react';
 
 interface UserRow {
@@ -147,7 +148,7 @@ export default function AdminUsersClient({ initialUsers }: Props) {
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-rose-900 to-red-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {u.profile?.profilePhoto ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={u.profile.profilePhoto} alt={u.username} className="w-full h-full object-cover" />
+                            <ProtectedImage src={u.profile.profilePhoto} alt={u.username} className="w-full h-full" />
                           ) : (
                             <span className="text-white text-xs font-bold">{u.username.slice(0, 2).toUpperCase()}</span>
                           )}

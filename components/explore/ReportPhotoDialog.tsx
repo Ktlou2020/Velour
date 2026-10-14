@@ -9,6 +9,7 @@ import type { ExplorePhoto } from './types';
 const REASONS = [
   'Explicit content in a public photo',
   'Not their photo / impersonation',
+  'Shared my photos/videos outside Hush',
   'May show someone under 18',
   'Harassment, hate or violence',
   'Spam, scam or advertising',

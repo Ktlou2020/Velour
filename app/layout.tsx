@@ -10,6 +10,7 @@ import PWAInstall from "@/components/PWAInstall";
 import AgeGate from "@/components/AgeGate";
 import CookieBanner from "@/components/CookieBanner";
 import OnlineTracker from "@/components/OnlineTracker";
+import PrivacyShield from "@/components/PrivacyShield";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -111,6 +112,7 @@ export default function RootLayout({
           <CookieBanner />
           <ToastProvider>
             <OnlineTracker />
+            <PrivacyShield />
             <PageTransition>
               {children}
             </PageTransition>

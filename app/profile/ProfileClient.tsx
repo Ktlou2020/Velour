@@ -25,6 +25,7 @@ import BadgeRow from '@/components/badges/BadgeRow';
 import SparkAnswers, { type SparkAnswerView } from '@/components/spark/SparkAnswers';
 import type { Badge } from '@/lib/badges';
 import Link from 'next/link';
+import MyReviewsPanel from '@/components/reviews/MyReviewsPanel';
 
 interface Photo {
   id: string;
@@ -398,6 +399,9 @@ export default function ProfileClient({ session, initialProfile }: Props) {
               </Link>
             }
           />
+
+          {/* Reviews: score, requests to answer, waiting reviews, ask someone */}
+          <MyReviewsPanel compact className="mb-6" />
 
           {/* Photos */}
           <div id="photos" className="glass rounded-2xl p-6 mb-6 scroll-mt-24">
