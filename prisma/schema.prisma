@@ -129,7 +129,7 @@ model Profile {
   gender              Gender?
   orientation         String?
   relationshipStatus  String?
-  lookingFor          String[]
+  lookingFor          String[]       @default([])
   location            String?
   city                String?
   country             String?
@@ -155,9 +155,9 @@ model Profile {
   // Optional self-described identity shown alongside gender, e.g. "Trans woman", "Genderqueer"
   genderLabel     String?
   // Who they want to meet: MAN, WOMAN, NON_BINARY, COUPLE
-  interestedIn    String[]
+  interestedIn    String[] @default([])
   // What they're open to: e.g. DATING, RELATIONSHIP, FRIENDSHIP, CASUAL, COUPLES_PLAY, EVENTS
-  intentions      String[]
+  intentions      String[] @default([])
   showGender      Boolean  @default(true)
   showOrientation Boolean  @default(true)
   // Couple profile details (when isCouple): e.g. "MF", "FF", "MM", "MX" — derived or chosen
@@ -170,7 +170,7 @@ model Profile {
   // shown only when showEthnicity is true, and never used as a search filter.
   ethnicity     String?
   showEthnicity Boolean  @default(false)
-  languages     String[]
+  languages     String[] @default([])
   drinking      String?
   smoking       String?
   hasChildren   String?
