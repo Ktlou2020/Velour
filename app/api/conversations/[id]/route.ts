@@ -3,10 +3,21 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { isPaid } from '@/lib/premium'
 import { generateIcebreakers } from '@/lib/icebreakers'
+import {
+  describeSide,
+  effectiveExpiry,
+  findMatchesBetween,
+  getConversationAccess,
+  getPartnerMap,
+  groupSides,
+  loadPeople,
+  sideOf,
+} from '@/lib/couples'
 
 /**
- * Conversation details for the chat view: the other participant's public
- * info, the caller's chat settings, match expiry and suggested icebreakers.
+ * Conversation details for the chat view: who's in it (grouped into sides —
+ * a person, a linked couple or a shared couple account), the caller's chat
+ * settings, match expiry and suggested icebreakers.
  */
 export async function GET(
   _req: NextRequest,
@@ -21,93 +32,126 @@ export async function GET(
     const role = (session.user as { role?: string }).role
     const { id: conversationId } = await params
 
-    const conversation = await db.conversation.findFirst({
-      where: { id: conversationId, participants: { some: { userId } } },
-      select: {
-        id: true,
-        lastMessageAt: true,
-        participants: {
-          select: {
-            userId: true,
-            user: {
-              select: {
-                id: true,
-                username: true,
-                interests: { select: { interest: { select: { name: true } } } },
-                profile: {
-                  select: {
-                    displayName: true,
-                    profilePhoto: true,
-                    isOnline: true,
-                    lastSeen: true,
-                    city: true,
-                    bio: true,
-                    prompts: true,
-                    membershipTier: true,
-                    showChatImages: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-        _count: { select: { messages: true } },
-      },
-    })
+    // Lazy sync: adds newly linked partners / removes ex-partners
+    const access = await getConversationAccess(conversationId, userId)
+    if (!access) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
 
+    const [conversation, partnerMap, people] = await Promise.all([
+      db.conversation.findUnique({
+        where: { id: conversationId },
+        select: { id: true, _count: { select: { messages: true } } },
+      }),
+      getPartnerMap(access.userIds),
+      loadPeople(access.userIds),
+    ])
     if (!conversation) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    const me = conversation.participants.find((p) => p.userId === userId)?.user
-    const other = conversation.participants.find((p) => p.userId !== userId)?.user ?? null
+    const mySide = sideOf(userId, partnerMap).filter((u) => access.userIds.includes(u))
+    const otherIds = access.userIds.filter((u) => !mySide.includes(u))
+    const sides = groupSides(otherIds, partnerMap).map((s) => describeSide(s, people))
+    const partnerId = mySide.find((u) => u !== userId) ?? null
 
-    let matchExpiresAt: Date | null = null
-    if (other) {
-      const [u1, u2] = userId < other.id ? [userId, other.id] : [other.id, userId]
-      const match = await db.match.findUnique({
-        where: { user1Id_user2Id: { user1Id: u1, user2Id: u2 } },
-        select: { expiresAt: true },
-      })
-      matchExpiresAt = match?.expiresAt ?? null
-    }
+    const [meRow, matches] = await Promise.all([
+      db.user.findUnique({
+        where: { id: userId },
+        select: {
+          interests: { select: { interest: { select: { name: true } } } },
+          profile: { select: { membershipTier: true, showChatImages: true, city: true } },
+        },
+      }),
+      findMatchesBetween(sideOf(userId, partnerMap), otherIds),
+    ])
 
     const hasMessages = conversation._count.messages > 0
-    const icebreakers = !hasMessages && other
-      ? generateIcebreakers(
+    const matchExpiresAt = hasMessages ? null : effectiveExpiry(matches)
+
+    // Icebreakers are based on the first person of the other side
+    const leadId = sides[0]?.userIds[0] ?? null
+    let icebreakers: string[] = []
+    if (!hasMessages && leadId) {
+      const lead = await db.user.findUnique({
+        where: { id: leadId },
+        select: {
+          username: true,
+          interests: { select: { interest: { select: { name: true } } } },
+          profile: { select: { displayName: true, city: true, bio: true, prompts: true } },
+        },
+      })
+      if (lead) {
+        icebreakers = generateIcebreakers(
           {
-            displayName: other.profile?.displayName ?? other.username,
-            city: other.profile?.city,
-            bio: other.profile?.bio,
-            interests: other.interests.map((i) => i.interest.name),
-            prompts: other.profile?.prompts,
+            displayName: sides[0]?.label || lead.profile?.displayName || lead.username,
+            city: lead.profile?.city,
+            bio: lead.profile?.bio,
+            interests: lead.interests.map((i) => i.interest.name),
+            prompts: lead.profile?.prompts,
           },
           {
-            interests: me?.interests.map((i) => i.interest.name) ?? [],
-            city: me?.profile?.city,
+            interests: meRow?.interests.map((i) => i.interest.name) ?? [],
+            city: meRow?.profile?.city,
           },
         )
-      : []
+      }
+    }
+
+    // Per-participant display info (keyed by userId) for message labels
+    const participants: Record<string, {
+      name: string
+      username: string
+      photo: string | null
+      coupleLabel: string | null
+      isMyPartner: boolean
+      isMe: boolean
+    }> = {}
+    for (const u of access.userIds) {
+      const p = people.get(u)
+      if (!p) continue
+      const side = mySide.includes(u)
+        ? describeSide(mySide, people)
+        : sides.find((s) => s.userIds.includes(u))
+      participants[u] = {
+        name: p.name,
+        username: p.username,
+        photo: p.photo,
+        coupleLabel: side?.isCouple ? side.label : null,
+        isMyPartner: u === partnerId,
+        isMe: u === userId,
+      }
+    }
+
+    const lead = leadId ? people.get(leadId) : null
+    const me = people.get(userId)
 
     return NextResponse.json({
       conversation: {
         id: conversation.id,
         hasMessages,
-        matchExpiresAt: hasMessages ? null : matchExpiresAt,
+        matchExpiresAt,
         expired: !hasMessages && !!matchExpiresAt && matchExpiresAt.getTime() < Date.now(),
-        other: other && {
-          id: other.id,
-          username: other.username,
-          displayName: other.profile?.displayName ?? other.username,
-          profilePhoto: other.profile?.profilePhoto ?? null,
-          isOnline: other.profile?.isOnline ?? false,
-          lastSeen: other.profile?.lastSeen ?? null,
-          city: other.profile?.city ?? null,
+        blocked: access.blocked,
+        participantCount: access.userIds.length,
+        sides,
+        participants,
+        partner: partnerId ? { id: partnerId, name: people.get(partnerId)?.name ?? '' } : null,
+        other: lead && {
+          id: lead.id,
+          username: lead.username,
+          displayName: sides[0]?.label ?? lead.name,
+          profilePhoto: lead.photo,
+          isOnline: lead.isOnline,
+          lastSeen: lead.lastSeen,
+          city: lead.city,
         },
       },
       me: {
-        isPaid: isPaid(me?.profile?.membershipTier, role),
-        showChatImages: me?.profile?.showChatImages ?? false,
+        isPaid: isPaid(meRow?.profile?.membershipTier, role),
+        showChatImages: meRow?.profile?.showChatImages ?? false,
+        // Shared couple account: who can be picked in "Sending as"
+        coupleNames: !partnerId && me?.coupleNames.length ? me.coupleNames : [],
       },
       icebreakers,
     })

@@ -9,6 +9,13 @@ import { compatibility, ageFromDob } from '@/lib/compat';
 import { distanceKm, formatDistance } from '@/lib/geo';
 import { parsePrompts } from '@/app/profile/prompts';
 import { isPlatinum } from '@/lib/premium';
+import { categoryOf, effectiveInterestedIn, publicIdentity } from '@/lib/identity';
+
+const PERSON_FIELDS = {
+  displayName: true, dateOfBirth: true, gender: true, genderLabel: true, pronouns: true,
+  orientation: true, showGender: true, showOrientation: true, heightCm: true, bodyType: true,
+  ethnicity: true, showEthnicity: true, languages: true, drinking: true, smoking: true,
+} as const;
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -32,10 +39,13 @@ export default async function MemberProfilePage({ params }: PageProps) {
       isVerified: true,
       profile: {
         select: {
-          displayName: true, bio: true, dateOfBirth: true, gender: true, orientation: true,
-          relationshipStatus: true, lookingFor: true, city: true, country: true,
+          ...PERSON_FIELDS,
+          bio: true, relationshipStatus: true, lookingFor: true, city: true, country: true,
           isOnline: true, membershipTier: true, profileViews: true,
           latitude: true, longitude: true, videoUrl: true, prompts: true,
+          interestedIn: true, intentions: true, isCouple: true, coupleType: true,
+          coupleMembers: true, hasChildren: true,
+          partner: { select: { ...PERSON_FIELDS, user: { select: { username: true, isActive: true } } } },
         },
       },
       photos: {
@@ -46,7 +56,15 @@ export default async function MemberProfilePage({ params }: PageProps) {
     },
   });
 
-  if (!user) return (
+  // Blocked either way → behave as if the member doesn't exist.
+  const blocked = user && currentUser?.id && currentUser.id !== user.id
+    ? await db.block.findFirst({
+        where: { OR: [{ blockerId: currentUser.id, blockedId: user.id }, { blockerId: user.id, blockedId: currentUser.id }] },
+        select: { id: true },
+      })
+    : null;
+
+  if (!user || blocked) return (
     <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
       <p className="text-white/65">Member not found.</p>
     </div>
@@ -62,7 +80,8 @@ export default async function MemberProfilePage({ params }: PageProps) {
           profile: {
             select: {
               membershipTier: true,
-              incognito: true, lookingFor: true, dateOfBirth: true, city: true,
+              incognito: true, lookingFor: true, interestedIn: true, intentions: true,
+              isCouple: true, gender: true, dateOfBirth: true, city: true,
               latitude: true, longitude: true,
             },
           },
@@ -116,7 +135,9 @@ export default async function MemberProfilePage({ params }: PageProps) {
     compat = compatibility(
       {
         interests: viewer.interests.map(i => i.interest?.name ?? '').filter(Boolean),
-        lookingFor: vp?.lookingFor ?? [],
+        category: vp ? categoryOf(vp) : null,
+        interestedIn: vp ? effectiveInterestedIn(vp) : [],
+        intentions: vp?.intentions ?? [],
         age: ageFromDob(vp?.dateOfBirth),
         city: vp?.city,
         latitude: vp?.latitude,
@@ -124,7 +145,9 @@ export default async function MemberProfilePage({ params }: PageProps) {
       },
       {
         interests: ownerInterests,
-        lookingFor: op?.lookingFor ?? [],
+        category: op ? categoryOf(op) : null,
+        interestedIn: op ? effectiveInterestedIn(op) : [],
+        intentions: op?.intentions ?? [],
         age: ageFromDob(op?.dateOfBirth),
         city: op?.city,
         latitude: op?.latitude,
@@ -138,6 +161,14 @@ export default async function MemberProfilePage({ params }: PageProps) {
 
   const insights = !!viewer && isPlatinum(viewer.profile?.membershipTier, viewer.role);
 
+  // Public identity: hidden gender / orientation / ethnicity are removed here,
+  // on the server, so they never reach the browser.
+  const op = user.profile;
+  const partner = op?.partner && op.partner.user?.isActive !== false
+    ? { ...op.partner, username: op.partner.user?.username ?? null }
+    : null;
+  const identity = op ? publicIdentity(op, partner) : undefined;
+
   // Build flat profile object for the client component
   const profileData = {
     id: user.id,
@@ -149,10 +180,8 @@ export default async function MemberProfilePage({ params }: PageProps) {
       : undefined,
     city: user.profile?.city ?? undefined,
     country: user.profile?.country ?? undefined,
-    gender: user.profile?.gender ?? undefined,
-    orientation: user.profile?.orientation ?? undefined,
     relationshipStatus: user.profile?.relationshipStatus ?? undefined,
-    lookingFor: user.profile?.lookingFor ?? [],
+    identity,
     isOnline: user.profile?.isOnline ?? false,
     isVerified: user.isVerified,
     membershipTier: (user.profile?.membershipTier ?? 'FREE') as 'FREE' | 'GOLD' | 'PLATINUM',

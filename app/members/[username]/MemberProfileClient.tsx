@@ -11,6 +11,9 @@ import {
 import type { ReactElement } from 'react';
 import type { Session } from 'next-auth';
 import ProtectedImage from '@/components/ProtectedImage';
+import MemberAlbums from '@/components/albums/MemberAlbums';
+import PersonCard from '@/app/profile/identity/PersonCard';
+import type { PublicIdentity } from '@/lib/identity';
 
 interface Photo {
   id: string;
@@ -30,16 +33,12 @@ interface Profile {
   isOnline?: boolean;
   isVerified?: boolean;
   membershipTier?: 'FREE' | 'GOLD' | 'PLATINUM';
-  orientation?: string;
-  lookingFor?: string[];
   interests?: string[];
+  identity?: PublicIdentity;
   photos?: Photo[];
   profileViews?: number;
   likesReceived?: number;
-  gender?: string;
   relationshipStatus?: string;
-  height?: string;
-  languages?: string;
   memberSince?: string;
   compatibilityScore?: number;
   compatibilityReasons?: string[];
@@ -102,6 +101,13 @@ export default function MemberProfileClient({ username, profile: raw, session }:
   const heroPhoto = photos.find(ph => ph.isProfile) ?? photos[0];
   const compatScore = p.compatibilityScore;
   const sharedSet = new Set((p.sharedInterests ?? []).map((i) => i.toLowerCase()));
+  const identity = p.identity;
+  const isCouple = !!identity?.isCouple;
+  const self = !isCouple ? identity?.people[0] : undefined;
+  const ageText = isCouple
+    ? (identity?.ages.length ? identity.ages.join(' & ') : undefined)
+    : (p.age ? `${p.age} years old` : undefined);
+  const STATUS_LABELS: Record<string, string> = { SINGLE: 'Single', IN_RELATIONSHIP: 'In a relationship', COMPLICATED: "It's complicated" };
 
   async function handleLike() {
     setLiked(!liked);
@@ -192,7 +198,13 @@ export default function MemberProfileClient({ username, profile: raw, session }:
             {/* Name + badges */}
             <div className="flex-1 pb-1">
               <div className="flex flex-wrap items-center gap-2 mb-2">
-                <h1 className="font-serif text-3xl sm:text-5xl font-bold text-white drop-shadow-lg">{displayName}</h1>
+                <h1 className="font-serif text-3xl sm:text-5xl font-bold text-white drop-shadow-lg break-words">{displayName}</h1>
+                {self?.pronouns && <span className="text-white/70 text-sm sm:text-base">({self.pronouns})</span>}
+                {isCouple && (
+                  <span className="flex items-center gap-1 bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37] text-xs font-bold px-2.5 py-1 rounded-full">
+                    {identity?.coupleBadge ?? 'Couple'}
+                  </span>
+                )}
                 {tier !== 'FREE' && TIER_BADGE[tier]}
                 {p.isVerified && (
                   <span className="flex items-center gap-1 bg-blue-500/20 border border-blue-500/40 text-blue-300 text-xs font-bold px-2.5 py-1 rounded-full">
@@ -203,7 +215,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-white/80 text-sm">
                 <span className="flex items-center gap-1.5"><MapPin size={13} />{location}</span>
                 {p.distance && <span className="flex items-center gap-1.5"><Navigation size={13} />{p.distance}</span>}
-                {p.age && <span className="flex items-center gap-1.5"><Calendar size={13} />{p.age} years old</span>}
+                {ageText && <span className="flex items-center gap-1.5"><Calendar size={13} />{ageText}</span>}
                 {p.isOnline
                   ? <span className="flex items-center gap-1.5 text-emerald-400"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Online now</span>
                   : p.memberSince && <span className="flex items-center gap-1.5"><UserCheck size={13} />Since {p.memberSince}</span>
@@ -292,9 +304,27 @@ export default function MemberProfileClient({ username, profile: raw, session }:
             <div className="glass rounded-2xl p-6">
               <h2 className="font-serif text-lg font-bold text-white mb-3 flex items-center gap-2">
                 <span className="w-1 h-5 bg-[#DC143C] rounded-full inline-block" />
-                About Me
+                {isCouple ? 'About us' : 'About Me'}
               </h2>
               <p className="text-white/75 leading-relaxed text-[15px]">{p.bio}</p>
+            </div>
+          )}
+
+          {/* Couples: each partner side by side */}
+          {isCouple && identity && (
+            <div>
+              <h2 className="font-serif text-lg font-bold text-white mb-3 flex items-center gap-2">
+                <span className="w-1 h-5 bg-[#D4AF37] rounded-full inline-block" />
+                The two of us
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-4">
+                {identity.people.map((person, i) => (
+                  <PersonCard key={i} person={person} fallbackTitle={`Partner ${i + 1}`} />
+                ))}
+                {identity.people.length === 1 && (
+                  <div className="glass rounded-2xl p-5 text-white/50 text-sm italic flex items-center">Partner 2 hasn&apos;t added their details yet</div>
+                )}
+              </div>
             </div>
           )}
 
@@ -331,20 +361,35 @@ export default function MemberProfileClient({ username, profile: raw, session }:
             </div>
           )}
 
-          {/* Looking For */}
-          {p.lookingFor && p.lookingFor.length > 0 && (
-            <div className="glass rounded-2xl p-6">
-              <h2 className="font-serif text-lg font-bold text-white mb-3 flex items-center gap-2">
-                <Flame size={16} className="text-[#DC143C]" />
-                Looking For
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {p.lookingFor.map((tag) => (
-                  <span key={tag} className="flex items-center gap-1.5 bg-[#DC143C]/10 border border-[#DC143C]/25 text-[#DC143C] px-4 py-1.5 rounded-full text-sm font-medium">
-                    <Heart size={11} className="fill-current" /> {tag}
-                  </span>
-                ))}
-              </div>
+          {/* Who they'd like to meet + what they're here for */}
+          {identity && ((identity.interestedIn?.length ?? 0) > 0 || identity.intentions.length > 0) && (
+            <div className="glass rounded-2xl p-6 space-y-4">
+              {(identity.interestedIn?.length ?? 0) > 0 && (
+                <div>
+                  <h2 className="font-serif text-lg font-bold text-white mb-3 flex items-center gap-2">
+                    <Heart size={16} className="text-[#DC143C]" />
+                    {isCouple ? 'We’d like to meet' : 'Would like to meet'}
+                  </h2>
+                  <div className="flex flex-wrap gap-2">
+                    {identity.interestedIn!.map((tag) => (
+                      <span key={tag} className="bg-[#DC143C]/10 border border-[#DC143C]/25 text-[#FF4D6D] px-4 py-1.5 rounded-full text-sm font-medium">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {identity.intentions.length > 0 && (
+                <div>
+                  <h2 className="font-serif text-lg font-bold text-white mb-3 flex items-center gap-2">
+                    <Flame size={16} className="text-[#D4AF37]" />
+                    Here for
+                  </h2>
+                  <div className="flex flex-wrap gap-2">
+                    {identity.intentions.map((tag) => (
+                      <span key={tag} className="bg-[#D4AF37]/10 border border-[#D4AF37]/25 text-[#D4AF37] px-4 py-1.5 rounded-full text-sm font-medium">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -389,6 +434,9 @@ export default function MemberProfileClient({ username, profile: raw, session }:
               </div>
             </div>
           )}
+
+          {/* Albums (public, and private ones shown locked with "Request access") */}
+          {session?.user && <MemberAlbums username={username} />}
         </div>
 
         {/* ─── SIDEBAR ──────────────────────────────────────────────────── */}
@@ -434,7 +482,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                 ))}
               </ul>
             ) : (
-              <p className="text-white/60 text-xs">Add interests and what you&apos;re looking for to improve your matches</p>
+              <p className="text-white/60 text-xs">Add interests, who you&apos;d like to meet and what you&apos;re here for to improve your matches</p>
             )}
             {(p.sharedInterests ?? []).length > 0 && (
               <div className="mt-4 text-left">
@@ -446,35 +494,47 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                 </div>
               </div>
             )}
-            <p className="text-white/55 text-[11px] mt-4">Based on shared interests, goals, age &amp; distance</p>
+            <p className="text-white/55 text-[11px] mt-4">Based on mutual interest, shared interests &amp; intentions, age and distance</p>
           </div>
           )}
 
-          {/* Profile details */}
-          <div className="glass rounded-2xl p-6">
-            <p className="text-white/65 text-xs font-medium uppercase tracking-wider mb-4">Details</p>
-            <div className="space-y-3">
-              {[
-                { label: 'Gender',       value: p.gender },
-                { label: 'Orientation',  value: p.orientation },
-                { label: 'Status',       value: p.relationshipStatus },
-                { label: 'Height',       value: p.height },
-                { label: 'Languages',    value: p.languages },
-                { label: 'Location',     value: location !== 'Unknown location' ? location : null },
-                { label: 'Distance',     value: p.distance },
-              ].filter(r => !!r.value).map(({ label, value }) => (
-                <div key={label} className="flex items-center justify-between gap-2 text-sm">
-                  <span className="text-white/60 flex-shrink-0">{label}</span>
-                  <span className="text-white/80 text-right">{value}</span>
-                </div>
-              ))}
-              {[
-                p.gender, p.orientation, p.relationshipStatus, p.height, p.languages,
-              ].every(v => !v) && (
-                <p className="text-white/25 text-xs text-center italic">No details shared yet</p>
-              )}
-            </div>
-          </div>
+          {/* Profile details (individuals: their own; couples: shared bits — partner details are above) */}
+          {(() => {
+            const rows: { label: string; value?: string }[] = [
+              ...(self ? [
+                { label: 'Gender', value: [self.gender, self.genderLabel].filter(Boolean).join(' · ') || undefined },
+                { label: 'Orientation', value: self.orientation },
+                { label: 'Height', value: self.height },
+                { label: 'Body type', value: self.bodyType },
+                { label: 'Ethnicity', value: self.ethnicity },
+                { label: 'Languages', value: self.languages?.join(', ') },
+                { label: 'Drinks', value: self.drinking },
+                { label: 'Smokes', value: self.smoking },
+              ] : []),
+              { label: 'Children', value: identity?.children },
+              { label: 'Status', value: p.relationshipStatus ? (STATUS_LABELS[p.relationshipStatus] ?? p.relationshipStatus) : undefined },
+              { label: 'Location', value: location !== 'Unknown location' ? location : undefined },
+              { label: 'Distance', value: p.distance },
+            ];
+            const shown = rows.filter((r) => !!r.value);
+            return (
+              <div className="glass rounded-2xl p-6">
+                <p className="text-white/65 text-xs font-medium uppercase tracking-wider mb-4">Details</p>
+                {shown.length > 0 ? (
+                  <dl className="space-y-3">
+                    {shown.map(({ label, value }) => (
+                      <div key={label} className="flex items-center justify-between gap-2 text-sm">
+                        <dt className="text-white/60 flex-shrink-0">{label}</dt>
+                        <dd className="text-white/80 text-right break-words min-w-0">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : (
+                  <p className="text-white/45 text-xs text-center italic">No details shared yet</p>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Upgrade CTA — only for non-premium viewer */}
           {session && (

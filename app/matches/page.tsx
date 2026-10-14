@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import EmptyState from '@/components/EmptyState';
-import { Heart, MessageCircle, MapPin, User, ChevronDown } from 'lucide-react';
+import { Heart, MessageCircle, MapPin, User, ChevronDown, Users } from 'lucide-react';
 import ExpiryCountdown from '@/components/chat/ExpiryCountdown';
 
 interface Match {
@@ -23,6 +23,10 @@ interface Match {
       isOnline?: boolean;
     };
   };
+  /** The matched person is part of a couple: "Thandi & Sipho" */
+  couple?: { label: string; kind: 'linked' | 'shared' } | null;
+  /** Who on my side matched (me, or my linked partner) */
+  matchedVia?: { id: string; name: string; isMe: boolean };
 }
 
 function timeAgo(dateStr: string) {
@@ -49,6 +53,8 @@ export default function MatchesPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [showExpired, setShowExpired] = useState(false);
+  const [inCouple, setInCouple] = useState(false);
+  const [opening, setOpening] = useState<string | null>(null);
 
   const isExpired = (m: Match) => !!m.expired || (!!m.expiresAt && new Date(m.expiresAt).getTime() < Date.now());
   const activeMatches = matches.filter(m => !isExpired(m));
@@ -57,28 +63,33 @@ export default function MatchesPage() {
   useEffect(() => {
     fetch('/api/matches')
       .then(r => r.json())
-      .then(d => setMatches(d.matches || []))
+      .then(d => { setMatches(d.matches || []); setInCouple(!!d.inCouple); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
+  // Opens (or creates) the shared conversation — both partners of a couple are in it
   async function startConversation(username: string) {
-    const res = await fetch('/api/conversations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ targetUsername: username }),
-    });
-    if (res.ok) {
-      const data = await res.json() as { conversation?: { id: string }; id?: string };
-      const convId = data.conversation?.id ?? data.id;
-      if (convId) window.location.href = `/messages?conv=${convId}`;
-    }
+    setOpening(username);
+    try {
+      const res = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUsername: username }),
+      });
+      if (res.ok) {
+        const data = await res.json() as { conversation?: { id: string }; id?: string };
+        const convId = data.conversation?.id ?? data.id;
+        if (convId) { window.location.href = `/messages?conv=${convId}`; return; }
+      }
+    } catch { /* ignore */ }
+    setOpening(null);
   }
 
   function renderCard(match: Match, expired: boolean) {
     const other = match.otherUser;
     const profile = other.profile;
-    const name = profile?.displayName || other.username;
+    const name = match.couple?.label || profile?.displayName || other.username;
     const initials = name.slice(0, 2).toUpperCase();
     const location = [profile?.city, profile?.country].filter(Boolean).join(', ');
 
@@ -118,7 +129,19 @@ export default function MatchesPage() {
 
         {/* Info */}
         <div className="p-3 space-y-2">
-          <p className="text-white text-sm font-semibold truncate">{name}</p>
+          <p className="text-white text-sm font-semibold truncate flex items-center gap-1.5">
+            <span className="truncate">{name}</span>
+            {match.couple && (
+              <span className="flex-shrink-0 inline-flex items-center gap-0.5 text-[10px] font-medium text-[#D4AF37] border border-[#D4AF37]/30 rounded-full px-1.5 py-px">
+                <Users size={9} aria-hidden="true" /> Couple
+              </span>
+            )}
+          </p>
+          {inCouple && match.matchedVia && (
+            <p className="text-white/55 text-[11px] truncate">
+              {match.matchedVia.isMe ? 'Matched with you' : `Matched with ${match.matchedVia.name}`}
+            </p>
+          )}
           {match.expiresAt && !expired && (
             <ExpiryCountdown expiresAt={match.expiresAt} nudge />
           )}
@@ -132,7 +155,8 @@ export default function MatchesPage() {
           <div className="flex gap-1.5 pt-1">
             {!expired && <button
               onClick={() => startConversation(other.username)}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-[#DC143C] hover:bg-[#FF1744] text-white text-xs font-semibold py-2 rounded-lg transition-colors"
+              disabled={opening === other.username}
+              className="flex-1 disabled:opacity-60 flex items-center justify-center gap-1.5 bg-[#DC143C] hover:bg-[#FF1744] text-white text-xs font-semibold py-2 rounded-lg transition-colors"
             >
               <MessageCircle size={12} aria-hidden="true" />
               Message

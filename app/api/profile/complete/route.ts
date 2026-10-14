@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
+import { completenessOf } from '@/lib/identity'
 
 // Milestones: 0=none, 1=40% reached (+1 SL), 2=70% reached (+2 SL), 3=100% reached (+3 SL)
 const MILESTONES = [
@@ -18,27 +19,13 @@ export async function POST() {
 
     const [user, profile, photos] = await Promise.all([
       db.user.findUnique({ where: { id: userId }, select: { completionMilestone: true, superLikeCredits: true } }),
-      db.profile.findUnique({ where: { userId }, select: { displayName: true, bio: true, dateOfBirth: true, gender: true, orientation: true, relationshipStatus: true, city: true, country: true, profilePhoto: true } }),
+      db.profile.findUnique({ where: { userId }, select: { displayName: true, bio: true, dateOfBirth: true, gender: true, orientation: true, interestedIn: true, lookingFor: true, city: true, country: true, profilePhoto: true } }),
       db.photo.findMany({ where: { userId, isProfile: true }, take: 1 }),
     ])
 
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-    const fields = {
-      displayName: !!profile?.displayName,
-      bio: !!profile?.bio,
-      dateOfBirth: !!profile?.dateOfBirth,
-      gender: !!profile?.gender,
-      orientation: !!profile?.orientation,
-      relationshipStatus: !!profile?.relationshipStatus,
-      city: !!profile?.city,
-      country: !!profile?.country,
-      profilePhoto: !!(photos.length > 0 || profile?.profilePhoto),
-      lookingFor: true, // always true (optional)
-    }
-
-    const filled = Object.values(fields).filter(Boolean).length
-    const completeness = Math.round((filled / 9) * 100) // 9 meaningful fields
+    const { completeness, missing } = completenessOf(profile, photos.length > 0)
 
     const currentMilestone = user.completionMilestone ?? 0
     const newMilestones = MILESTONES.filter(m => m.level > currentMilestone && completeness >= m.threshold)
@@ -67,7 +54,7 @@ export async function POST() {
       completeness,
       creditsAwarded,
       milestone: highestNew?.label ?? null,
-      missingFields: Object.entries(fields).filter(([, v]) => !v).map(([k]) => k),
+      missingFields: missing,
     })
   } catch (error) {
     console.error('POST /api/profile/complete error:', error)

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { getBlockedIds, getCallerContext, memberSelect, notSnoozed, toMemberResult } from '@/app/api/members/search'
+import { getBlockedIds, getCallerContext, memberSelect, mutualInterestWhere, notSnoozed, toMemberResult } from '@/app/api/members/search'
 
 const POOL_SIZE = 200
 const FREE_PICKS = 5
@@ -22,6 +22,7 @@ function hash(str: string): number {
  * FREE: 5 picks, GOLD/PLATINUM: 10. Candidates are the 200 most recently active
  * eligible members; scored with lib/compat and tie-broken by a hash of
  * caller + candidate + date so the order is stable through the day.
+ * Only mutually interested members are considered.
  */
 export async function GET() {
   try {
@@ -44,7 +45,8 @@ export async function GET() {
       where: {
         id: { not: userId, notIn: excludedIds },
         isActive: true,
-        profile: { AND: [notSnoozed()] },
+        // Only people who would like to meet each other (lib/identity rules)
+        profile: { AND: [notSnoozed(), ...mutualInterestWhere(caller)] },
       },
       select: memberSelect,
       orderBy: [{ profile: { lastSeen: 'desc' } }, { id: 'asc' }],

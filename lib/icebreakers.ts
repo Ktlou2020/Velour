@@ -9,7 +9,16 @@ export interface IcebreakerProfile {
   bio?: string | null
   interests?: string[]
   prompts?: unknown // Profile.prompts Json: [{ question, answer }]
+  /** Couple profiles get "you two" phrasing */
+  isCouple?: boolean | null
 }
+
+const GENERIC_COUPLE = [
+  "Hi you two! Your profile caught my eye — how did you meet?",
+  "Hey both! What's your idea of a great night out together?",
+  "Hello! What's the most spontaneous thing you two have done lately?",
+  "Hi! What does a perfect Sunday look like for the two of you?",
+]
 
 const GENERIC = [
   "Hey! Your profile caught my eye — what's something that always makes your week better?",
@@ -113,9 +122,10 @@ export function generateIcebreakers(
   }
 
   // 7. Generic fallbacks
-  const start = seedOf(other.displayName ?? 'x') % GENERIC.length
-  for (let i = 0; i < GENERIC.length && out.length < count; i++) {
-    push(GENERIC[(start + i) % GENERIC.length])
+  const generic = other.isCouple ? GENERIC_COUPLE : GENERIC
+  const start = seedOf(other.displayName ?? 'x') % generic.length
+  for (let i = 0; i < generic.length && out.length < count; i++) {
+    push(generic[(start + i) % generic.length])
   }
 
   return out

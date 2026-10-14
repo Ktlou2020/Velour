@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import ProfileClient from './ProfileClient';
 import { isPaid, isPlatinum } from '@/lib/premium';
 import { parsePrompts } from './prompts';
+import { effectiveInterestedIn, parseCoupleMembers, personFromProfile } from '@/lib/identity';
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -20,7 +21,7 @@ export default async function ProfilePage() {
       email: true,
       isVerified: true,
       role: true,
-      profile: true,
+      profile: { include: { partner: { select: { displayName: true, user: { select: { username: true, isActive: true } } } } } },
       photos: { orderBy: { order: 'asc' } },
       interests: { include: { interest: true } },
     },
@@ -29,6 +30,16 @@ export default async function ProfilePage() {
   if (!user) redirect('/auth/signin');
 
   const profile = user.profile;
+  const members = parseCoupleMembers(profile?.coupleMembers);
+  const me = profile ? personFromProfile(profile) : { showGender: true, showOrientation: true };
+  const linkedPartner = profile?.partner?.user && profile.partner.user.isActive !== false
+    ? { username: profile.partner.user.username, displayName: profile.partner.displayName }
+    : null;
+  // Couples sharing an account keep partner 1's name etc. in coupleMembers[0];
+  // the main profile fields mirror partner 1.
+  const person = profile?.isCouple && !linkedPartner && members[0]
+    ? { ...me, ...members[0], dateOfBirth: me.dateOfBirth }
+    : me;
 
   const initialProfile = {
     id: user.id,
@@ -38,8 +49,18 @@ export default async function ProfilePage() {
     bio: profile?.bio ?? undefined,
     city: profile?.city ?? undefined,
     country: profile?.country ?? undefined,
-    orientation: profile?.orientation ?? undefined,
-    lookingFor: profile?.lookingFor ?? [],
+    pronouns: profile?.pronouns ?? null,
+    identity: {
+      isCouple: profile?.isCouple ?? false,
+      linkedPartner,
+      dateOfBirth: profile?.dateOfBirth ? profile.dateOfBirth.toISOString().slice(0, 10) : null,
+      person,
+      partner2: members[1] ?? null,
+      coupleType: profile?.coupleType ?? null,
+      interestedIn: profile ? effectiveInterestedIn(profile) : [],
+      intentions: profile?.intentions ?? [],
+      hasChildren: profile?.hasChildren ?? null,
+    },
     membershipTier: (profile?.membershipTier ?? 'FREE') as 'FREE' | 'GOLD' | 'PLATINUM',
     profileViews: profile?.profileViews ?? 0,
     completeness: profile?.profileCompleteness ?? 0,

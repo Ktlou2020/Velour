@@ -26,6 +26,15 @@ interface Profile {
   compatibilityReasons?: string[];
   distance?: string;
   prompts?: { question: string; answer: string }[];
+  pronouns?: string;
+  isCouple?: boolean;
+  coupleBadge?: string;
+  ages?: number[];
+}
+
+function agesText(p: Profile): string | undefined {
+  if (p.isCouple && p.ages?.length) return p.ages.join(' & ');
+  return p.age ? String(p.age) : undefined;
 }
 
 type ActionType = 'LIKE' | 'SUPER_LIKE' | 'WINK' | 'PASS';
@@ -292,7 +301,7 @@ export default function DiscoverPage() {
                         )}
                       </div>
                       <p className="text-white/80 text-xs font-medium truncate mt-1.5">
-                        {pick.displayName || pick.username}{pick.age ? <span className="text-white/60">, {pick.age}</span> : null}
+                        {pick.displayName || pick.username}{agesText(pick) ? <span className="text-white/60">, {agesText(pick)}</span> : null}
                       </p>
                       {pick.distance && <p className="text-white/55 text-[10px] truncate">{pick.distance}</p>}
                     </button>
@@ -406,9 +415,15 @@ export default function DiscoverPage() {
                     <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/90 to-transparent" />
 
                     <div className="absolute bottom-0 left-0 right-0 p-6">
-                      <h2 className="text-white text-2xl font-bold font-serif">
-                        {current.displayName || current.username}{current.age ? `, ${current.age}` : ''}
+                      <h2 className="text-white text-2xl font-bold font-serif break-words">
+                        {current.displayName || current.username}{agesText(current) ? `, ${agesText(current)}` : ''}
+                        {current.pronouns && <span className="text-white/65 text-sm font-sans font-normal ml-2">({current.pronouns})</span>}
                       </h2>
+                      {current.isCouple && (
+                        <span className="inline-block mt-1.5 bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] text-[11px] font-bold px-2 py-0.5 rounded-full">
+                          {current.coupleBadge ?? 'Couple'}
+                        </span>
+                      )}
                       {(location || current.distance) && (
                         <div className="flex items-center gap-3 text-white/70 text-sm mt-1 flex-wrap">
                           {location && (
@@ -520,7 +535,7 @@ export default function DiscoverPage() {
             <EmptyState
               icon={Zap}
               title="You’re all caught up"
-              description="New members join every week. Come back tomorrow for fresh faces, or browse members with different filters."
+              description="We only show people who’d like to meet you too. New members join every week — come back tomorrow, or widen who you’d like to meet on your profile."
               action={{ label: 'Browse members', href: '/members' }}
               secondaryAction={{ label: 'See my matches', href: '/matches' }}
             />

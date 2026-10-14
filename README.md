@@ -58,6 +58,29 @@ reminded once (`EventAttendee.reminderSentAt`), so running it more often is safe
    - **Anything else:** cron-job.org, GitHub Actions `schedule:`, or a server crontab can hit the same URL
      with the `Authorization` header.
 
+## Media storage
+
+Photos, chat images and Platinum profile videos are stored **by Hush itself on disk** and served through
+`GET /api/media/<id>` (`?size=thumb` for the 480px thumbnail), which checks on every request who may see the
+file. Nothing is publicly reachable by guessing a path.
+
+- **Where:** `UPLOAD_DIR` (default `./.uploads` relative to the server's working directory — which is
+  `.next/standalone` in production, i.e. wiped on every deploy). **In production, attach a Railway volume**
+  to the web service (e.g. mount path `/data`) and set `UPLOAD_DIR=/data/uploads`. Size it for your photos
+  (≈ 300–600 KB per photo incl. thumbnail; videos ≤ 30 MB each). A single volume means a single replica.
+- **Processing** (`lib/storage.ts`, sharp): the bytes are sniffed (the client's mime type is ignored), EXIF
+  orientation is applied and **all metadata (GPS, camera, timestamps) is stripped**; images are re-encoded to
+  WebP, max 2048px, plus a 480px thumbnail. Limits: images 10 MB, videos 30 MB (MP4/MOV/WebM, duration ≤ 30 s
+  checked in the browser). iPhone HEIC is converted to JPEG in the browser when it can decode it.
+- **Who sees what** (`lib/media-access.ts`): owners and admins always; blocked users (either direction) never;
+  public photos → signed-in members; main profile photos → also logged-out visitors (landing page);
+  private albums → people the owner shared it with (or approved); loose private photos → only the owner;
+  chat images → participants of that conversation; profile video → signed-in members. Anything else is a 404.
+- **Albums** (`/gallery`, `/api/albums/**`): owners share a private album with a username (access is immediate,
+  the member is notified and can leave); members can request access (owner approves/declines).
+- **Legacy:** older Cloudinary URLs keep rendering; set `CLOUDINARY_CLOUD_NAME` so they still validate.
+- **Backups:** back up the volume together with the database — rows without files render as broken images.
+
 ## Security
 
 - **Sessions** are JWTs. Every `AUTH_REFRESH_SECONDS` (default 300) the token re-reads `role`, `isActive` and

@@ -50,8 +50,8 @@ const PRIVACY = [
 ];
 
 const FEATURES = [
-  { icon: Sparkles, title: 'Transparent compatibility', desc: 'Scores built from shared interests, goals, age and distance — and we show you why.' },
-  { icon: Users, title: 'Made for couples too', desc: 'Invite your partner to link profiles and appear together. Couples are first-class members here, not an afterthought.' },
+  { icon: Sparkles, title: 'Transparent compatibility', desc: 'Scores built from mutual interest, shared interests and intentions, age and distance — and we show you why.' },
+  { icon: Users, title: 'Inclusive by design', desc: 'Women, men, non-binary people and couples of every kind. Share your identity on your terms, and couples can share one profile or link two.' },
   { icon: CalendarHeart, title: 'Curated events', desc: 'Intimate member gatherings — sundowners, tastings, workshops — where introductions come naturally.' },
   { icon: MessageCircle, title: 'Conversation, not small talk', desc: 'Profile prompts and icebreakers give you something real to reply to, plus a members-only forum.' },
 ];

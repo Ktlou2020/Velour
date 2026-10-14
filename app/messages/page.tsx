@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import EmptyState from '@/components/EmptyState';
@@ -8,8 +8,10 @@ import MessageBubble, { type ChatMessage } from '@/components/chat/MessageBubble
 import ExpiryCountdown from '@/components/chat/ExpiryCountdown';
 import Icebreakers from '@/components/chat/Icebreakers';
 import { useSession } from 'next-auth/react';
-import { Search, Send, Heart, ArrowLeft, ImagePlus, X, Crown } from 'lucide-react';
+import { Search, Send, Heart, ArrowLeft, ImagePlus, X, Crown, Users, ChevronDown } from 'lucide-react';
 import type { Reactions } from '@/lib/reactions';
+
+interface Avatar { name: string; photo?: string | null; username?: string }
 
 interface Conversation {
   id: string;
@@ -22,13 +24,46 @@ interface Conversation {
   isOnline?: boolean;
   matchExpiresAt?: string | null;
   expired?: boolean;
+  isCouple?: boolean;
+  participantCount?: number;
+  avatars?: Avatar[];
+  partnerName?: string | null;
+}
+
+interface Side {
+  userIds: string[];
+  label: string;
+  isCouple: boolean;
+  kind: 'single' | 'linked' | 'shared';
+  members: { id: string; username: string; name: string; photo: string | null; isOnline: boolean }[];
+}
+
+interface ParticipantInfo {
+  name: string;
+  username: string;
+  photo: string | null;
+  coupleLabel: string | null;
+  isMyPartner: boolean;
+  isMe: boolean;
 }
 
 interface ConvInfo {
-  conversation: { id: string; hasMessages: boolean; matchExpiresAt: string | null; expired: boolean };
-  me: { isPaid: boolean; showChatImages: boolean };
+  conversation: {
+    id: string;
+    hasMessages: boolean;
+    matchExpiresAt: string | null;
+    expired: boolean;
+    blocked?: boolean;
+    participantCount?: number;
+    sides?: Side[];
+    participants?: Record<string, ParticipantInfo>;
+    partner?: { id: string; name: string } | null;
+  };
+  me: { isPaid: boolean; showChatImages: boolean; coupleNames?: string[] };
   icebreakers: string[];
 }
+
+interface Receipt { messageId: string; seenBy: string[]; allSeen: boolean; readAt: string | null }
 
 type Message = ChatMessage;
 
@@ -42,6 +77,7 @@ const GRADIENTS = [
 
 const TYPING_THROTTLE_MS = 2000;
 const RR_HINT_KEY = 'velour_rr_hint_shown';
+const SEND_AS_KEY = 'hush_send_as';
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 function gradientFor(u: string) { return GRADIENTS[(u || '?').charCodeAt(0) % GRADIENTS.length]; }
@@ -57,6 +93,59 @@ function fmtTime(d?: string) {
 function clock(d?: string | null) {
   return d ? new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 }
+function listNames(names: string[]) {
+  if (names.length <= 1) return names[0] ?? '';
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+/** Round avatar: photo or initials on a gradient. */
+function Face({ name, photo, seed, size, ring = false, grayscale = false, oneLetter = false, back = false }: {
+  name: string; photo?: string | null; seed: string; size: number; ring?: boolean; grayscale?: boolean; oneLetter?: boolean;
+  /** Rear face of a stack: nudge the initial up-left, clear of the front face */
+  back?: boolean;
+}) {
+  const style = back
+    ? { width: size, height: size, paddingRight: Math.round(size * 0.3), paddingBottom: Math.round(size * 0.3) }
+    : { width: size, height: size };
+  const ringCls = ring ? 'ring-2 ring-[#0A0A0F]' : '';
+  if (photo) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={photo} alt="" width={size} height={size} loading="lazy" style={{ width: size, height: size }} className={`rounded-full object-cover flex-shrink-0 ${ringCls} ${grayscale ? 'grayscale' : ''}`} />;
+  }
+  return (
+    <div style={style} className={`rounded-full bg-gradient-to-br ${gradientFor(seed)} flex items-center justify-center flex-shrink-0 ${ringCls}`}>
+      <span className="text-white font-bold" style={{ fontSize: Math.max(10, Math.round(size * (oneLetter ? 0.42 : 0.32))) }}>{oneLetter ? initialsFor(name).charAt(0) : initialsFor(name)}</span>
+    </div>
+  );
+}
+
+/** One face, or two overlapping faces for a couple / group. */
+function AvatarStack({ avatars, size, grayscale }: { avatars: Avatar[]; size: number; grayscale?: boolean }) {
+  if (avatars.length < 2) {
+    const a = avatars[0] ?? { name: '?' };
+    return <Face name={a.name} photo={a.photo} seed={a.username || a.name} size={size} grayscale={grayscale} />;
+  }
+  const small = Math.round(size * 0.7);
+  return (
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }} aria-hidden="true">
+      <div className="absolute top-0 left-0">
+        <Face name={avatars[0].name} photo={avatars[0].photo} seed={avatars[0].username || avatars[0].name} size={small} grayscale={grayscale} oneLetter back />
+      </div>
+      <div className="absolute bottom-0 right-0">
+        <Face name={avatars[1].name} photo={avatars[1].photo} seed={avatars[1].username || avatars[1].name} size={small} ring grayscale={grayscale} oneLetter />
+      </div>
+    </div>
+  );
+}
+
+function CoupleBadge() {
+  return (
+    <span className="flex-shrink-0 inline-flex items-center gap-0.5 text-[10px] font-medium text-[#D4AF37] border border-[#D4AF37]/30 rounded-full px-1.5 py-px leading-none">
+      <Users size={9} aria-hidden="true" /> Couple
+    </span>
+  );
+}
 
 export default function MessagesPage() {
   const { data: session } = useSession();
@@ -71,13 +160,15 @@ export default function MessagesPage() {
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
   const [info, setInfo] = useState<ConvInfo | null>(null);
-  const [otherTyping, setOtherTyping] = useState(false);
+  // userId → name override (shared couple account partner) for everyone typing
+  const [typing, setTyping] = useState<Record<string, string | null>>({});
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<{ url: string; preview: string } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRrHint, setShowRrHint] = useState(false);
   const [convsLoaded, setConvsLoaded] = useState(false);
+  const [sendAs, setSendAs] = useState<string>('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -91,11 +182,32 @@ export default function MessagesPage() {
   const blurImages = !(info?.me.showChatImages ?? false);
   const expiresAt = messages.length === 0 ? (info?.conversation.matchExpiresAt ?? activeConv?.matchExpiresAt ?? null) : null;
   const expired = messages.length === 0 && (info?.conversation.expired ?? activeConv?.expired ?? false);
+  const blocked = !!info?.conversation.blocked;
+  const participants = info?.conversation.participants ?? {};
+  const sides = info?.conversation.sides ?? [];
+  const partner = info?.conversation.partner ?? null;
+  const coupleNames = info?.me.coupleNames ?? [];
+  const participantCount = info?.conversation.participantCount ?? activeConv?.participantCount ?? 2;
+  // Name every message once more than two people are in the room, or a couple is involved
+  const showSenders = participantCount > 2 || sides.some(s => s.isCouple) || coupleNames.length >= 2;
 
   // ── Read-receipt upsell hint: shown at most once per browser ──────────────
   useEffect(() => {
     try { setShowRrHint(!localStorage.getItem(RR_HINT_KEY)); } catch { setShowRrHint(false); }
   }, []);
+
+  // ── Shared couple account: remember "Sending as" per device ───────────────
+  useEffect(() => {
+    if (coupleNames.length < 2) return;
+    let saved = '';
+    try { saved = localStorage.getItem(`${SEND_AS_KEY}:${myId}`) ?? ''; } catch { /* ignore */ }
+    setSendAs(prev => (coupleNames.includes(prev) ? prev : coupleNames.includes(saved) ? saved : coupleNames[0]));
+  }, [coupleNames.join('|'), myId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function chooseSendAs(name: string) {
+    setSendAs(name);
+    try { localStorage.setItem(`${SEND_AS_KEY}:${myId}`, name); } catch { /* ignore */ }
+  }
 
   // ── Auto-open conversation from URL ?conv= ────────────────────────────────
   useEffect(() => {
@@ -127,6 +239,13 @@ export default function MessagesPage() {
     return () => { if (convPollRef.current) clearInterval(convPollRef.current); };
   }, [fetchConversations]);
 
+  const applyReceipt = useCallback((r: Receipt | null | undefined) => {
+    if (!r) return;
+    setMessages(prev => prev.map(m => m.id === r.messageId
+      ? { ...m, isRead: r.allSeen, seenBy: r.seenBy, readAt: r.readAt ?? m.readAt ?? null }
+      : m));
+  }, []);
+
   // ── Load full message history when switching conversations ────────────────
   const loadMessages = useCallback(async (convId: string) => {
     setLoadingMsgs(true);
@@ -139,9 +258,10 @@ export default function MessagesPage() {
           isSent: m.senderId === myId,
         }));
         setMessages(msgs);
+        applyReceipt(data.receipt as Receipt | null);
       }
     } finally { setLoadingMsgs(false); }
-  }, [myId]);
+  }, [myId, applyReceipt]);
 
   const loadInfo = useCallback(async (convId: string) => {
     try {
@@ -156,7 +276,7 @@ export default function MessagesPage() {
 
     setMessages([]);
     setInfo(null);
-    setOtherTyping(false);
+    setTyping({});
     setPickerFor(null);
     setPendingImage(null);
     setError(null);
@@ -165,6 +285,7 @@ export default function MessagesPage() {
 
     let retryTimeout: ReturnType<typeof setTimeout> | null = null;
     let attempts = 0;
+    let stopped = false;
 
     function connect() {
       sseRef.current?.close();
@@ -179,7 +300,10 @@ export default function MessagesPage() {
               ...data.message,
               isSent: data.message.senderId === myId,
             };
-            if (!msg.isSent) setOtherTyping(false);
+            if (!msg.isSent && msg.senderId) {
+              const sid = msg.senderId;
+              setTyping(prev => { if (!(sid in prev)) return prev; const n = { ...prev }; delete n[sid]; return n; });
+            }
             setMessages(prev => {
               const filtered = prev.filter(m =>
                 !m.id.startsWith('temp-') || m.content !== msg.content || (m.imageUrl ?? null) !== (msg.imageUrl ?? null));
@@ -188,12 +312,27 @@ export default function MessagesPage() {
             });
             fetchConversations();
           } else if (data.type === 'typing') {
-            if (data.userId !== myId) setOtherTyping(!!data.isTyping);
-          } else if (data.type === 'read') {
-            const ids = new Set<string>(data.messageIds as string[]);
-            setMessages(prev => prev.map(m => ids.has(m.id) ? { ...m, isRead: true, readAt: data.readAt } : m));
+            if (data.userId !== myId) {
+              const uid = data.userId as string;
+              setTyping(prev => {
+                const n = { ...prev };
+                if (data.isTyping) n[uid] = (data.name as string | undefined) ?? null; else delete n[uid];
+                return n;
+              });
+            }
+          } else if (data.type === 'receipt') {
+            applyReceipt(data as Receipt);
           } else if (data.type === 'reaction') {
             setMessages(prev => prev.map(m => m.id === data.messageId ? { ...m, reactions: data.reactions as Reactions } : m));
+          } else if (data.type === 'participants') {
+            if (activeConvId) loadInfo(activeConvId);
+            fetchConversations();
+          } else if (data.type === 'revoked') {
+            stopped = true;
+            sse.close();
+            setActiveConvId(null);
+            setMobileView('list');
+            fetchConversations();
           } else if (data.type === 'connected') {
             attempts = 0;
           }
@@ -202,6 +341,7 @@ export default function MessagesPage() {
 
       sse.onerror = () => {
         sse.close();
+        if (stopped) return;
         // Reconnect with backoff (max 30s)
         const delay = Math.min(1000 * 2 ** attempts, 30000);
         attempts++;
@@ -212,17 +352,27 @@ export default function MessagesPage() {
     connect();
 
     return () => {
+      stopped = true;
       if (retryTimeout) clearTimeout(retryTimeout);
       sseRef.current?.close();
       sseRef.current = null;
     };
-  }, [activeConvId, loadMessages, loadInfo, fetchConversations, myId]);
+  }, [activeConvId, loadMessages, loadInfo, fetchConversations, myId, applyReceipt]);
+
+  const typingIds = Object.keys(typing);
+  const nameOf = useCallback((uid: string, partnerName?: string | null) =>
+    partnerName || participants[uid]?.name || 'Someone', [participants]);
+  const typingNames = typingIds.map(uid => nameOf(uid, typing[uid]));
+  const someoneTyping = typingIds.length > 0;
+  const typingText = someoneTyping
+    ? `${listNames(typingNames)} ${typingNames.length > 1 ? 'are' : 'is'} typing…`
+    : '';
 
   // ── Auto-scroll ───────────────────────────────────────────────────────────
   const scrollToEnd = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
-  useEffect(() => { scrollToEnd(); }, [messages.length, otherTyping, scrollToEnd]);
+  useEffect(() => { scrollToEnd(); }, [messages.length, someoneTyping, scrollToEnd]);
 
   // ── Close reaction picker on outside tap ──────────────────────────────────
   useEffect(() => {
@@ -241,7 +391,7 @@ export default function MessagesPage() {
     fetch(`/api/conversations/${activeConvId}/typing`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isTyping: true }),
+      body: JSON.stringify({ isTyping: true, ...(sendAs && coupleNames.length >= 2 ? { as: sendAs } : {}) }),
     }).catch(() => {});
   }
 
@@ -255,6 +405,8 @@ export default function MessagesPage() {
     try {
       const form = new FormData();
       form.append('file', file);
+      // Chat photos are stored privately (only conversation participants can view)
+      form.append('purpose', 'chat');
       const res = await fetch('/api/upload', { method: 'POST', body: form });
       const data = await res.json().catch(() => ({})) as { url?: string; error?: string };
       if (!res.ok || !data.url) throw new Error(data.error || 'Upload failed');
@@ -274,12 +426,13 @@ export default function MessagesPage() {
   }
 
   // ── Send message ──────────────────────────────────────────────────────────
-  const canSend = (!!input.trim() || !!pendingImage) && !sending && !uploading && !expired;
+  const canSend = (!!input.trim() || !!pendingImage) && !sending && !uploading && !expired && !blocked;
 
   async function handleSend() {
     if (!canSend || !activeConvId) return;
     const text = input.trim();
     const image = pendingImage;
+    const as = coupleNames.length >= 2 && sendAs ? sendAs : null;
     setInput('');
     setPendingImage(null);
     setSending(true);
@@ -288,14 +441,19 @@ export default function MessagesPage() {
 
     const tempId = `temp-${Date.now()}`;
     setMessages(prev => [...prev, {
-      id: tempId, content: text, imageUrl: image?.url ?? null, isSent: true, createdAt: new Date().toISOString(),
+      id: tempId, content: text, imageUrl: image?.url ?? null, isSent: true, senderId: myId,
+      senderPartnerName: as, createdAt: new Date().toISOString(),
     }]);
 
     try {
       const res = await fetch(`/api/conversations/${activeConvId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: text, ...(image ? { imageUrl: image.url } : {}) }),
+        body: JSON.stringify({
+          content: text,
+          ...(image ? { imageUrl: image.url } : {}),
+          ...(as ? { senderPartnerName: as } : {}),
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
@@ -364,18 +522,25 @@ export default function MessagesPage() {
     if (rrHintVisible) { try { localStorage.setItem(RR_HINT_KEY, '1'); } catch { /* ignore */ } }
   }, [rrHintVisible]);
 
+  const multiRecipients = participantCount > 2;
+
   function receiptFor(msg: Message) {
     if (msg.id !== lastSentId) return null;
     if (isPaidUser) {
-      return msg.isRead
-        ? <span className="text-xs text-[#D4AF37]">Seen{msg.readAt ? ` ${clock(msg.readAt)}` : ''}</span>
-        : <span className="text-xs text-white/55">Delivered</span>;
+      if (msg.isRead) {
+        return <span className="text-xs text-[#D4AF37]">Seen{!multiRecipients && msg.readAt ? ` ${clock(msg.readAt)}` : ''}</span>;
+      }
+      const seen = (msg.seenBy ?? []).map(u => participants[u]?.name).filter((n): n is string => !!n);
+      if (multiRecipients && seen.length > 0) {
+        return <span className="text-xs text-[#D4AF37]/80 truncate">Seen by {listNames(seen)}</span>;
+      }
+      return <span className="text-xs text-white/55">Delivered</span>;
     }
     return (
-      <span className="flex items-center gap-1.5">
+      <span className="flex flex-wrap items-center justify-end gap-x-1.5">
         <span className="text-xs text-white/55">Delivered</span>
         {rrHintVisible && (
-          <Link href="/upgrade" className="flex items-center gap-0.5 text-[11px] text-[#D4AF37]/70 hover:text-[#D4AF37]">
+          <Link href="/upgrade" className="flex items-center gap-0.5 whitespace-nowrap text-[11px] text-[#D4AF37]/70 hover:text-[#D4AF37]">
             <Crown size={10} /> See read receipts with Gold
           </Link>
         )}
@@ -429,9 +594,11 @@ export default function MessagesPage() {
         ) : filtered.length === 0 ? (
           <p className="text-white/60 text-sm text-center px-6 py-10">No conversations match “{search}”.</p>
         ) : filtered.map(conv => {
-          const grad = gradientFor(conv.username);
-          const init = initialsFor(conv.displayName || conv.username);
           const active = conv.id === activeConvId;
+          const name = conv.displayName || conv.username;
+          const avatars: Avatar[] = conv.avatars?.length
+            ? conv.avatars
+            : [{ name, photo: conv.profilePhoto, username: conv.username }];
           return (
             <button
               key={conv.id}
@@ -439,20 +606,16 @@ export default function MessagesPage() {
               className={`w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/5 transition-colors text-left border-b border-white/5 ${active ? 'bg-white/5 border-l-2 border-l-[#DC143C]' : ''} ${conv.expired ? 'opacity-50' : ''}`}
             >
               <div className="relative flex-shrink-0">
-                {conv.profilePhoto ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={conv.profilePhoto} alt="" width={48} height={48} loading="lazy" className={`w-12 h-12 rounded-full object-cover ${conv.expired ? 'grayscale' : ''}`} />
-                ) : (
-                  <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${grad} flex items-center justify-center`}>
-                    <span className="text-white text-sm font-bold">{init}</span>
-                  </div>
-                )}
+                <AvatarStack avatars={avatars} size={48} grayscale={conv.expired} />
                 {conv.isOnline && !conv.expired && <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 border-2 border-[#0A0A0F] rounded-full" />}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-white font-medium text-sm truncate">{conv.displayName || conv.username}</span>
-                  <span className="text-white/55 text-xs flex-shrink-0 ml-2">{fmtTime(conv.lastMessageAt)}</span>
+                <div className="flex items-center justify-between mb-0.5 gap-2">
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-white font-medium text-sm truncate">{name}</span>
+                    {conv.isCouple && <CoupleBadge />}
+                  </span>
+                  <span className="text-white/55 text-xs flex-shrink-0">{fmtTime(conv.lastMessageAt)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   {conv.matchExpiresAt && !conv.lastMessage ? (
@@ -466,6 +629,9 @@ export default function MessagesPage() {
                     </span>
                   )}
                 </div>
+                {conv.partnerName && (
+                  <p className="text-[11px] text-[#D4AF37]/70 truncate mt-0.5">Shared with {conv.partnerName}</p>
+                )}
               </div>
             </button>
           );
@@ -475,17 +641,45 @@ export default function MessagesPage() {
   );
 
   // ── Chat window ────────────────────────────────────────────────────────────
-  const name = activeConv ? (activeConv.displayName || activeConv.username) : '';
-  const otherAvatar = activeConv && (
-    activeConv.profilePhoto ? (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={activeConv.profilePhoto} alt="" className="w-8 h-8 rounded-full object-cover mr-2 flex-shrink-0 mt-1" />
-    ) : (
-      <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${gradientFor(activeConv.username)} flex items-center justify-center text-white text-xs font-bold mr-2 flex-shrink-0 mt-1`}>
-        {initialsFor(name)}
+  const name = sides.length ? sides.map(s => s.label).join(', ') : (activeConv ? (activeConv.displayName || activeConv.username) : '');
+  const headerAvatars: Avatar[] = sides.length
+    ? sides.flatMap(s => s.members).map(m => ({ name: m.name, photo: m.photo, username: m.username }))
+    : activeConv?.avatars?.length
+      ? activeConv.avatars
+      : activeConv ? [{ name, photo: activeConv.profilePhoto, username: activeConv.username }] : [];
+  const headerIsCouple = sides.length ? sides.some(s => s.isCouple) : !!activeConv?.isCouple;
+  const onlineMembers = sides.flatMap(s => s.members).filter(m => m.isOnline);
+  const anyOnline = sides.length ? onlineMembers.length > 0 : !!activeConv?.isOnline;
+  const memberCount = sides.reduce((n, s) => n + s.members.length, 0);
+
+  function senderAvatar(msg: Message, show: boolean): ReactNode {
+    if (!show) return <div className="w-8 mr-2 flex-shrink-0" aria-hidden="true" />;
+    const p = msg.senderId ? participants[msg.senderId] : undefined;
+    const n = msg.senderPartnerName || p?.name || msg.sender?.profile?.displayName || msg.sender?.username || name;
+    const photo = msg.senderPartnerName ? null : (p?.photo ?? msg.sender?.profile?.profilePhoto ?? (showSenders ? null : activeConv?.profilePhoto));
+    return (
+      <div className="mr-2 mt-1 flex-shrink-0 self-start">
+        <Face name={n} photo={photo} seed={p?.username || msg.sender?.username || n} size={32} />
       </div>
-    )
-  );
+    );
+  }
+
+  function senderLabel(msg: Message): ReactNode {
+    const p = msg.senderId ? participants[msg.senderId] : undefined;
+    if (msg.isSent) {
+      // Shared account: make it clear which of us wrote it
+      return msg.senderPartnerName ? <span className="text-white/50">as {msg.senderPartnerName}</span> : null;
+    }
+    const n = msg.senderPartnerName || p?.name || msg.sender?.profile?.displayName || msg.sender?.username;
+    if (!n) return null;
+    const suffix = p?.isMyPartner ? 'your partner' : (p?.coupleLabel || msg.senderPartnerName) ? 'couple' : null;
+    return (
+      <>
+        <span className="text-white/75 font-medium">{n}</span>
+        {suffix && <span className={p?.isMyPartner ? 'text-[#D4AF37]/75' : 'text-white/45'}> · {suffix}</span>}
+      </>
+    );
+  }
 
   const ChatWindow = activeConv ? (
     <div className={`${mobileView === 'chat' ? 'flex' : 'hidden'} md:flex flex-1 flex-col min-w-0`}>
@@ -495,24 +689,21 @@ export default function MessagesPage() {
           <ArrowLeft size={20} aria-hidden="true" />
         </button>
         <div className="relative flex-shrink-0">
-          {activeConv.profilePhoto ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={activeConv.profilePhoto} alt="" width={40} height={40} className="w-10 h-10 rounded-full object-cover" />
-          ) : (
-            <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${gradientFor(activeConv.username)} flex items-center justify-center`}>
-              <span className="text-white text-sm font-bold">{initialsFor(name)}</span>
-            </div>
-          )}
-          {activeConv.isOnline && <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-[#0A0A0F] rounded-full" />}
+          <AvatarStack avatars={headerAvatars} size={40} />
+          {anyOnline && <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-[#0A0A0F] rounded-full" />}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-white font-semibold text-sm truncate">{name}</div>
-          <div className="text-xs">
-            {otherTyping
-              ? <span className="text-[#D4AF37]">typing…</span>
-              : activeConv.isOnline
-                ? <span className="text-emerald-400">● Online now</span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-white font-semibold text-sm truncate">{name}</span>
+            {headerIsCouple && <CoupleBadge />}
+          </div>
+          <div className="text-xs truncate">
+            {someoneTyping
+              ? <span className="text-[#D4AF37]">{showSenders ? typingText : 'typing…'}</span>
+              : anyOnline
+                ? <span className="text-emerald-400">● {memberCount > 1 ? `${listNames(onlineMembers.map(m => m.name))} online` : 'Online now'}</span>
                 : <span className="text-white/60">Offline</span>}
+            {partner && !someoneTyping && <span className="text-white/50"> · with {partner.name}</span>}
           </div>
         </div>
         {expiresAt && (
@@ -537,29 +728,37 @@ export default function MessagesPage() {
             <Icebreakers suggestions={info?.icebreakers ?? []} name={name} onPick={pickIcebreaker} />
           )
         )}
-        {messages.map(msg => (
-          <MessageBubble
-            key={msg.id}
-            msg={msg}
-            myId={myId}
-            blurReceivedImages={blurImages}
-            avatar={otherAvatar}
-            footer={msg.isSent && !msg.id.startsWith('temp-') ? receiptFor(msg) : null}
-            pickerOpen={pickerFor === msg.id}
-            onOpenPicker={() => setPickerFor(msg.id)}
-            onClosePicker={() => setPickerFor(p => (p === msg.id ? null : p))}
-            onReact={(emoji) => handleReact(msg.id, emoji)}
-            onImageLoad={msg.id === messages[messages.length - 1]?.id ? scrollToEnd : undefined}
-          />
-        ))}
-        {otherTyping && (
-          <div className="flex items-center gap-2 text-white/60 text-xs pl-1">
+        {messages.map((msg, i) => {
+          const prev = messages[i - 1];
+          const runStart = !prev || prev.senderId !== msg.senderId ||
+            (prev.senderPartnerName ?? null) !== (msg.senderPartnerName ?? null) || !!prev.isSent !== !!msg.isSent;
+          const label = showSenders && runStart ? senderLabel(msg) : null;
+          return (
+            <MessageBubble
+              key={msg.id}
+              msg={msg}
+              myId={myId}
+              blurReceivedImages={blurImages}
+              avatar={senderAvatar(msg, !showSenders || runStart)}
+              senderLabel={label}
+              fromPartner={!!msg.senderId && !!participants[msg.senderId]?.isMyPartner}
+              footer={msg.isSent && !msg.id.startsWith('temp-') ? receiptFor(msg) : null}
+              pickerOpen={pickerFor === msg.id}
+              onOpenPicker={() => setPickerFor(msg.id)}
+              onClosePicker={() => setPickerFor(p => (p === msg.id ? null : p))}
+              onReact={(emoji) => handleReact(msg.id, emoji)}
+              onImageLoad={msg.id === messages[messages.length - 1]?.id ? scrollToEnd : undefined}
+            />
+          );
+        })}
+        {someoneTyping && (
+          <div className="flex items-center gap-2 text-white/60 text-xs pl-1" aria-live="polite">
             <span className="glass rounded-2xl rounded-tl-sm px-3 py-2 flex gap-1">
               <span className="w-1.5 h-1.5 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
               <span className="w-1.5 h-1.5 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
               <span className="w-1.5 h-1.5 bg-white/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
             </span>
-            {name} is typing…
+            {showSenders ? typingText : `${name} is typing…`}
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -568,6 +767,23 @@ export default function MessagesPage() {
       {/* Input */}
       <div className="glass-dark border-t border-white/5 px-4 py-3">
         {error && <p className="text-red-400 text-xs mb-2">{error}</p>}
+        {blocked && <p className="text-white/60 text-xs mb-2">You can no longer message in this conversation.</p>}
+        {coupleNames.length >= 2 && !blocked && (
+          <div className="mb-2 flex items-center gap-1.5 text-xs text-white/55">
+            <span>Sending as</span>
+            <label className="relative inline-flex items-center">
+              <span className="sr-only">Choose who is sending</span>
+              <select
+                value={sendAs}
+                onChange={e => chooseSendAs(e.target.value)}
+                className="appearance-none bg-white/5 border border-[#D4AF37]/30 hover:border-[#D4AF37]/60 text-[#D4AF37] font-medium rounded-full pl-2.5 pr-6 py-0.5 focus:outline-none focus:ring-1 focus:ring-[#D4AF37]/60 cursor-pointer"
+              >
+                {coupleNames.map(n => <option key={n} value={n} className="bg-[#0A0A0F] text-white">{n}</option>)}
+              </select>
+              <ChevronDown size={12} className="absolute right-1.5 text-[#D4AF37] pointer-events-none" aria-hidden="true" />
+            </label>
+          </div>
+        )}
         {(pendingImage || uploading) && (
           <div className="mb-2 flex items-center gap-2">
             <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-white/5 flex items-center justify-center">
@@ -602,7 +818,7 @@ export default function MessagesPage() {
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            disabled={uploading || expired}
+            disabled={uploading || expired || blocked}
             className="w-10 h-10 rounded-xl glass flex items-center justify-center text-white/65 hover:text-white disabled:opacity-40 flex-shrink-0 transition-colors"
             aria-label="Attach photo"
           >
@@ -611,11 +827,11 @@ export default function MessagesPage() {
           <textarea
             ref={textareaRef}
             aria-label={`Message ${name}`}
-            placeholder={expired ? 'This match has expired' : `Message ${name}…`}
-            className="input-dark flex-1 px-4 py-2.5 rounded-xl text-sm resize-none min-h-[44px] max-h-32"
+            placeholder={blocked ? 'Messaging unavailable' : expired ? 'This match has expired' : `Message ${name}…`}
+            className="input-dark flex-1 min-w-0 px-4 py-2.5 rounded-xl text-sm resize-none min-h-[44px] max-h-32"
             rows={1}
             value={input}
-            disabled={expired}
+            disabled={expired || blocked}
             maxLength={2000}
             onChange={e => { setInput(e.target.value); if (e.target.value.trim()) notifyTyping(); }}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}

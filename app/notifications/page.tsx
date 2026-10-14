@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import EmptyState from '@/components/EmptyState';
-import { Bell, Heart, MessageCircle, Users, Eye, Shield, Star, Check, CheckCheck, Flame } from 'lucide-react';
+import { Bell, Heart, MessageCircle, Users, Eye, Shield, Star, Check, CheckCheck, Flame, Lock, Image as ImageIcon, CalendarDays, CreditCard } from 'lucide-react';
 
 interface Notification {
   id: string;
@@ -23,7 +23,13 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; href
   WINK:         { icon: Heart,          color: 'text-pink-400',   href: () => '/members' },
   MESSAGE:      { icon: MessageCircle,  color: 'text-blue-400',   href: () => '/messages' },
   PROFILE_VIEW: { icon: Eye,            color: 'text-purple-400', href: () => '/members' },
-  COUPLE_INVITE:{ icon: Users,          color: 'text-emerald-400',href: () => '/profile' },
+  COUPLE_INVITE:{ icon: Users,          color: 'text-emerald-400',href: () => '/profile#couple' },
+  COUPLE_UPDATE:{ icon: Users,          color: 'text-emerald-400',href: () => '/profile#couple' },
+  ALBUM_INVITE: { icon: ImageIcon,      color: 'text-[#D4AF37]',  href: () => '/gallery?tab=shared' },
+  ALBUM_REQUEST:{ icon: Lock,           color: 'text-[#D4AF37]',  href: () => '/gallery?tab=albums' },
+  ALBUM_GRANTED:{ icon: ImageIcon,      color: 'text-emerald-400',href: () => '/gallery?tab=shared' },
+  EVENT_REMINDER:{ icon: CalendarDays,  color: 'text-blue-400',   href: () => '/events' },
+  PAYMENT:      { icon: CreditCard,     color: 'text-[#D4AF37]',  href: () => '/subscription' },
   VERIFIED:     { icon: Shield,         color: 'text-emerald-400',href: () => '/account' },
   STREAK:       { icon: Flame,          color: 'text-orange-400', href: () => '/account' },
   DEFAULT:      { icon: Bell,           color: 'text-white/65' },
@@ -117,7 +123,8 @@ export default function NotificationsPage() {
             {notifications.map((n) => {
               const cfg = TYPE_CONFIG[n.type] ?? TYPE_CONFIG.DEFAULT;
               const Icon = cfg.icon;
-              const href = cfg.href?.(n);
+              const dataUrl = typeof n.data?.url === 'string' && n.data.url.startsWith('/') && !n.data.url.startsWith('//') ? n.data.url : undefined;
+              const href = dataUrl ?? cfg.href?.(n);
 
               const inner = (
                 <div

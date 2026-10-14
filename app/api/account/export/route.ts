@@ -9,7 +9,7 @@ export async function GET() {
 
     const userId = session.user.id
 
-    const [user, profile, photos, likes, matches, notifications, events, forumPosts] =
+    const [user, profile, photos, likes, matches, notifications, events, forumPosts, albums, albumAccess] =
       await Promise.all([
         db.user.findUnique({
           where: { id: userId },
@@ -45,7 +45,10 @@ export async function GET() {
         }),
         db.photo.findMany({
           where: { userId },
-          select: { url: true, isProfile: true, isPrivate: true, caption: true, createdAt: true },
+          select: {
+            url: true, thumbnailUrl: true, isProfile: true, isPrivate: true, caption: true, createdAt: true,
+            mimeType: true, sizeBytes: true, album: { select: { name: true } },
+          },
         }),
         db.like.findMany({
           where: { fromUserId: userId },
@@ -70,13 +73,38 @@ export async function GET() {
           select: { content: true, createdAt: true },
           take: 100,
         }),
+        db.album.findMany({
+          where: { ownerId: userId, name: { not: { startsWith: '__' } } },
+          select: {
+            name: true, description: true, isPrivate: true, createdAt: true,
+            _count: { select: { photos: true } },
+            access: { select: { status: true, createdAt: true, user: { select: { username: true } } } },
+          },
+        }),
+        db.albumAccess.findMany({
+          where: { userId },
+          select: { status: true, createdAt: true, album: { select: { name: true, owner: { select: { username: true } } } } },
+        }),
       ])
 
     const exportData = {
       exportedAt: new Date().toISOString(),
       account: user,
       profile,
-      photos,
+      // Media URLs are relative to this site and need you to be signed in.
+      photos: photos.map(({ album, ...p }) => ({
+        ...p,
+        album: album && !album.name.startsWith('__') ? album.name : null,
+        kind: album?.name === '__chat' ? 'chat image' : album?.name === '__video' ? 'profile video' : 'photo',
+      })),
+      albums: albums.map(({ _count, access, ...a }) => ({
+        ...a,
+        photoCount: _count.photos,
+        sharedWith: access.map((x) => ({ username: x.user.username, status: x.status, since: x.createdAt })),
+      })),
+      albumsSharedWithMe: albumAccess.map((x) => ({
+        album: x.album.name, owner: x.album.owner.username, status: x.status, since: x.createdAt,
+      })),
       likes,
       matches,
       notifications,

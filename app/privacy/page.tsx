@@ -60,7 +60,7 @@ export default function PrivacyPage() {
                 <h3 className="text-white font-semibold mb-2">1.1 Information you provide directly</h3>
                 <ul className="list-disc list-inside space-y-1 pl-4">
                   <li>Account information: username, email address, password (stored as a one-way hash)</li>
-                  <li>Profile information: display name, date of birth, gender, orientation, relationship status, bio, location (city/country)</li>
+                  <li>Profile information: display name, date of birth, gender (and, if you choose, a self-described gender and pronouns), orientation, who you’d like to meet and what you’re here for, optional details such as height, languages and ethnicity, relationship status, bio, location (city/country). Couple profiles may hold these details for each partner.</li>
                   <li>Photos and media you upload</li>
                   <li>Messages and communications you send through the platform</li>
                   <li>Payment information (processed by our payment provider — we do not store full card numbers)</li>
@@ -80,7 +80,7 @@ export default function PrivacyPage() {
               <div>
                 <h3 className="text-white font-semibold mb-2">1.3 Special categories of personal information</h3>
                 <p>
-                  Hush processes special categories of personal information under POPIA, specifically information relating to sexual orientation and relationship preferences. We process this information because you have explicitly provided it for the purpose of using a lifestyle dating platform, and we rely on your explicit consent as the lawful basis for this processing.
+                  Hush processes special categories of personal information under POPIA, specifically information relating to sexual orientation, gender identity, relationship preferences and — only if you choose to add it — race or ethnicity. We process this information because you have explicitly provided it for the purpose of using a lifestyle dating platform, and we rely on your explicit consent as the lawful basis for this processing. You can hide your gender and orientation from your profile at any time; hidden details are still used to suggest mutual matches but are never shown to other members. Ethnicity is optional, hidden unless you switch it on, and is never used for search, filtering, ranking or matching. You can remove any of these details whenever you like.
                 </p>
               </div>
             </div>

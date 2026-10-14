@@ -1,19 +1,20 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import Link from 'next/link';
 import ProtectedImage from '@/components/ProtectedImage';
 import {
   Camera, Eye, Heart, MessageCircle, Users, Crown, Shield,
-  Edit2, Check, X, Trash2, Lock, Plus, Star, Link2, Link2Off,
+  Edit2, Check, X, Trash2, Lock, Star,
   Globe, Upload
 } from 'lucide-react';
 import type { Session } from 'next-auth';
 import { CITIES_BY_COUNTRY, COUNTRIES } from '@/lib/cities';
 import BoostCard from './BoostCard';
 import { PromptsEditor, VideoProfileCard, LocationCard, PrivacySettingsCard } from './ProfileExtras';
+import IdentityEditor, { type IdentityInitial } from './IdentityEditor';
+import CoupleLinkCard from './CoupleLinkCard';
 import type { ProfilePrompt } from './prompts';
 
 interface Photo {
@@ -49,12 +50,8 @@ interface Profile {
   hasLocation?: boolean;
   isPaid?: boolean;
   isPlatinum?: boolean;
-  partner?: {
-    id?: string;
-    displayName?: string;
-    profilePhoto?: string;
-    user?: { username?: string };
-  } | null;
+  identity?: IdentityInitial;
+  pronouns?: string | null;
 }
 
 interface Props {
@@ -81,33 +78,6 @@ export default function ProfileClient({ session, initialProfile }: Props) {
   const [country, setCountry] = useState(initialProfile?.country || '');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [coupleModalOpen, setCoupleModalOpen] = useState(false);
-  const [partnerUsernameInput, setPartnerUsernameInput] = useState('');
-  const [coupleSending, setCoupleSending] = useState(false);
-  const [coupleMessage, setCoupleMessage] = useState('');
-  const [pendingCoupleInvite, setPendingCoupleInvite] = useState<{ notificationId: string; inviterId: string; inviterUsername: string } | null>(null);
-  const [acceptingInvite, setAcceptingInvite] = useState(false);
-
-  useEffect(() => {
-    async function checkCoupleInvites() {
-      try {
-        const res = await fetch('/api/notifications?type=COUPLE_INVITE');
-        if (res.ok) {
-          const data = await res.json() as { notifications: Array<{ id: string; isRead: boolean; data: { inviterId?: string; inviterUsername?: string } | null }> };
-          const pending = (data.notifications || []).find((n) => !n.isRead && n.data?.inviterId);
-          if (pending) {
-            setPendingCoupleInvite({
-              notificationId: pending.id,
-              inviterId: pending.data!.inviterId!,
-              inviterUsername: pending.data!.inviterUsername || 'someone',
-            });
-          }
-        }
-      } catch { /* ignore */ }
-    }
-    checkCoupleInvites();
-  }, []);
-
   const user = session.user as { username?: string; name?: string; email?: string };
   const username = profile.username || user.username || user.email?.split('@')[0] || 'User';
   const name = profile.displayName || displayName || user.name || username;
@@ -213,55 +183,6 @@ export default function ProfileClient({ session, initialProfile }: Props) {
     } catch { /* ignore */ }
   }
 
-  async function sendCoupleInvite() {
-    if (!partnerUsernameInput.trim()) return;
-    setCoupleSending(true);
-    setCoupleMessage('');
-    try {
-      const res = await fetch('/api/couple/invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ partnerUsername: partnerUsernameInput.trim() }),
-      });
-      if (res.ok) {
-        setCoupleMessage('Invitation sent!');
-        setPartnerUsernameInput('');
-        setTimeout(() => { setCoupleModalOpen(false); setCoupleMessage(''); }, 1500);
-      } else {
-        const err = await res.json() as { error?: string };
-        setCoupleMessage(err.error || 'Failed to send invite');
-      }
-    } finally {
-      setCoupleSending(false);
-    }
-  }
-
-  async function unlinkCouple() {
-    try {
-      await fetch('/api/couple/unlink', { method: 'POST' });
-      setProfile((p) => ({ ...p, isCouple: false, partnerId: null, partner: null }));
-    } catch { /* ignore */ }
-  }
-
-  async function acceptCoupleInvite() {
-    if (!pendingCoupleInvite) return;
-    setAcceptingInvite(true);
-    try {
-      const res = await fetch('/api/couple/accept', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inviterId: pendingCoupleInvite.inviterId, notificationId: pendingCoupleInvite.notificationId }),
-      });
-      if (res.ok) {
-        setPendingCoupleInvite(null);
-        setProfile((p) => ({ ...p, isCouple: true }));
-        window.location.reload();
-      }
-    } finally {
-      setAcceptingInvite(false);
-    }
-  }
-
   const stats = [
     { icon: Eye, label: 'Profile Views', value: (profile.profileViews ?? 0).toLocaleString(), color: 'text-blue-400' },
     { icon: Heart, label: 'Likes Received', value: (profile.likesReceived ?? 0).toLocaleString(), color: 'text-[#DC143C]' },
@@ -309,7 +230,10 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                     className="input-dark font-serif text-2xl font-bold text-white px-3 py-1 rounded-lg"
                   />
                 ) : (
-                  <h1 className="font-serif text-3xl font-bold text-white">{name}</h1>
+                  <h1 className="font-serif text-3xl font-bold text-white break-words">
+                    {name}
+                    {profile.pronouns && !profile.isCouple && <span className="text-white/60 text-base font-sans font-normal ml-2">({profile.pronouns})</span>}
+                  </h1>
                 )}
                 <div className={`flex items-center gap-1 border px-3 py-1 rounded-full ${TIER_COLORS[tier]}`}>
                   {tier === 'GOLD' && <Crown size={12} />}
@@ -397,7 +321,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-white font-semibold flex items-center gap-2">
                 <MessageCircle size={16} className="text-[#DC143C]" />
-                About Me
+                {profile.isCouple ? 'Our bio' : 'My bio'}
               </h2>
               {!editingBio && (
                 <button onClick={() => setEditingBio(true)} className="text-white/55 hover:text-white/60 transition-colors" aria-label="Edit bio">
@@ -431,6 +355,9 @@ export default function ProfileClient({ session, initialProfile }: Props) {
               </p>
             )}
           </div>
+
+          {/* Identity, who you'd like to meet, about-me details (and both partners for couples) */}
+          {profile.identity && <IdentityEditor initial={profile.identity} />}
 
           {/* Boost */}
           <BoostCard className="mb-6" />
@@ -573,113 +500,10 @@ export default function ProfileClient({ session, initialProfile }: Props) {
             </div>
           </div>
 
-          {/* Couple Profile */}
-          <div className="glass rounded-2xl p-6 mb-6">
-            <h2 className="text-white font-semibold flex items-center gap-2 mb-4">
-              <Link2 size={16} className="text-[#DC143C]" />
-              Couple Profile
-            </h2>
-
-            {profile.isCouple && profile.partner ? (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-rose-900 to-red-700 flex items-center justify-center overflow-hidden">
-                    {profile.partner.profilePhoto ? (
-                      <ProtectedImage src={profile.partner.profilePhoto} alt="Partner" className="w-full h-full" />
-                    ) : (
-                      <span className="text-white font-bold text-sm">
-                        {(profile.partner.displayName || profile.partner.user?.username || '?').slice(0, 2).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-white font-medium">{profile.partner.displayName || profile.partner.user?.username}</p>
-                    {profile.partner.user?.username && (
-                      <Link href={`/members/${profile.partner.user.username}`} className="text-[#DC143C] text-xs hover:underline">
-                        View profile
-                      </Link>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={unlinkCouple}
-                  className="flex items-center gap-1.5 text-sm glass border border-white/10 hover:border-red-500/30 text-white/65 hover:text-red-400 px-4 py-2 rounded-xl transition-all"
-                >
-                  <Link2Off size={14} />
-                  Unlink Partner
-                </button>
-              </div>
-            ) : (
-              <div>
-                <p className="text-white/65 text-sm mb-4">Link your profile with your partner to show you&apos;re a couple.</p>
-
-                {/* Pending invite */}
-                {pendingCoupleInvite && (
-                  <div className="glass border border-[#D4AF37]/30 rounded-xl p-4 mb-4">
-                    <p className="text-white text-sm mb-2">
-                      <span className="text-[#D4AF37] font-semibold">@{pendingCoupleInvite.inviterUsername}</span> wants to link profiles with you
-                    </p>
-                    <button
-                      onClick={acceptCoupleInvite}
-                      disabled={acceptingInvite}
-                      className="bg-[#D4AF37] text-[#0A0A0F] font-semibold px-4 py-2 rounded-lg text-sm hover:bg-[#F4D03F] transition-colors disabled:opacity-60"
-                    >
-                      {acceptingInvite ? 'Accepting...' : 'Accept Invitation'}
-                    </button>
-                  </div>
-                )}
-
-                <button
-                  onClick={() => setCoupleModalOpen(true)}
-                  className="flex items-center gap-2 bg-[#DC143C]/20 hover:bg-[#DC143C]/30 border border-[#DC143C]/30 text-[#DC143C] px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
-                >
-                  <Link2 size={14} />
-                  Link with Partner
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Linked-accounts couples */}
+          <CoupleLinkCard />
         </div>
       </main>
-
-      {/* Couple Invite Modal */}
-      {coupleModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="couple-modal-title">
-          <div className="glass rounded-2xl p-6 w-full max-w-sm">
-            <h3 id="couple-modal-title" className="text-white font-semibold text-lg mb-1">Link with your partner</h3>
-            <p className="text-white/65 text-sm mb-4">Enter your partner&apos;s username to send them a link invitation.</p>
-            <input
-              type="text"
-              placeholder="Partner's username"
-              aria-label="Partner's username"
-              value={partnerUsernameInput}
-              onChange={(e) => setPartnerUsernameInput(e.target.value)}
-              className="input-dark w-full px-4 py-3 rounded-xl text-sm mb-3"
-              onKeyDown={(e) => { if (e.key === 'Enter') sendCoupleInvite(); }}
-            />
-            {coupleMessage && (
-              <p className={`text-sm mb-3 ${coupleMessage.includes('sent') ? 'text-emerald-400' : 'text-red-400'}`}>
-                {coupleMessage}
-              </p>
-            )}
-            <div className="flex gap-2">
-              <button
-                onClick={sendCoupleInvite}
-                disabled={coupleSending || !partnerUsernameInput.trim()}
-                className="flex-1 bg-[#DC143C] hover:bg-[#FF1744] disabled:opacity-50 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
-              >
-                {coupleSending ? 'Sending...' : 'Send Invitation'}
-              </button>
-              <button
-                onClick={() => { setCoupleModalOpen(false); setCoupleMessage(''); setPartnerUsernameInput(''); }}
-                className="glass px-4 py-2.5 rounded-xl text-white/65 hover:text-white text-sm transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <Footer />
     </div>

@@ -21,7 +21,7 @@ const GOLD_FEATURES = [
   'Profile boost (1× per month)',
   'Read receipts',
   'Undo your last swipe',
-  'Couple profile — search for male or female thirds',
+  'Couples: meet singles or other couples in any city',
   'Priority in search results',
   'Forum posting & replies',
 ]

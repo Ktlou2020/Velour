@@ -5,6 +5,10 @@ import { db } from '@/lib/db'
 import { isPaid, isBoosted } from '@/lib/premium'
 import { boundingBox, distanceKm, formatDistance } from '@/lib/geo'
 import { compatibility, ageFromDob, type CompatInput } from '@/lib/compat'
+import {
+  ageFrom, categoryOf, coupleTypeBadge, effectiveInterestedIn, legacyValuesWanting,
+  parseCoupleMembers, LEGACY_WHO_VALUES, type Category, type CoupleType,
+} from '@/lib/identity'
 
 export interface ProfilePrompt {
   question: string
@@ -31,6 +35,14 @@ export interface MemberResult {
   prompts: ProfilePrompt[]
   distance?: string
   distanceKm?: number
+  /** Shown next to the name (individuals only; couples show names instead). */
+  pronouns?: string
+  isCouple: boolean
+  coupleType?: string
+  /** e.g. "FF couple" */
+  coupleBadge?: string
+  /** Couples: both partners' ages, e.g. [31, 34] */
+  ages?: number[]
 }
 
 export interface CallerContext {
@@ -40,6 +52,10 @@ export interface CallerContext {
   city: string | null
   latitude: number | null
   longitude: number | null
+  /** What kind of member the caller is, for mutual-interest matching. */
+  category: Category | null
+  /** Who the caller would like to meet ([] = open to everyone). */
+  interestedIn: Category[]
   compat: CompatInput
 }
 
@@ -54,6 +70,10 @@ export async function getCallerContext(userId: string, role?: string): Promise<C
           latitude: true,
           longitude: true,
           lookingFor: true,
+          interestedIn: true,
+          intentions: true,
+          isCouple: true,
+          gender: true,
           dateOfBirth: true,
         },
       },
@@ -61,6 +81,8 @@ export async function getCallerContext(userId: string, role?: string): Promise<C
     },
   })
   const p = me?.profile
+  const category = p ? categoryOf(p) : null
+  const interestedIn = p ? effectiveInterestedIn(p) : []
   const latitude = p?.latitude ?? null
   const longitude = p?.longitude ?? null
   return {
@@ -70,9 +92,13 @@ export async function getCallerContext(userId: string, role?: string): Promise<C
     city: p?.city ?? null,
     latitude,
     longitude,
+    category,
+    interestedIn,
     compat: {
       interests: me?.interests.map((i) => i.interest.name) ?? [],
-      lookingFor: p?.lookingFor ?? [],
+      category,
+      interestedIn,
+      intentions: p?.intentions ?? [],
       age: ageFromDob(p?.dateOfBirth),
       city: p?.city ?? null,
       latitude,
@@ -89,6 +115,45 @@ export function notSnoozed(now = new Date()): Prisma.ProfileWhereInput {
       OR: [{ snoozedUntil: null }, { snoozedUntil: { gt: now } }],
     },
   }
+}
+
+const NB_GENDERS: ('NON_BINARY' | 'OTHER')[] = ['NON_BINARY', 'OTHER']
+
+/** Profiles in a given category (COUPLE / MAN / WOMAN / NON_BINARY). */
+export function categoryWhere(cat: Category, coupleTypes?: CoupleType[]): Prisma.ProfileWhereInput {
+  if (cat === 'COUPLE') return coupleTypes?.length ? { isCouple: true, coupleType: { in: coupleTypes } } : { isCouple: true }
+  if (cat === 'NON_BINARY') return { isCouple: false, gender: { in: NB_GENDERS } }
+  return { isCouple: false, gender: cat }
+}
+
+/**
+ * Mutual-interest filter: the caller would like to meet the candidate's
+ * category AND the candidate would like to meet the caller's category.
+ * Permissive when either side has no preference (or no known category).
+ * Hidden gender/orientation still count here; they are just never displayed.
+ */
+export function mutualInterestWhere(caller: Pick<CallerContext, 'category' | 'interestedIn'>): Prisma.ProfileWhereInput[] {
+  const out: Prisma.ProfileWhereInput[] = []
+  if (caller.interestedIn.length) {
+    out.push({
+      OR: [
+        ...caller.interestedIn.map((c) => categoryWhere(c)),
+        { isCouple: false, gender: null }, // category unknown → don't exclude
+      ],
+    })
+  }
+  if (caller.category) {
+    out.push({
+      OR: [
+        { interestedIn: { has: caller.category } },
+        // Legacy members who only have lookingFor (MAN/WOMAN/COUPLE/ANY)
+        { interestedIn: { isEmpty: true }, lookingFor: { hasSome: legacyValuesWanting(caller.category) } },
+        // No preference at all
+        { interestedIn: { isEmpty: true }, NOT: { lookingFor: { hasSome: LEGACY_WHO_VALUES } } },
+      ],
+    })
+  }
+  return out
 }
 
 /** Ids of users the caller has blocked or been blocked by. */
@@ -122,6 +187,13 @@ export const memberSelect = {
       prompts: true,
       latitude: true,
       longitude: true,
+      interestedIn: true,
+      intentions: true,
+      isCouple: true,
+      coupleType: true,
+      coupleMembers: true,
+      pronouns: true,
+      partner: { select: { dateOfBirth: true } },
     },
   },
   photos: {
@@ -151,6 +223,25 @@ function parsePrompts(raw: Prisma.JsonValue | null | undefined): ProfilePrompt[]
   return out
 }
 
+function coupleExtras(p: NonNullable<SelectedUser['profile']>): Pick<MemberResult, 'coupleType' | 'coupleBadge' | 'ages'> {
+  const ages: number[] = []
+  if (p.partner) {
+    for (const d of [p.dateOfBirth, p.partner.dateOfBirth]) {
+      const a = ageFrom(d); if (a !== undefined) ages.push(a)
+    }
+  } else {
+    const members = parseCoupleMembers(p.coupleMembers)
+    if (members.length === 0) { const a = ageFrom(p.dateOfBirth); if (a !== undefined) ages.push(a) }
+    members.forEach((m, i) => {
+      const a = ageFrom(i === 0 ? p.dateOfBirth : m.dateOfBirth); if (a !== undefined) ages.push(a)
+    })
+  }
+  return {
+    ...(p.coupleType ? { coupleType: p.coupleType, coupleBadge: coupleTypeBadge(p.coupleType) } : {}),
+    ...(ages.length ? { ages } : {}),
+  }
+}
+
 /** Map a DB user to the public card shape. Never exposes raw coordinates. */
 export function toMemberResult(u: SelectedUser, caller: CallerContext, promptLimit = 1): MemberResult {
   const p = u.profile
@@ -158,7 +249,9 @@ export function toMemberResult(u: SelectedUser, caller: CallerContext, promptLim
   const age = ageFromDob(p?.dateOfBirth) ?? undefined
   const compat = compatibility(caller.compat, {
     interests,
-    lookingFor: p?.lookingFor ?? [],
+    category: p ? categoryOf(p) : null,
+    interestedIn: p ? effectiveInterestedIn(p) : [],
+    intentions: p?.intentions ?? [],
     age,
     city: p?.city ?? null,
     latitude: p?.latitude ?? null,
@@ -191,6 +284,8 @@ export function toMemberResult(u: SelectedUser, caller: CallerContext, promptLim
     compatibilityReasons: compat.reasons,
     sharedInterests: compat.sharedInterests,
     prompts: parsePrompts(p?.prompts).slice(0, promptLimit),
+    isCouple: !!p?.isCouple,
+    ...(p?.isCouple ? coupleExtras(p) : p?.pronouns ? { pronouns: p.pronouns } : {}),
     ...(km !== undefined ? { distance: formatDistance(km) ?? undefined, distanceKm: Math.round(km) } : {}),
   }
 }
@@ -208,6 +303,10 @@ export interface SearchParamsInput {
   sort?: string | null
   maxKm?: string | null
   discover?: string | null
+  /** "Show me": comma list of WOMAN, MAN, NON_BINARY, COUPLE */
+  show?: string | null
+  /** Couple-type sub-filter when COUPLE is shown: comma list of MF, FF, MM, MX */
+  coupleType?: string | null
 }
 
 export interface SearchResult {
@@ -237,12 +336,17 @@ export async function searchMembers(caller: CallerContext, params: SearchParamsI
   // FREE users are locked to their own city regardless of query param
   const effectiveCity = caller.paid ? (params.city || null) : caller.city
 
-  const profileWhere: Prisma.ProfileWhereInput = { AND: [notSnoozed(now)] }
+  const profileWhere: Prisma.ProfileWhereInput = { AND: [notSnoozed(now), ...mutualInterestWhere(caller)] }
   const and = profileWhere.AND as Prisma.ProfileWhereInput[]
 
-  if (params.gender && params.gender !== 'ALL') {
-    if (params.gender === 'COUPLE') and.push({ isCouple: true })
-    else and.push({ gender: params.gender as 'MAN' | 'WOMAN' | 'NON_BINARY' | 'OTHER' })
+  // "Show me" filter (new) — falls back to the legacy single `gender` param.
+  const VALID_CATS: Category[] = ['WOMAN', 'MAN', 'NON_BINARY', 'COUPLE']
+  const show = (params.show ?? (params.gender && params.gender !== 'ALL' ? (params.gender === 'OTHER' ? 'NON_BINARY' : params.gender) : ''))
+    .split(',').filter((c): c is Category => (VALID_CATS as string[]).includes(c))
+  const coupleTypes = (params.coupleType ?? '').split(',')
+    .filter((t): t is CoupleType => ['MF', 'FF', 'MM', 'MX'].includes(t))
+  if (show.length) {
+    and.push({ OR: Array.from(new Set(show)).map((c) => categoryWhere(c, c === 'COUPLE' ? coupleTypes : undefined)) })
   }
   if (effectiveCity) and.push({ city: { contains: effectiveCity, mode: 'insensitive' } })
   if (params.tier === 'FREE' || params.tier === 'GOLD' || params.tier === 'PLATINUM') {

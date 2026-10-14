@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
       email?: unknown
       password?: unknown
       dateOfBirth?: unknown
+      accountType?: unknown
     } | null
     if (!body) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
@@ -31,6 +32,8 @@ export async function POST(req: NextRequest) {
     const email = typeof body.email === 'string' ? body.email.trim() : ''
     const password = typeof body.password === 'string' ? body.password : ''
     const dateOfBirth = typeof body.dateOfBirth === 'string' ? body.dateOfBirth : ''
+    // "I'm joining as": a single person or a couple sharing one account.
+    const isCouple = body.accountType === 'COUPLE'
 
     if (!username || !email || !password || !dateOfBirth) {
       return NextResponse.json(
@@ -55,15 +58,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: passwordError }, { status: 400 })
     }
 
-    const dob = new Date(dateOfBirth)
-    if (isNaN(dob.getTime())) {
+    // Accept YYYY-MM-DD only, stored as UTC midnight so the day never shifts.
+    const dob = /^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth) ? new Date(`${dateOfBirth}T00:00:00.000Z`) : new Date(NaN)
+    if (isNaN(dob.getTime()) || dob.getUTCFullYear() < 1900) {
       return NextResponse.json({ error: 'Invalid date of birth' }, { status: 400 })
     }
 
     const today = new Date()
-    let age = today.getFullYear() - dob.getFullYear()
-    const monthDiff = today.getMonth() - dob.getMonth()
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+    let age = today.getUTCFullYear() - dob.getUTCFullYear()
+    const monthDiff = today.getUTCMonth() - dob.getUTCMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getUTCDate() < dob.getUTCDate())) {
       age--
     }
     if (age < 18) {
@@ -109,7 +113,10 @@ export async function POST(req: NextRequest) {
       data: {
         userId: user.id,
         dateOfBirth: dob,
-        profileCompleteness: 20,
+        isCouple,
+        // Partner 1 of a shared couple account is the account holder (DOB from sign-up).
+        ...(isCouple ? { coupleMembers: [{ dateOfBirth: dateOfBirth }] } : {}),
+        profileCompleteness: 11,
       },
     })
 

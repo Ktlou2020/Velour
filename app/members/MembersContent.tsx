@@ -19,8 +19,14 @@ interface Props {
   callerHasLocation?: boolean;
 }
 
-const GENDER_FILTERS = ['ALL', 'MAN', 'WOMAN', 'COUPLE'];
-const GENDER_LABELS: Record<string, string> = { ALL: 'All', MAN: 'Men', WOMAN: 'Women', COUPLE: 'Couples' };
+// "Show me" — narrows results further. Everyone listed already wants to meet you too.
+const SHOW_OPTIONS = [
+  { value: 'WOMAN', label: 'Women' },
+  { value: 'MAN', label: 'Men' },
+  { value: 'NON_BINARY', label: 'Non-binary' },
+  { value: 'COUPLE', label: 'Couples' },
+];
+const COUPLE_TYPES = ['MF', 'FF', 'MM', 'MX'];
 const DISTANCE_OPTIONS = ['', '10', '25', '50', '100'];
 
 export default function MembersContent({ members, total, searchParams, canChangeCity, profileCity, profileCountry, callerHasLocation = false }: Props) {
@@ -32,7 +38,10 @@ export default function MembersContent({ members, total, searchParams, canChange
   const [ageMax, setAgeMax] = useState(searchParams.ageMax || '65');
   const [city, setCity] = useState(searchParams.city || profileCity || '');
   const [country, setCountry] = useState(profileCountry || '');
-  const [gender, setGender] = useState(searchParams.gender || 'ALL');
+  const initialShow = (searchParams.show ?? (searchParams.gender && searchParams.gender !== 'ALL' ? searchParams.gender : ''))
+    .split(',').filter(Boolean);
+  const [show, setShow] = useState<string[]>(initialShow);
+  const [coupleTypes, setCoupleTypes] = useState<string[]>((searchParams.coupleType ?? '').split(',').filter(Boolean));
   const [onlineOnly, setOnlineOnly] = useState(searchParams.online === '1');
   const [sortBy, setSortBy] = useState(searchParams.sort || 'online');
   const [maxKm, setMaxKm] = useState(searchParams.maxKm || '');
@@ -41,12 +50,14 @@ export default function MembersContent({ members, total, searchParams, canChange
 
   function applyFilters(overrides?: Record<string, string | undefined>) {
     const params = new URLSearchParams();
-    const g = overrides?.gender ?? gender;
+    const sh = overrides && 'show' in overrides ? overrides.show : show.join(',');
+    const ct = overrides && 'coupleType' in overrides ? overrides.coupleType : coupleTypes.join(',');
     const om = overrides?.online ?? (onlineOnly ? '1' : undefined);
     const s = overrides?.sort ?? sortBy;
     const km = overrides && 'maxKm' in overrides ? overrides.maxKm : maxKm;
     const c = canChangeCity ? city : profileCity;
-    if (g && g !== 'ALL') params.set('gender', g);
+    if (sh) params.set('show', sh);
+    if (sh?.split(',').includes('COUPLE') && ct) params.set('coupleType', ct);
     if (ageMin !== '18') params.set('ageMin', ageMin);
     if (ageMax !== '65') params.set('ageMax', ageMax);
     if (c.trim()) params.set('city', c.trim());
@@ -61,19 +72,58 @@ export default function MembersContent({ members, total, searchParams, canChange
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-4 mb-8 items-start sm:items-center flex-wrap">
-        <div className="flex gap-2 flex-wrap">
-          {GENDER_FILTERS.map((g) => (
+        <div className="w-full sm:w-auto" role="group" aria-labelledby="show-me-label">
+          <div className="flex gap-2 flex-wrap items-center">
+            <span id="show-me-label" className="text-white/70 text-sm mr-1">Show me</span>
             <button
-              key={g}
-              onClick={() => { setGender(g); applyFilters({ gender: g }); }}
-              aria-pressed={gender === g}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                gender === g ? 'bg-[#DC143C] text-white' : 'glass text-white/75 hover:text-white'
-              }`}
+              onClick={() => { setShow([]); setCoupleTypes([]); applyFilters({ show: undefined, coupleType: undefined }); }}
+              aria-pressed={show.length === 0}
+              className={`min-h-[40px] px-4 py-2 rounded-xl text-sm font-medium transition-all ${show.length === 0 ? 'bg-[#DC143C] text-white' : 'glass text-white/75 hover:text-white'}`}
             >
-              {GENDER_LABELS[g]}
+              Everyone
             </button>
-          ))}
+            {SHOW_OPTIONS.map((o) => {
+              const on = show.includes(o.value);
+              return (
+                <button
+                  key={o.value}
+                  onClick={() => {
+                    const next = on ? show.filter((v) => v !== o.value) : [...show, o.value];
+                    const nextTypes = next.includes('COUPLE') ? coupleTypes : [];
+                    setShow(next); setCoupleTypes(nextTypes);
+                    applyFilters({ show: next.join(',') || undefined, coupleType: nextTypes.join(',') || undefined });
+                  }}
+                  aria-pressed={on}
+                  className={`min-h-[40px] px-4 py-2 rounded-xl text-sm font-medium transition-all ${on ? 'bg-[#DC143C] text-white' : 'glass text-white/75 hover:text-white'}`}
+                >
+                  {o.label}
+                </button>
+              );
+            })}
+          </div>
+          {show.includes('COUPLE') && (
+            <div className="flex gap-1.5 flex-wrap items-center mt-2" role="group" aria-label="Couple type">
+              <span className="text-white/55 text-xs mr-1">Couple type</span>
+              {COUPLE_TYPES.map((t) => {
+                const on = coupleTypes.includes(t);
+                return (
+                  <button
+                    key={t}
+                    onClick={() => {
+                      const next = on ? coupleTypes.filter((v) => v !== t) : [...coupleTypes, t];
+                      setCoupleTypes(next);
+                      applyFilters({ coupleType: next.join(',') || undefined });
+                    }}
+                    aria-pressed={on}
+                    title={{ MF: 'Woman & man', FF: 'Two women', MM: 'Two men', MX: 'Includes a non-binary partner' }[t]}
+                    className={`min-h-[36px] px-3 py-1 rounded-lg text-xs font-semibold transition-all ${on ? 'bg-[#D4AF37] text-[#0A0A0F]' : 'glass text-white/70 hover:text-white'}`}
+                  >
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
@@ -219,10 +269,10 @@ export default function MembersContent({ members, total, searchParams, canChange
           </div>
           <h2 className="font-serif text-white font-bold text-2xl mb-2">No one matches these filters — yet</h2>
           <p className="text-white/70 text-sm sm:text-base mb-7 max-w-md mx-auto">
-            Hush is new and growing every week. Try widening your age range or distance, or check back soon.
+            We only show people who&apos;d like to meet you too. Hush is new and growing every week — try widening your filters, or check who you&apos;d like to meet on your profile.
           </p>
           <button
-            onClick={() => { setGender('ALL'); setCity(''); setCountry(''); setOnlineOnly(false); setMaxKm(''); router.push(pathname); }}
+            onClick={() => { setShow([]); setCoupleTypes([]); setCity(''); setCountry(''); setOnlineOnly(false); setMaxKm(''); router.push(pathname); }}
             className="bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] px-7 py-3 rounded-xl text-white text-sm font-semibold transition-all"
           >
             Clear all filters
@@ -233,6 +283,8 @@ export default function MembersContent({ members, total, searchParams, canChange
           initialMembers={members}
           filters={{
             gender: searchParams.gender,
+            show: searchParams.show,
+            coupleType: searchParams.coupleType,
             ageMin: searchParams.ageMin,
             ageMax: searchParams.ageMax,
             city: canChangeCity ? searchParams.city : profileCity,

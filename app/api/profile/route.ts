@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
+import { isOwnMediaUrl, mediaIdFromUrl } from '@/lib/media'
 import { isPlatinum } from '@/lib/premium'
 import { validatePrompts } from '@/app/profile/prompts'
+import { Prisma } from '@prisma/client'
+import { completenessOf, effectiveInterestedIn, isAdult, parseIdentityInput } from '@/lib/identity'
 
 function bad(error: string, status = 400) {
   return NextResponse.json({ error }, { status })
@@ -54,36 +57,45 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json()
-    const {
-      displayName,
-      bio,
-      dateOfBirth,
-      gender,
-      orientation,
-      relationshipStatus,
-      lookingFor,
-      location,
-      city,
-      country,
-    } = body
+    const body = await req.json().catch(() => null) as Record<string, unknown> | null
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return bad('Invalid request')
+    const { displayName, bio, dateOfBirth, relationshipStatus, location, city, country } = body
+    const text = (v: unknown, max: number) =>
+      typeof v === 'string' ? (v.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, max) || null) : null
 
     const updateData: Record<string, unknown> = {}
-    if (displayName !== undefined) updateData.displayName = displayName
-    if (bio !== undefined) updateData.bio = bio
-    if (dateOfBirth !== undefined) updateData.dateOfBirth = new Date(dateOfBirth)
-    if (gender !== undefined) updateData.gender = gender
-    if (orientation !== undefined) updateData.orientation = orientation
-    if (relationshipStatus !== undefined) updateData.relationshipStatus = relationshipStatus
-    if (lookingFor !== undefined) updateData.lookingFor = lookingFor
-    if (location !== undefined) updateData.location = location
-    if (city !== undefined) updateData.city = city
-    if (country !== undefined) updateData.country = country
+    if (displayName !== undefined) updateData.displayName = text(displayName, 50)
+    if (bio !== undefined) updateData.bio = text(bio, 500)
+    if (dateOfBirth !== undefined) {
+      const s = typeof dateOfBirth === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateOfBirth) ? dateOfBirth.slice(0, 10) : ''
+      if (!s || !isAdult(s)) return bad('You must be at least 18 years old')
+      updateData.dateOfBirth = new Date(`${s}T00:00:00.000Z`)
+    }
+    if (relationshipStatus !== undefined) updateData.relationshipStatus = text(relationshipStatus, 40)
+    if (location !== undefined) updateData.location = text(location, 100)
+    if (city !== undefined) updateData.city = text(city, 60)
+    if (country !== undefined) updateData.country = text(country, 60)
 
     // Calculate profile completeness
     const existing = await db.profile.findUnique({
       where: { userId: session.user.id },
     })
+
+    // Legacy clients may still send lookingFor (MAN/WOMAN/COUPLE/ANY) as the "who".
+    if (Array.isArray(body.lookingFor) && body.interestedIn === undefined) {
+      body.interestedIn = effectiveInterestedIn({ lookingFor: body.lookingFor.filter((v): v is string => typeof v === 'string') })
+    }
+
+    // Identity, preferences, about-me and couple details (validated in lib/identity)
+    const identity = parseIdentityInput(body, {
+      dateOfBirth: (updateData.dateOfBirth as Date | undefined) ?? existing?.dateOfBirth ?? null,
+      isCouple: existing?.isCouple ?? false,
+      partnerId: existing?.partnerId ?? null,
+      gender: existing?.gender ?? null,
+    })
+    if ('error' in identity) return bad(identity.error)
+    Object.assign(updateData, identity.data)
+    if (updateData.coupleMembers === null) updateData.coupleMembers = Prisma.DbNull
 
     const needsTierCheck =
       body.incognito === true || (typeof body.videoUrl === 'string' && body.videoUrl !== '')
@@ -120,9 +132,12 @@ export async function PUT(req: NextRequest) {
       } else {
         if (typeof body.videoUrl !== 'string') return bad('Invalid video URL')
         if (!platinum) return bad('Video profiles are a Platinum feature', 403)
-        const cloudName = process.env.CLOUDINARY_CLOUD_NAME
-        const prefix = `https://res.cloudinary.com/${cloudName}/video/upload/`
-        if (!cloudName || !body.videoUrl.startsWith(prefix)) return bad('Video must be uploaded through Hush')
+        if (!isOwnMediaUrl(body.videoUrl, 'video')) return bad('Video must be uploaded through Hush')
+        const mediaId = mediaIdFromUrl(body.videoUrl)
+        if (mediaId) {
+          const owned = await db.photo.findFirst({ where: { id: mediaId, userId: session.user.id }, select: { id: true } })
+          if (!owned) return bad('Video must be uploaded through Hush')
+        }
         updateData.videoUrl = body.videoUrl
       }
     }
@@ -143,16 +158,8 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    const merged = { ...(existing ?? {}), ...updateData }
-    const completenessFields = [
-      'displayName', 'bio', 'dateOfBirth', 'gender', 'orientation',
-      'relationshipStatus', 'city', 'country', 'profilePhoto',
-    ]
-    const filled = completenessFields.filter((f) => {
-      const val = (merged as Record<string, unknown>)[f]
-      return val !== null && val !== undefined
-    }).length
-    updateData.profileCompleteness = Math.round((filled / completenessFields.length) * 100)
+    const hasPhoto = (await db.photo.count({ where: { userId: session.user.id, isProfile: true } })) > 0
+    updateData.profileCompleteness = completenessOf({ ...(existing ?? {}), ...updateData }, hasPhoto).completeness
 
     const profile = await db.profile.upsert({
       where: { userId: session.user.id },

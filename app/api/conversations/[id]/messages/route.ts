@@ -3,21 +3,25 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { sendPushToUser } from '@/lib/push'
 import { isPaid } from '@/lib/premium'
+import {
+  computeReceipt,
+  effectiveExpiry,
+  findMatchesBetween,
+  getConversationAccess,
+  getCoupleMemberNames,
+  getPartnerMap,
+  sideOf,
+} from '@/lib/couples'
 
 const MAX_CONTENT = 2000
 
-/** Only accept https images hosted on our Cloudinary account. */
-function isValidImageUrl(raw: unknown): raw is string {
-  if (typeof raw !== 'string' || raw.length > 1000) return false
-  try {
-    const u = new URL(raw)
-    if (u.protocol !== 'https:' || u.hostname !== 'res.cloudinary.com') return false
-    const cloud = process.env.CLOUDINARY_CLOUD_NAME
-    if (cloud && !u.pathname.startsWith(`/${cloud}/`)) return false
-    return u.pathname.includes('/image/upload/')
-  } catch {
-    return false
-  }
+/**
+ * Only accept images the sender uploaded to Hush (`/api/media/<id>`, from
+ * POST /api/upload with purpose=chat) or legacy Cloudinary images.
+ */
+async function isValidImageUrl(raw: unknown, senderId: string): Promise<boolean> {
+  const { isSendableChatImage } = await import('@/lib/media-access')
+  return isSendableChatImage(raw, senderId)
 }
 
 export async function GET(
@@ -37,7 +41,12 @@ export async function GET(
     const cursor = searchParams.get('cursor')
     const limit = Math.min(Math.max(parseInt(searchParams.get('limit') ?? '20', 10) || 20, 1), 100)
 
-    // Verify user is a participant (and fetch tier for read-receipt gating)
+    // Lazy couple sync (adds linked partners / removes ex-partners), then
+    // verify user is a participant (and fetch tier for read-receipt gating)
+    const access = await getConversationAccess(conversationId, userId)
+    if (!access) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
     const participation = await db.conversationParticipant.findUnique({
       where: { conversationId_userId: { conversationId, userId } },
       select: { unreadCount: true, user: { select: { profile: { select: { membershipTier: true } } } } },
@@ -93,11 +102,20 @@ export async function GET(
     const nextCursor = messages.length === limit ? messages[messages.length - 1].id : null
 
     // Read receipts on your own sent messages are a paid feature
-    const out = messages.reverse().map((m) =>
-      m.senderId === userId && !paid ? { ...m, isRead: false, readAt: null } : m
-    )
+    // With several recipients "read" means every other participant has read it.
+    const receipt = paid ? await computeReceipt(conversationId, userId) : null
+    const multi = access.userIds.length > 2
+    const out = messages.reverse().map((m) => {
+      if (m.senderId !== userId) return m
+      if (!paid) return { ...m, isRead: false, readAt: null }
+      if (multi) {
+        const isLatest = receipt?.messageId === m.id
+        return { ...m, isRead: isLatest ? receipt!.allSeen : m.isRead, seenBy: isLatest ? receipt!.seenBy : undefined }
+      }
+      return m
+    })
 
-    return NextResponse.json({ messages: out, nextCursor })
+    return NextResponse.json({ messages: out, nextCursor, receipt })
   } catch (error) {
     console.error('GET /api/conversations/[id]/messages error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -117,12 +135,13 @@ export async function POST(
 
     const { id: conversationId } = await params
     const body = await req.json().catch(() => ({}))
-    const { content: rawContent, imageUrl: rawImageUrl } = body as { content?: unknown; imageUrl?: unknown }
+    const { content: rawContent, imageUrl: rawImageUrl, senderPartnerName: rawPartnerName } =
+      body as { content?: unknown; imageUrl?: unknown; senderPartnerName?: unknown }
 
     const content = typeof rawContent === 'string' ? rawContent.trim() : ''
     let imageUrl: string | null = null
     if (rawImageUrl !== undefined && rawImageUrl !== null && rawImageUrl !== '') {
-      if (!isValidImageUrl(rawImageUrl)) {
+      if (typeof rawImageUrl !== 'string' || !(await isValidImageUrl(rawImageUrl, userId))) {
         return NextResponse.json({ error: 'Invalid image URL' }, { status: 400 })
       }
       imageUrl = rawImageUrl
@@ -135,32 +154,42 @@ export async function POST(
       return NextResponse.json({ error: `Message must be under ${MAX_CONTENT} characters` }, { status: 400 })
     }
 
-    // Verify user is a participant
-    const participation = await db.conversationParticipant.findUnique({
-      where: { conversationId_userId: { conversationId, userId } },
-      select: { id: true },
-    })
-
-    if (!participation) {
+    // Verify user is a participant (after the lazy couple sync)
+    const access = await getConversationAccess(conversationId, userId)
+    if (!access) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
+    // A block by/against anyone on either side (incl. linked partners)
+    if (access.blocked) {
+      return NextResponse.json({ error: 'You can no longer message in this conversation' }, { status: 403 })
+    }
 
-    const otherParticipants = await db.conversationParticipant.findMany({
-      where: { conversationId, userId: { not: userId } },
-      select: { userId: true },
+    // Shared couple account: which of the two is writing
+    const me = await db.profile.findUnique({
+      where: { userId },
+      select: { isCouple: true, partnerId: true, coupleMembers: true, displayName: true, user: { select: { username: true } } },
     })
-    const otherUserId = otherParticipants[0]?.userId
-    const pair = otherUserId
-      ? (userId < otherUserId ? [userId, otherUserId] : [otherUserId, userId])
-      : null
+    const coupleNames = me?.isCouple && !me.partnerId ? getCoupleMemberNames(me.coupleMembers) : []
+    let senderPartnerName: string | null = null
+    if (typeof rawPartnerName === 'string' && rawPartnerName.trim()) {
+      const wanted = rawPartnerName.trim()
+      if (!coupleNames.includes(wanted)) {
+        return NextResponse.json({ error: 'Choose who is sending this message' }, { status: 400 })
+      }
+      senderPartnerName = wanted
+    }
+
+    const otherParticipants = access.userIds.filter((u) => u !== userId).map((u) => ({ userId: u }))
+    const partnerMap = await getPartnerMap(access.userIds)
+    const mySide = sideOf(userId, partnerMap)
+    const otherSide = access.userIds.filter((u) => !mySide.includes(u))
+    const sideMatches = await findMatchesBetween(mySide, otherSide)
 
     // An expired match (nobody said hi within the window) can't be revived by messaging
-    if (pair) {
-      const match = await db.match.findUnique({
-        where: { user1Id_user2Id: { user1Id: pair[0], user2Id: pair[1] } },
-        select: { expiresAt: true },
-      })
-      if (match?.expiresAt && match.expiresAt.getTime() < Date.now()) {
+    const expiry = effectiveExpiry(sideMatches)
+    if (expiry && expiry.getTime() < Date.now()) {
+      const anyMessage = await db.message.findFirst({ where: { conversationId }, select: { id: true } })
+      if (!anyMessage) {
         return NextResponse.json({ error: 'This match has expired' }, { status: 410 })
       }
     }
@@ -171,6 +200,7 @@ export async function POST(
         senderId: userId,
         content,
         imageUrl,
+        senderPartnerName,
       },
       include: {
         sender: {
@@ -186,6 +216,18 @@ export async function POST(
     })
 
     const preview = content ? content.slice(0, 100) : '📷 Photo'
+    // "Thandi" — or for a linked couple member "Thandi (Thandi & Sipho)"
+    const myName = me?.displayName || me?.user.username || 'Someone'
+    const partnerOfMe = mySide.find((u) => u !== userId)
+    let senderLabel = senderPartnerName || myName
+    if (partnerOfMe && access.userIds.includes(partnerOfMe)) {
+      const pp = await db.profile.findUnique({
+        where: { userId: partnerOfMe },
+        select: { displayName: true, user: { select: { username: true } } },
+      })
+      const pn = pp?.displayName || pp?.user.username
+      if (pn) senderLabel = `${myName} (${myName} & ${pn})`
+    }
 
     // Update conversation last message; stop the sender's typing indicator
     await db.$transaction([
@@ -209,23 +251,23 @@ export async function POST(
         data: {
           userId: participant.userId,
           type: 'MESSAGE',
-          title: 'New Message',
+          title: `New message from ${senderLabel}`,
           body: preview,
-          data: { conversationId, senderId: userId },
+          data: { conversationId, senderId: userId, ...(senderPartnerName ? { senderPartnerName } : {}) },
         },
       })
       sendPushToUser(participant.userId, {
-        title: 'New Message — Hush',
+        title: `${senderLabel} — Hush`,
         body: preview,
-        url: `/messages`,
+        url: `/messages?conv=${conversationId}`,
         tag: `message-${conversationId}`,
       }).catch(() => {})
     }
 
     // Extend match expiry — once conversation is active the match never expires
-    if (pair) {
+    if (sideMatches.some((m) => m.expiresAt)) {
       db.match.updateMany({
-        where: { user1Id: pair[0], user2Id: pair[1] },
+        where: { id: { in: sideMatches.map((m) => m.id) } },
         data: { expiresAt: null },
       }).catch(() => {})
     }

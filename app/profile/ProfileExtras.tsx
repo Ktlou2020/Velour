@@ -140,6 +140,21 @@ export function PromptsEditor({ initial }: { initial: ProfilePrompt[] }) {
 
 /* ─── Video profile ───────────────────────────────────────────────────── */
 
+/** Duration in seconds read by the browser, or null if it can't tell. */
+function videoDuration(file: File): Promise<number | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement('video');
+    const done = (d: number | null) => { URL.revokeObjectURL(url); resolve(d); };
+    const timer = setTimeout(() => done(null), 8000);
+    v.preload = 'metadata';
+    v.muted = true;
+    v.onloadedmetadata = () => { clearTimeout(timer); done(Number.isFinite(v.duration) ? v.duration : null); };
+    v.onerror = () => { clearTimeout(timer); done(null); };
+    v.src = url;
+  });
+}
+
 export function VideoProfileCard({ initialUrl, platinum }: { initialUrl: string | null; platinum: boolean }) {
   const { showToast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -150,13 +165,21 @@ export function VideoProfileCard({ initialUrl, platinum }: { initialUrl: string 
     const file = e.target.files?.[0];
     if (inputRef.current) inputRef.current.value = '';
     if (!file) return;
-    if (!file.type.startsWith('video/')) { showToast('Please choose a video file', 'error'); return; }
+    if (!/^video\/(mp4|webm|quicktime)$/.test(file.type) && !/\.(mp4|m4v|mov|webm)$/i.test(file.name)) {
+      showToast('Please choose an MP4, MOV or WebM video', 'error'); return;
+    }
     if (file.size > 30 * 1024 * 1024) { showToast('Video must be under 30MB', 'error'); return; }
     setBusy(true);
     try {
+      // The server can't measure duration (no ffmpeg), so check it here.
+      const seconds = await videoDuration(file);
+      if (seconds !== null && seconds > 30.5) {
+        showToast(`Video must be 30 seconds or shorter (yours is ${Math.round(seconds)}s)`, 'error');
+        return;
+      }
       const fd = new FormData();
       fd.append('file', file);
-      fd.append('kind', 'video');
+      fd.append('purpose', 'video');
       const up = await fetch('/api/upload', { method: 'POST', body: fd });
       const data = await up.json().catch(() => ({})) as { url?: string; error?: string };
       if (!up.ok || !data.url) { showToast(data.error ?? 'Upload failed', 'error'); return; }
@@ -212,7 +235,7 @@ export function VideoProfileCard({ initialUrl, platinum }: { initialUrl: string 
               </button>
             )}
           </div>
-          <input ref={inputRef} type="file" accept="video/*" className="hidden" onChange={onFile} />
+          <input ref={inputRef} type="file" accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.m4v,.webm" className="hidden" onChange={onFile} aria-label="Choose a profile video" />
         </>
       ) : (
         <div className="flex items-center justify-between gap-3 flex-wrap">

@@ -38,8 +38,9 @@ function SigninContent() {
       })
 
       if (result?.error) {
-        // Show specific error for debugging
-        if (result.error === 'CredentialsSignin') {
+        if (result.code === 'rate_limited') {
+          setError('Too many attempts, try again in a few minutes.')
+        } else if (result.error === 'CredentialsSignin') {
           setError('Incorrect email or password. Please check your details and try again.')
         } else {
           console.error('Sign in failed:', result.error)

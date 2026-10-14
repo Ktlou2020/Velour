@@ -4,6 +4,7 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { isPaid } from '@/lib/premium'
 import { normalizeReactions } from '@/lib/reactions'
+import { computeReceipt, getTypingAs } from '@/lib/couples'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,13 +14,16 @@ const POLL_MS = 1500
  * SSE stream for one conversation. Emits:
  *  { type: 'connected' }
  *  { type: 'message', message }
- *  { type: 'typing', userId, isTyping }
- *  { type: 'read', messageIds, readAt }          (paid callers only)
+ *  { type: 'typing', userId, isTyping, name? }    (name: shared couple account's partner)
+ *  { type: 'receipt', messageId, seenBy, allSeen, readAt }   (paid callers only;
+ *        for the caller's latest message — "Seen" once every other participant read it)
  *  { type: 'reaction', messageId, reactions }
+ *  { type: 'participants' }   (someone joined/left, e.g. a partner was linked)
+ *  { type: 'revoked' }        (the caller is no longer a participant)
  *
- * Each poll does one light query (conversation.updatedAt + the other
- * participant's typingUntil). Messages / reads / reactions are only queried
- * when updatedAt changed — every write path touches the conversation.
+ * Each poll does one light query (conversation.updatedAt + every
+ * participant's typingUntil / unreadCount). Messages / reactions are only
+ * queried when updatedAt changed — every write path touches the conversation.
  */
 export async function GET(
   req: NextRequest,
@@ -44,8 +48,10 @@ export async function GET(
 
   let lastMessageId: string | null = null
   let lastUpdatedAt = 0
-  let readCursor = new Date()
-  const typingState = new Map<string, boolean>()
+  let receiptKey = ''
+  let unreadKey = ''
+  let participantsKey = ''
+  const typingState = new Map<string, string>()
   const reactionCache = new Map<string, string>()
   let closed = false
   let polling = false
@@ -93,27 +99,55 @@ export async function GET(
             select: {
               updatedAt: true,
               participants: {
-                where: { userId: { not: userId } },
-                select: { userId: true, typingUntil: true },
+                select: { userId: true, typingUntil: true, unreadCount: true },
               },
             },
           })
           if (!conv) { closed = true; clearInterval(poll); return }
+          if (!conv.participants.some((p) => p.userId === userId)) {
+            // Removed (e.g. the couple link that added them was undone)
+            send({ type: 'revoked' })
+            closed = true; clearInterval(poll)
+            try { controller.close() } catch { /* ignore */ }
+            return
+          }
+          const others = conv.participants.filter((p) => p.userId !== userId)
 
-          // ── Typing ────────────────────────────────────────────────────
-          for (const p of conv.participants) {
+          // ── Participants joined / left ────────────────────────────────
+          const pKey = others.map((p) => p.userId).sort().join(',')
+          if (participantsKey && pKey !== participantsKey) send({ type: 'participants' })
+          participantsKey = pKey
+
+          // ── Typing (every other participant, named) ───────────────────
+          for (const p of others) {
             const isTyping = !!p.typingUntil && p.typingUntil.getTime() > now
-            if ((typingState.get(p.userId) ?? false) !== isTyping) {
-              typingState.set(p.userId, isTyping)
-              send({ type: 'typing', userId: p.userId, isTyping })
+            const name = isTyping ? getTypingAs(conversationId, p.userId) : null
+            const key = isTyping ? `1|${name ?? ''}` : '0'
+            if ((typingState.get(p.userId) ?? '0') !== key) {
+              typingState.set(p.userId, key)
+              send({ type: 'typing', userId: p.userId, isTyping, ...(name ? { name } : {}) })
             }
           }
 
+          // ── Read receipts (others' unread counts moved) ───────────────
+          const uKey = others.map((p) => `${p.userId}:${p.unreadCount}`).sort().join(',')
+          const unreadChanged = uKey !== unreadKey
+          unreadKey = uKey
+
           const updatedAt = conv.updatedAt.getTime()
+          if (paid && unreadChanged) {
+            const r = await computeReceipt(conversationId, userId)
+            const key = r ? `${r.messageId}|${r.seenBy.join(',')}|${r.allSeen}` : ''
+            if (r && key !== receiptKey) {
+              send({ type: 'receipt', ...r })
+              receiptKey = key
+            }
+          }
+
           if (updatedAt !== lastUpdatedAt) {
             lastUpdatedAt = updatedAt
 
-            const [newMessages, reads, reacted] = await Promise.all([
+            const [newMessages, reacted] = await Promise.all([
               db.message.findMany({
                 where: {
                   conversationId,
@@ -125,18 +159,20 @@ export async function GET(
                   content: true,
                   imageUrl: true,
                   senderId: true,
+                  senderPartnerName: true,
+                  sender: {
+                    select: {
+                      id: true,
+                      username: true,
+                      profile: { select: { displayName: true, profilePhoto: true } },
+                    },
+                  },
                   isRead: true,
                   readAt: true,
                   reactions: true,
                   createdAt: true,
                 },
               }),
-              paid
-                ? db.message.findMany({
-                    where: { conversationId, senderId: userId, readAt: { gt: readCursor } },
-                    select: { id: true, readAt: true },
-                  })
-                : Promise.resolve([] as { id: string; readAt: Date | null }[]),
               db.message.findMany({
                 where: { conversationId, reactions: { not: Prisma.AnyNull } },
                 select: { id: true, reactions: true },
@@ -172,14 +208,6 @@ export async function GET(
                   data: { updatedAt: new Date() },
                 }),
               ])
-            }
-
-            // ── Read receipts ───────────────────────────────────────────
-            if (reads.length > 0) {
-              let max = readCursor
-              for (const r of reads) if (r.readAt && r.readAt > max) max = r.readAt
-              readCursor = max
-              send({ type: 'read', messageIds: reads.map((r) => r.id), readAt: max })
             }
 
             // ── Reactions ───────────────────────────────────────────────

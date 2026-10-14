@@ -1,161 +1,171 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
 import crypto from 'crypto'
+import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { isPlatinum } from '@/lib/premium'
-import { rateLimit, TOO_MANY_REQUESTS_MESSAGE } from '@/lib/rate-limit'
+import { getClientIp, rateLimit, TOO_MANY_REQUESTS_MESSAGE } from '@/lib/rate-limit'
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, MediaError, deleteFiles, photoFileKeys, saveImage, saveVideo } from '@/lib/storage'
+import { CHAT_ALBUM_NAME, VIDEO_ALBUM_NAME, isSystemAlbumName, mediaThumbUrl, mediaUrl } from '@/lib/media'
+import { systemAlbumId } from '@/lib/media-access'
+import { isValidId } from '@/lib/security'
 
-// Raster formats only: SVG can carry script.
-const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'image/avif'])
+export const runtime = 'nodejs'
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-const MAX_VIDEO_SIZE = 30 * 1024 * 1024 // 30MB
-const MAX_VIDEO_SECONDS = 31
+const MAX_GALLERY_PHOTOS = 300
 
-function sign(params: string, apiSecret: string) {
-  return crypto.createHash('sha256').update(params + apiSecret).digest('hex')
+/** Cuid-like id we can turn into a URL before the row exists. */
+function newMediaId(): string {
+  return 'm' + crypto.randomBytes(15).toString('hex').slice(0, 24)
 }
 
-async function handleVideoUpload(file: File, userId: string, cloudName: string, apiKey: string, apiSecret: string) {
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { role: true, profile: { select: { membershipTier: true } } },
+/** Delete this user's chat images that were uploaded > 1 day ago but never sent. */
+async function sweepUnsentChatImages(userId: string, albumId: string) {
+  const stale = await db.photo.findMany({
+    where: { userId, albumId, createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+    select: { id: true, url: true, storageKey: true, mimeType: true },
+    take: 50,
   })
-  if (!isPlatinum(user?.profile?.membershipTier, user?.role)) {
-    return NextResponse.json({ error: 'Video profiles are a Platinum feature' }, { status: 403 })
-  }
-  if (!file.type.startsWith('video/')) {
-    return NextResponse.json({ error: 'Only video files are accepted' }, { status: 400 })
-  }
-  if (file.size > MAX_VIDEO_SIZE) {
-    return NextResponse.json({ error: 'Video must be under 30MB' }, { status: 400 })
-  }
-
-  const timestamp = Math.round(Date.now() / 1000)
-  const folder = 'velour/videos'
-  const signature = sign(`folder=${folder}&timestamp=${timestamp}`, apiSecret)
-
-  const uploadForm = new FormData()
-  uploadForm.append('file', file)
-  uploadForm.append('api_key', apiKey)
-  uploadForm.append('timestamp', String(timestamp))
-  uploadForm.append('signature', signature)
-  uploadForm.append('folder', folder)
-
-  const uploadResponse = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
-    method: 'POST',
-    body: uploadForm,
+  if (!stale.length) return
+  const used = await db.message.findMany({
+    where: { senderId: userId, imageUrl: { in: stale.map((s) => s.url) } },
+    select: { imageUrl: true },
   })
-  if (!uploadResponse.ok) {
-    const errorData = await uploadResponse.json().catch(() => ({}))
-    console.error('Cloudinary video upload error:', errorData)
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
-  }
-
-  const data = await uploadResponse.json() as { secure_url: string; public_id?: string; duration?: number }
-  const duration = typeof data.duration === 'number' ? data.duration : null
-
-  if (duration !== null && duration > MAX_VIDEO_SECONDS) {
-    // Best-effort cleanup of the rejected upload
-    if (data.public_id) {
-      const ts = Math.round(Date.now() / 1000)
-      const destroyForm = new FormData()
-      destroyForm.append('public_id', data.public_id)
-      destroyForm.append('api_key', apiKey)
-      destroyForm.append('timestamp', String(ts))
-      destroyForm.append('signature', sign(`public_id=${data.public_id}&timestamp=${ts}`, apiSecret))
-      fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/destroy`, { method: 'POST', body: destroyForm }).catch(() => {})
-    }
-    return NextResponse.json({ error: 'Video must be 30 seconds or shorter' }, { status: 400 })
-  }
-
-  const url = data.secure_url
-  // Poster frame: same asset rendered as a JPG
-  const posterUrl = url.replace(/\.[a-z0-9]+$/i, '.jpg')
-  return NextResponse.json({ url, posterUrl, duration }, { status: 201 })
+  const usedSet = new Set(used.map((u) => u.imageUrl))
+  const orphans = stale.filter((s) => !usedSet.has(s.url))
+  if (!orphans.length) return
+  await db.photo.deleteMany({ where: { id: { in: orphans.map((o) => o.id) } } })
+  await deleteFiles(orphans.flatMap(photoFileKeys))
 }
 
+/**
+ * POST /api/upload  (multipart/form-data)
+ *   file     the image or video
+ *   purpose  "gallery" (default) | "chat" | "video"   (legacy: kind=video)
+ *   albumId  optional, gallery uploads only: put the photo straight into one of my albums
+ *
+ * Gallery photos are created immediately as normal Photo rows owned by the
+ * uploader (so nothing is ever orphaned); POST /api/photos with the returned
+ * url then just updates that row. Chat images and the profile video go into
+ * hidden per-user albums and never appear in the gallery.
+ *
+ * 201 → { url, thumbnailUrl, id, photo, width?, height? }
+ */
 export async function POST(req: NextRequest) {
   try {
     const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const userId = session?.user?.id
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    if (!rateLimit(`upload:${session.user.id}`, 30, 10 * 60 * 1000)) {
+    if (!rateLimit(`upload:${userId}`, 40, 10 * 60 * 1000) || !rateLimit(`upload:ip:${getClientIp(req.headers)}`, 80, 10 * 60 * 1000)) {
       return NextResponse.json({ error: TOO_MANY_REQUESTS_MESSAGE }, { status: 429 })
     }
 
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME
-    const apiKey = process.env.CLOUDINARY_API_KEY
-    const apiSecret = process.env.CLOUDINARY_API_SECRET
-
-    if (!cloudName || !apiKey || !apiSecret) {
-      return NextResponse.json({ error: 'Cloudinary not configured' }, { status: 500 })
+    // Refuse obviously oversized bodies before buffering them.
+    const declared = Number(req.headers.get('content-length') || 0)
+    if (declared > MAX_VIDEO_BYTES + 1024 * 1024) {
+      return NextResponse.json({ error: 'File is too large' }, { status: 413 })
     }
 
     const formData = await req.formData().catch(() => null)
     const entry = formData?.get('file')
     const file = entry instanceof File ? entry : null
+    if (!formData || !file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
-    if (!formData || !file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 })
-    }
+    const rawPurpose = formData.get('purpose') ?? (formData.get('kind') === 'video' ? 'video' : 'gallery')
+    const purpose = rawPurpose === 'chat' || rawPurpose === 'video' ? rawPurpose : 'gallery'
 
-    if (formData.get('kind') === 'video') {
-      return handleVideoUpload(file, session.user.id, cloudName, apiKey, apiSecret)
-    }
-
-    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
-      return NextResponse.json({ error: 'Only JPEG, PNG, WebP, GIF, HEIC or AVIF images are accepted' }, { status: 400 })
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: 'File size must be under 10MB' }, { status: 400 })
-    }
-
-    const timestamp = Math.round(Date.now() / 1000)
-    const folder = 'velour/photos'
-
-    // Build signature string (params sorted alphabetically)
-    const paramsToSign = `folder=${folder}&timestamp=${timestamp}`
-    const signature = crypto
-      .createHash('sha256')
-      .update(paramsToSign + apiSecret)
-      .digest('hex')
-
-    // Build upload form data
-    const uploadForm = new FormData()
-    uploadForm.append('file', file)
-    uploadForm.append('api_key', apiKey)
-    uploadForm.append('timestamp', String(timestamp))
-    uploadForm.append('signature', signature)
-    uploadForm.append('folder', folder)
-
-    const uploadResponse = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-      {
-        method: 'POST',
-        body: uploadForm,
+    if (purpose === 'video') {
+      const user = await db.user.findUnique({
+        where: { id: userId },
+        select: { role: true, profile: { select: { membershipTier: true, videoUrl: true } } },
+      })
+      if (!isPlatinum(user?.profile?.membershipTier, user?.role)) {
+        return NextResponse.json({ error: 'Video profiles are a Platinum feature' }, { status: 403 })
       }
-    )
+      if (file.size > MAX_VIDEO_BYTES) return NextResponse.json({ error: 'Video must be under 30MB' }, { status: 413 })
 
-    if (!uploadResponse.ok) {
-      const errorData = await uploadResponse.json().catch(() => ({}))
-      console.error('Cloudinary upload error:', errorData)
-      return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
+      const stored = await saveVideo(Buffer.from(await file.arrayBuffer()))
+      const albumId = await systemAlbumId(userId, VIDEO_ALBUM_NAME)
+      const id = newMediaId()
+      const url = mediaUrl(id)
+
+      // Clean up earlier uploads that never became (or no longer are) the profile video.
+      const old = await db.photo.findMany({
+        where: { userId, albumId, url: { not: user?.profile?.videoUrl ?? '' } },
+        select: { id: true, storageKey: true, mimeType: true },
+      })
+
+      const photo = await db.photo.create({
+        data: { id, userId, url, albumId, isPrivate: true, storageKey: stored.key, mimeType: stored.mimeType, sizeBytes: stored.sizeBytes },
+      })
+      if (old.length) {
+        await db.photo.deleteMany({ where: { id: { in: old.map((o) => o.id) } } })
+        deleteFiles(old.flatMap(photoFileKeys)).catch(() => {})
+      }
+      return NextResponse.json({ url, id: photo.id, posterUrl: null, duration: null, mimeType: stored.mimeType }, { status: 201 })
     }
 
-    const data = await uploadResponse.json()
-    const url: string = data.secure_url
+    if (file.size > MAX_IMAGE_BYTES) return NextResponse.json({ error: 'Images must be under 10MB' }, { status: 413 })
 
-    // Build thumbnail URL by inserting transformation into Cloudinary URL
-    // Replace /upload/ with /upload/w_300,h_300,c_fill/
-    const thumbnailUrl = url.replace('/upload/', '/upload/w_300,h_300,c_fill/')
+    let albumId: string | null = null
+    let isPrivate = false
+    if (purpose === 'chat') {
+      albumId = await systemAlbumId(userId, CHAT_ALBUM_NAME)
+      isPrivate = true
+      sweepUnsentChatImages(userId, albumId).catch(() => {})
+    } else {
+      const count = await db.photo.count({
+        where: { userId, OR: [{ albumId: null }, { album: { name: { notIn: [CHAT_ALBUM_NAME, VIDEO_ALBUM_NAME] } } }] },
+      })
+      if (count >= MAX_GALLERY_PHOTOS) {
+        return NextResponse.json({ error: `You can keep up to ${MAX_GALLERY_PHOTOS} photos. Delete some to upload more.` }, { status: 400 })
+      }
+      const requestedAlbum = formData.get('albumId')
+      if (typeof requestedAlbum === 'string' && requestedAlbum) {
+        if (!isValidId(requestedAlbum)) return NextResponse.json({ error: 'Album not found' }, { status: 404 })
+        const album = await db.album.findFirst({ where: { id: requestedAlbum, ownerId: userId }, select: { id: true, name: true, isPrivate: true } })
+        if (!album || isSystemAlbumName(album.name)) return NextResponse.json({ error: 'Album not found' }, { status: 404 })
+        albumId = album.id
+        isPrivate = album.isPrivate
+      }
+    }
 
-    return NextResponse.json({ url, thumbnailUrl }, { status: 201 })
+    const stored = await saveImage(Buffer.from(await file.arrayBuffer()))
+    const id = newMediaId()
+    const url = mediaUrl(id)
+    const thumbnailUrl = mediaThumbUrl(id)
+    const last = purpose === 'gallery'
+      ? await db.photo.findFirst({ where: { userId }, orderBy: { order: 'desc' }, select: { order: true } })
+      : null
+
+    try {
+      const photo = await db.photo.create({
+        data: {
+          id,
+          userId,
+          url,
+          thumbnailUrl,
+          albumId,
+          isPrivate,
+          order: (last?.order ?? -1) + 1,
+          storageKey: stored.key,
+          mimeType: stored.mimeType,
+          sizeBytes: stored.sizeBytes,
+        },
+      })
+      return NextResponse.json(
+        { url, thumbnailUrl, id: photo.id, photo, width: stored.width, height: stored.height },
+        { status: 201 },
+      )
+    } catch (e) {
+      await deleteFiles([stored.key, stored.thumbKey])
+      throw e
+    }
   } catch (error) {
-    console.error('POST /api/upload error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    if (error instanceof MediaError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+    console.error('POST /api/upload error:', error instanceof Error ? error.message : error)
+    return NextResponse.json({ error: 'Upload failed — please try again' }, { status: 500 })
   }
 }

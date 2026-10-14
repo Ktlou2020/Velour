@@ -1,8 +1,18 @@
 import { distanceKm } from '@/lib/geo'
+import { INTENTION_OPTIONS, type Category } from '@/lib/identity'
 
+/**
+ * Inputs for the compatibility score. Deliberately contains no ethnicity,
+ * body type or other "about me" details: those are never used to rank people.
+ */
 export interface CompatInput {
   interests: string[]
-  lookingFor: string[]
+  /** What kind of member this is (MAN / WOMAN / NON_BINARY / COUPLE), if known. */
+  category?: Category | null
+  /** Who they'd like to meet ([] = open to everyone). Use effectiveInterestedIn(). */
+  interestedIn?: Category[]
+  /** Why they're here, e.g. DATING, FRIENDSHIP. */
+  intentions?: string[]
   age?: number | null
   city?: string | null
   latitude?: number | null
@@ -15,27 +25,55 @@ export interface CompatResult {
   sharedInterests: string[]
 }
 
+function wants(who: Category[] | undefined, cat: Category | null | undefined): 'yes' | 'open' | 'no' {
+  if (!who || who.length === 0 || !cat) return 'open'
+  return who.includes(cat) ? 'yes' : 'no'
+}
+
+function intentionPhrase(values: string[]): string {
+  const phrases = values.map((v) => INTENTION_OPTIONS.find((o) => o.value === v)?.phrase ?? v.toLowerCase())
+  if (phrases.length === 1) return phrases[0]
+  return `${phrases.slice(0, -1).join(', ')} & ${phrases[phrases.length - 1]}`
+}
+
 /**
- * Transparent compatibility score (0–100) built from shared interests,
- * overlapping goals, age gap and proximity. Deterministic, no external calls.
+ * Transparent compatibility score (0–100): shared interests (35), mutual
+ * interest in each other (20), shared intentions (15), age gap (15) and
+ * proximity (15). Deterministic, no external calls.
  */
 export function compatibility(a: CompatInput, b: CompatInput): CompatResult {
   const reasons: string[] = []
 
+  // Mutual interest first: it is the most meaningful reason.
+  const aWantsB = wants(a.interestedIn, b.category)
+  const bWantsA = wants(b.interestedIn, a.category)
+  let mutualScore = 0
+  if (aWantsB !== 'no' && bWantsA !== 'no') {
+    if (aWantsB === 'yes' && bWantsA === 'yes') {
+      mutualScore = 20
+      reasons.push('Mutual interest')
+    } else {
+      mutualScore = 12
+    }
+  }
+
+  const aIntent = new Set(a.intentions ?? [])
+  const sharedIntentions = (b.intentions ?? []).filter((i) => aIntent.has(i))
+  let intentScore = 5
+  if ((a.intentions?.length ?? 0) && (b.intentions?.length ?? 0)) {
+    intentScore = Math.min(sharedIntentions.length / Math.min(a.intentions!.length, b.intentions!.length), 1) * 15
+  }
+  if (sharedIntentions.length > 0) {
+    reasons.push(`You're both looking for ${intentionPhrase(sharedIntentions.slice(0, 2))}`)
+  }
+
   const aInterests = new Set(a.interests.map((i) => i.toLowerCase()))
   const sharedInterests = b.interests.filter((i) => aInterests.has(i.toLowerCase()))
   const interestPool = Math.max(Math.min(a.interests.length, b.interests.length), 1)
-  const interestScore = Math.min(sharedInterests.length / interestPool, 1) * 40
+  const interestScore = Math.min(sharedInterests.length / interestPool, 1) * 35
   if (sharedInterests.length > 0) {
     reasons.push(`${sharedInterests.length} shared interest${sharedInterests.length === 1 ? '' : 's'}`)
   }
-
-  const aGoals = new Set(a.lookingFor)
-  const sharedGoals = b.lookingFor.filter((g) => aGoals.has(g))
-  const goalScore = a.lookingFor.length && b.lookingFor.length
-    ? Math.min(sharedGoals.length / Math.min(a.lookingFor.length, b.lookingFor.length), 1) * 30
-    : 10
-  if (sharedGoals.length > 0) reasons.push('Looking for the same things')
 
   let ageScore = 8
   if (a.age && b.age) {
@@ -54,7 +92,7 @@ export function compatibility(a: CompatInput, b: CompatInput): CompatResult {
     reasons.push('Same city')
   }
 
-  const score = Math.round(Math.min(interestScore + goalScore + ageScore + placeScore, 100))
+  const score = Math.round(Math.min(interestScore + mutualScore + intentScore + ageScore + placeScore, 100))
   return { score, reasons, sharedInterests }
 }
 

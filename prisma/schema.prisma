@@ -300,18 +300,20 @@ model ConversationParticipant {
 }
 
 model Message {
-  id             String       @id @default(cuid())
-  conversationId String
-  senderId       String
-  content        String
-  imageUrl       String?
-  isRead         Boolean      @default(false)
-  readAt         DateTime?
+  id                String       @id @default(cuid())
+  conversationId    String
+  senderId          String
+  content           String
+  imageUrl          String?
+  // For couples sharing one account: which partner wrote this (name from Profile.coupleMembers)
+  senderPartnerName String?
+  isRead            Boolean      @default(false)
+  readAt            DateTime?
   // { "❤️": ["userId", ...] }
-  reactions      Json?
-  createdAt      DateTime     @default(now())
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  reactions         Json?
+  createdAt         DateTime     @default(now())
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender            User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
 }
 
 model Event {

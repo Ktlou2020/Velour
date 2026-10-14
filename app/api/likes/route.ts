@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { sendPushToUser } from '@/lib/push'
+import { findMatchesBetween, getPartnerMap, isBlockedBetween, sideOf } from '@/lib/couples'
 
 export async function POST(req: NextRequest) {
   try {
@@ -68,53 +69,56 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ passed: true, matched: false })
     }
 
-    // Check for mutual like
-    const mutualLike = await db.like.findFirst({
+    // Linked couples like as one: a like from either partner counts for the couple.
+    const partnerMap = await getPartnerMap([session.user.id, toUserId])
+    const mySide = sideOf(session.user.id, partnerMap)
+    const theirSide = sideOf(toUserId, partnerMap)
+    const sameCouple = mySide.includes(toUserId)
+
+    // Check for mutual like (anyone on their side → anyone on mine)
+    const mutualLike = sameCouple ? null : await db.like.findFirst({
       where: {
-        fromUserId: toUserId,
-        toUserId: session.user.id,
+        fromUserId: { in: theirSide },
+        toUserId: { in: mySide },
         type: { not: 'PASS' },
       },
     })
+    const blocked = mutualLike ? await isBlockedBetween(mySide, theirSide) : false
 
     let matched = false
 
-    if (mutualLike) {
+    if (mutualLike && !blocked) {
       const [user1Id, user2Id] =
         session.user.id < toUserId
           ? [session.user.id, toUserId]
           : [toUserId, session.user.id]
 
-      const existingMatch = await db.match.findUnique({
-        where: { user1Id_user2Id: { user1Id, user2Id } },
-      })
+      // Already matched with this person or their partner?
+      const existingMatch = (await findMatchesBetween(mySide, theirSide))[0] ?? null
 
       if (!existingMatch) {
         const sevenDays = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         await db.match.create({ data: { user1Id, user2Id, expiresAt: sevenDays } })
 
+        // Notify everyone on both sides (both partners of a linked couple)
+        const meId = session.user.id
+        const notify = [
+          ...mySide.map((u) => ({ userId: u, matchedUserId: toUserId })),
+          ...theirSide.map((u) => ({ userId: u, matchedUserId: meId })),
+        ]
         await db.notification.createMany({
-          data: [
-            {
-              userId: session.user.id,
-              type: 'MATCH',
-              title: "It's a Match!",
-              body: "You have a new match!",
-              data: { matchedUserId: toUserId },
-            },
-            {
-              userId: toUserId,
-              type: 'MATCH',
-              title: "It's a Match!",
-              body: "You have a new match!",
-              data: { matchedUserId: session.user.id },
-            },
-          ],
+          data: notify.map((n) => ({
+            userId: n.userId,
+            type: 'MATCH',
+            title: "It's a Match!",
+            body: "You have a new match!",
+            data: { matchedUserId: n.matchedUserId },
+          })),
         })
 
-        // Push to both users on new match
-        sendPushToUser(session.user.id, { title: "It's a Match! 🎉", body: "You have a new match on Hush!", url: '/messages', tag: `match-${user1Id}-${user2Id}` }).catch(() => {})
-        sendPushToUser(toUserId, { title: "It's a Match! 🎉", body: "You have a new match on Hush!", url: '/messages', tag: `match-${user1Id}-${user2Id}` }).catch(() => {})
+        for (const n of notify) {
+          sendPushToUser(n.userId, { title: "It's a Match! 🎉", body: "You have a new match on Hush!", url: '/matches', tag: `match-${user1Id}-${user2Id}` }).catch(() => {})
+        }
         matched = true
       } else {
         matched = true

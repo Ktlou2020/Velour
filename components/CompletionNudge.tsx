@@ -24,7 +24,7 @@ export default function CompletionNudge() {
         const res = await fetch('/api/profile');
         if (res.ok) {
           const data = await res.json();
-          const pct: number = data.profileCompleteness ?? data.completeness ?? 100;
+          const pct: number = data.user?.profile?.profileCompleteness ?? data.profileCompleteness ?? 100;
           if (pct < 80) {
             setCompleteness(pct);
             setDismissed(false);

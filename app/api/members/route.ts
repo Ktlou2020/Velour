@@ -26,6 +26,8 @@ export async function GET(req: NextRequest) {
       sort: searchParams.get('sort'),
       maxKm: searchParams.get('maxKm'),
       discover: searchParams.get('discover'),
+      show: searchParams.get('show'),
+      coupleType: searchParams.get('coupleType'),
     })
 
     return NextResponse.json({

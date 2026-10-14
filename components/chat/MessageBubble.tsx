@@ -9,7 +9,12 @@ export interface ChatMessage {
   content: string;
   imageUrl?: string | null;
   senderId?: string;
+  /** Shared couple account: which partner wrote it */
+  senderPartnerName?: string | null;
+  sender?: { id: string; username: string; profile?: { displayName?: string | null; profilePhoto?: string | null } | null } | null;
   isSent?: boolean;
+  /** Paid receipts with several recipients: who has read it */
+  seenBy?: string[];
   isRead?: boolean;
   readAt?: string | null;
   reactions?: Reactions | null;
@@ -22,6 +27,10 @@ interface Props {
   /** Blur received images until tapped (recipient's showChatImages = false). */
   blurReceivedImages: boolean;
   avatar?: ReactNode;
+  /** "Thandi · couple" — shown above the first bubble of a run */
+  senderLabel?: ReactNode;
+  /** Message from the viewer's own linked partner — subtle gold edge */
+  fromPartner?: boolean;
   footer?: ReactNode;
   pickerOpen: boolean;
   onOpenPicker: () => void;
@@ -33,7 +42,7 @@ interface Props {
 const LONG_PRESS_MS = 450;
 
 export default function MessageBubble({
-  msg, myId, blurReceivedImages, avatar, footer, pickerOpen, onOpenPicker, onClosePicker, onReact, onImageLoad,
+  msg, myId, blurReceivedImages, avatar, senderLabel, fromPartner = false, footer, pickerOpen, onOpenPicker, onClosePicker, onReact, onImageLoad,
 }: Props) {
   const sent = msg.isSent ?? false;
   const isTemp = msg.id.startsWith('temp-');
@@ -83,7 +92,12 @@ export default function MessageBubble({
   return (
     <div className={`flex ${sent ? 'justify-end' : 'justify-start'}`}>
       {!sent && avatar}
-      <div className={`max-w-[72%] flex flex-col gap-1 ${sent ? 'items-end' : 'items-start'}`}>
+      <div className={`max-w-[72%] min-w-0 flex flex-col gap-1 ${sent ? 'items-end' : 'items-start'}`}>
+        {senderLabel && (
+          <div className={`px-1 text-[11px] leading-tight max-w-full truncate ${sent ? 'text-right' : 'text-left'}`}>
+            {senderLabel}
+          </div>
+        )}
         <div
           className="relative group select-none md:select-auto"
           onTouchStart={startPress}
@@ -119,7 +133,7 @@ export default function MessageBubble({
             </div>
           )}
           {msg.content && (
-            <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${sent ? 'bg-[#DC143C] text-white rounded-tr-sm' : 'glass text-white/90 rounded-tl-sm'} ${isTemp ? 'opacity-60' : ''}`}>
+            <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${sent ? 'bg-[#DC143C] text-white rounded-tr-sm' : `glass text-white/90 rounded-tl-sm ${fromPartner ? 'ring-1 ring-[#D4AF37]/25' : ''}`} ${isTemp ? 'opacity-60' : ''}`}>
               {msg.content}
             </div>
           )}
@@ -144,8 +158,8 @@ export default function MessageBubble({
           </div>
         )}
 
-        <div className="flex items-center gap-1.5 px-1">
-          {time && <span className="text-white/25 text-xs">{time}</span>}
+        <div className={`flex flex-wrap items-center gap-x-1.5 gap-y-0.5 px-1 ${sent ? 'justify-end' : ''}`}>
+          {time && <span className="text-white/25 text-xs whitespace-nowrap">{time}</span>}
           {footer}
         </div>
       </div>

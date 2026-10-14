@@ -44,6 +44,8 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
     page: String(page),
     limit: String(limit),
     gender: params.gender,
+    show: params.show,
+    coupleType: params.coupleType,
     ageMin: params.ageMin,
     ageMax: params.ageMax,
     city: params.city,
@@ -62,7 +64,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
         <div className="bg-gradient-to-b from-[#0F0A1E] to-[#0A0A0F] py-8 sm:py-12 px-4 border-b border-white/5">
           <div className="max-w-7xl mx-auto">
             <h1 className="font-serif text-3xl sm:text-4xl font-bold text-white mb-2">Members</h1>
-            <p className="text-white/65">Singles and couples near you — filter by who and where.</p>
+            <p className="text-white/65">Women, men, non-binary people and couples near you who&apos;d like to meet you too.</p>
           </div>
         </div>
         <Suspense fallback={

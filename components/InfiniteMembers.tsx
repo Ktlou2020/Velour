@@ -9,6 +9,8 @@ import type { MemberData } from '@/app/members/page';
 
 type FilterState = Record<string, string | undefined> & {
   gender?: string;
+  show?: string;
+  coupleType?: string;
   ageMin?: string;
   ageMax?: string;
   city?: string;
@@ -57,8 +59,8 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
 
   // Stable filter key so fetchMore doesn't recreate on every render
   const filterKey = useMemo(
-    () => [filters.gender, filters.ageMin, filters.ageMax, filters.city, filters.online, filters.sort, filters.maxKm].join('|'),
-    [filters.gender, filters.ageMin, filters.ageMax, filters.city, filters.online, filters.sort, filters.maxKm]
+    () => [filters.gender, filters.show, filters.coupleType, filters.ageMin, filters.ageMax, filters.city, filters.online, filters.sort, filters.maxKm].join('|'),
+    [filters.gender, filters.show, filters.coupleType, filters.ageMin, filters.ageMax, filters.city, filters.online, filters.sort, filters.maxKm]
   );
 
   const fetchMore = useCallback(async (nextPage: number) => {
@@ -67,6 +69,8 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
     try {
       const qs = new URLSearchParams({
         ...(filters.gender && filters.gender !== 'ALL' ? { gender: filters.gender } : {}),
+        ...(filters.show ? { show: filters.show } : {}),
+        ...(filters.coupleType ? { coupleType: filters.coupleType } : {}),
         ...(filters.ageMin ? { ageMin: filters.ageMin } : {}),
         ...(filters.ageMax ? { ageMax: filters.ageMax } : {}),
         ...(filters.city ? { city: filters.city } : {}),
@@ -118,7 +122,9 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
         {members.map((member, idx) => {
           const memberExt = member as MemberData & { dateOfBirth?: string };
-          const age = member.age ?? (memberExt.dateOfBirth ? calcAge(memberExt.dateOfBirth) : undefined);
+          const age = member.isCouple && member.ages?.length
+            ? member.ages.join(' & ')
+            : member.age ?? (memberExt.dateOfBirth ? calcAge(memberExt.dateOfBirth) : undefined);
           const tier = member.membershipTier ?? 'FREE';
           const initials = (member.displayName || member.username || '?').slice(0, 2).toUpperCase();
 
@@ -175,6 +181,13 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
                   </div>
                 )}
 
+                {/* Couple badge */}
+                {member.isCouple && (
+                  <div className="absolute top-2 right-7 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded-md glass text-[#D4AF37]" title="Couple profile">
+                    {member.coupleBadge ?? 'Couple'}
+                  </div>
+                )}
+
                 {/* Verified badge */}
                 {isVerified && (
                   <div
@@ -194,6 +207,7 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
                   {member.displayName || member.username}
                   {age ? <span className="text-white/65 font-normal">, {age}</span> : ''}
                 </p>
+                {member.pronouns && <p className="text-white/50 text-[11px] truncate">{member.pronouns}</p>}
                 {member.city && (
                   <div className="flex items-center gap-1 text-white/55 text-xs mt-0.5">
                     <MapPin size={10} />
