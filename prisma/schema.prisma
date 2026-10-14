@@ -97,6 +97,7 @@ model User {
   photos              Photo[]
   albums              Album[]
   sparkAnswers        SparkAnswer[]
+  photoLikes          PhotoLike[]
   profileViewsGiven   ProfileView[]             @relation("ViewsGiven")
   profileViewsGot     ProfileView[]             @relation("ViewsGot")
   albumAccess         AlbumAccess[]
@@ -191,6 +192,9 @@ model Profile {
   travelLng     Float?
   travelUntil   DateTime?
 
+  // Show my public photos in the Explore feed (opt-out)
+  showInExplore Boolean @default(true)
+
   // Premium perks
   boostedUntil DateTime?
   lastBoostAt  DateTime?
@@ -224,6 +228,10 @@ model Photo {
   sizeBytes  Int?
   albumId    String?
   album      Album?  @relation(fields: [albumId], references: [id], onDelete: SetNull)
+
+  // Explore feed
+  likeCount Int         @default(0)
+  likes     PhotoLike[]
 }
 
 // A member's photo album. Private albums are visible only to the owner and
@@ -498,4 +506,17 @@ model ProfileView {
 
   @@index([viewedId, createdAt])
   @@index([viewerId, viewedId, createdAt])
+}
+
+model PhotoLike {
+  id        String   @id @default(cuid())
+  photoId   String
+  photo     Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([photoId, userId])
+  @@index([photoId, createdAt])
+  @@index([userId, createdAt])
 }
