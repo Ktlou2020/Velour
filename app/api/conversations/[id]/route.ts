@@ -3,6 +3,8 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { isPaid } from '@/lib/premium'
 import { generateIcebreakers } from '@/lib/icebreakers'
+import { CHAT_VIDEO_MAX_BYTES, getMessageAllowance, getPriorityAllowance } from '@/lib/chat-priority'
+import { entitlements, planFor } from '@/lib/plans'
 import {
   describeSide,
   effectiveExpiry,
@@ -55,7 +57,7 @@ export async function GET(
     const sides = groupSides(otherIds, partnerMap).map((s) => describeSide(s, people))
     const partnerId = mySide.find((u) => u !== userId) ?? null
 
-    const [meRow, matches] = await Promise.all([
+    const [meRow, matches, priority, messageAllowance] = await Promise.all([
       db.user.findUnique({
         where: { id: userId },
         select: {
@@ -64,6 +66,8 @@ export async function GET(
         },
       }),
       findMatchesBetween(sideOf(userId, partnerMap), otherIds),
+      getPriorityAllowance(userId, conversationId),
+      getMessageAllowance(userId),
     ])
 
     const hasMessages = conversation._count.messages > 0
@@ -152,6 +156,15 @@ export async function GET(
         showChatImages: meRow?.profile?.showChatImages ?? false,
         // Shared couple account: who can be picked in "Sending as"
         coupleNames: !partnerId && me?.coupleNames.length ? me.coupleNames : [],
+        // Priority messages: { plan, limit (null = unlimited, 0 = locked), remaining, usedInConversationToday }
+        priority,
+        // Free plan: messages per rolling 24h { limit (null = unlimited), remaining, resetsAt, welcomeUntil }
+        messageAllowance,
+        // Chat video caps for this plan
+        video: {
+          maxSec: entitlements(meRow?.profile?.membershipTier, role).chatVideoMaxSec,
+          maxBytes: CHAT_VIDEO_MAX_BYTES[planFor(meRow?.profile?.membershipTier, role)],
+        },
       },
       icebreakers,
     })

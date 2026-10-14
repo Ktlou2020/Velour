@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { sendPushToUser } from '@/lib/push'
+import { recordProfileView } from '@/lib/views'
+import { activeStatus } from '@/components/status/status'
 import { ageFrom, genderLabelOf, orientationLabelOf, publicIdentity } from '@/lib/identity'
 
 const PERSON_FIELDS = {
@@ -51,6 +52,9 @@ const PUBLIC_PROFILE_SELECT = {
   languages: true,
   drinking: true,
   smoking: true,
+  statusText: true,
+  statusEmoji: true,
+  statusUntil: true,
   partner: { select: { ...PERSON_FIELDS, user: { select: { username: true, isActive: true } } } },
 } as const
 
@@ -97,64 +101,10 @@ export async function GET(
       if (blocked) return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Track profile view (don't count self-views, incognito viewers, or ?track=0 lookups)
-    const skipTracking = req.nextUrl.searchParams.get('track') === '0'
-    let viewerIncognito = false
-    if (!skipTracking && user.id !== session.user.id) {
-      const viewerProfile = await db.profile.findUnique({
-        where: { userId: session.user.id },
-        select: { incognito: true },
-      })
-      viewerIncognito = !!viewerProfile?.incognito
-    }
-    if (!skipTracking && !viewerIncognito && user.id !== session.user.id) {
-      await db.profile.update({
-        where: { userId: user.id },
-        data: { profileViews: { increment: 1 } },
-      })
-
-      // Create PROFILE_VIEW notification for GOLD/PLATINUM users only, deduplicated per 24h
-      const ownerProfile = user.profile
-      if (
-        ownerProfile &&
-        (ownerProfile.membershipTier === 'GOLD' || ownerProfile.membershipTier === 'PLATINUM')
-      ) {
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
-        const viewerUser = await db.user.findUnique({
-          where: { id: session.user.id },
-          select: { username: true },
-        })
-
-        const existingView = await db.notification.findFirst({
-          where: {
-            userId: user.id,
-            type: 'PROFILE_VIEW',
-            createdAt: { gte: oneDayAgo },
-            data: {
-              path: ['viewerId'],
-              equals: session.user.id,
-            },
-          },
-        })
-
-        if (!existingView && viewerUser) {
-          await db.notification.create({
-            data: {
-              userId: user.id,
-              type: 'PROFILE_VIEW',
-              title: 'Someone viewed your profile',
-              body: `@${viewerUser.username} viewed your profile`,
-              data: { viewerId: session.user.id, viewerUsername: viewerUser.username },
-            },
-          })
-          sendPushToUser(user.id, {
-            title: 'Profile View — Hush',
-            body: `@${viewerUser.username} viewed your profile`,
-            url: '/views',
-            tag: `view-${session.user.id}`,
-          }).catch(() => {})
-        }
-      }
+    // Track the view (deduped per 24h, skipped for self-views and incognito
+    // viewers inside recordProfileView). ?track=0 lookups never count.
+    if (req.nextUrl.searchParams.get('track') !== '0' && user.id !== session.user.id) {
+      await recordProfileView(session.user.id, user.id)
     }
 
     return NextResponse.json({ user: { ...user, profile: user.profile ? publicProfile(user.profile, user.id === session.user.id) : null } })
@@ -175,7 +125,7 @@ function publicProfile(p: SelectedProfile, isSelf: boolean) {
   if (isSelf) {
     const { partner: _partner, ...rest } = p
     void _partner
-    return rest
+    return { ...rest, status: activeStatus(p) }
   }
   const partner = p.partner && p.partner.user?.isActive !== false
     ? { ...p.partner, username: p.partner.user?.username ?? null }
@@ -205,5 +155,7 @@ function publicProfile(p: SelectedProfile, isSelf: boolean) {
     videoUrl: p.videoUrl,
     prompts: p.prompts,
     identity,
+    // Only while it hasn't expired
+    status: activeStatus(p),
   }
 }

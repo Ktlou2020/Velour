@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useState } from 'react';
-import { Star, Trash2, Lock, Globe, ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, Trash2, Lock, Globe, ImageIcon, ChevronLeft, ChevronRight, Heart, Trophy } from 'lucide-react';
 import Modal from '@/components/albums/Modal';
 import { api, type AlbumSummary, type GalleryPhoto } from './types';
 import { Spinner, Switch, btnDanger, btnGhost, btnPrimary } from './ui';
@@ -18,9 +18,12 @@ interface Props {
   onCoverSet?: (albumId: string, photoId: string) => void;
   onPrev?: () => void;
   onNext?: () => void;
+  /** Open the "Liked by" list for this photo. */
+  onShowLikers?: (id: string) => void;
+  isMostLiked?: boolean;
 }
 
-export default function PhotoSheet({ photo, albums, albumContext, onClose, onUpdated, onDeleted, onCoverSet, onPrev, onNext }: Props) {
+export default function PhotoSheet({ photo, albums, albumContext, onClose, onUpdated, onDeleted, onCoverSet, onPrev, onNext, onShowLikers, isMostLiked }: Props) {
   const { showToast } = useToast();
   const [caption, setCaption] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
@@ -96,6 +99,18 @@ export default function PhotoSheet({ photo, albums, albumContext, onClose, onUpd
         </div>
 
         <div className="flex flex-col gap-4 min-w-0">
+          {(photo.likeCount ?? 0) > 0 && (
+            <button
+              type="button"
+              onClick={() => onShowLikers?.(photo.id)}
+              className="flex items-center gap-2 glass rounded-xl px-3.5 py-2.5 text-left hover:bg-white/[0.06] transition-colors"
+            >
+              <Heart size={16} className="fill-[#DC143C] text-[#DC143C] shrink-0" aria-hidden="true" />
+              <span className="flex-1 text-sm text-white"><span className="font-semibold tabular-nums">{photo.likeCount}</span> like{photo.likeCount === 1 ? '' : 's'} in Explore</span>
+              {isMostLiked && <span className="flex items-center gap-1 text-[11px] font-semibold text-[#D4AF37]"><Trophy size={11} aria-hidden="true" /> Most liked</span>}
+              <span className="text-xs text-[#D4AF37]">See who</span>
+            </button>
+          )}
           <form onSubmit={(e) => { e.preventDefault(); if (captionChanged) patch({ caption: caption.trim() }, 'caption', { success: 'Caption saved' }); }}>
             <label htmlFor={captionId} className="block text-white/70 text-xs font-medium mb-1.5">Caption</label>
             <textarea

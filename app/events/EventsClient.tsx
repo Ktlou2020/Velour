@@ -195,16 +195,25 @@ export default function EventsClient({ events, featured, pastEvents = [], active
       )}
 
       {/* Category Filter + Create Button */}
-      {canCreate && (
       <div className="flex items-center justify-end gap-4 mb-4">
+        {canCreate ? (
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shrink-0"
           >
             <Plus size={16} aria-hidden="true" /> Create event
           </button>
+        ) : (
+          <a
+            href="/upgrade"
+            className="flex items-center gap-2 glass border border-white/10 hover:border-[#D4AF37]/40 text-white/70 hover:text-white px-4 py-2 rounded-xl text-sm transition-all whitespace-nowrap shrink-0"
+            title="Hosting events is part of Gold and Platinum"
+          >
+            <Plus size={14} aria-hidden="true" /> Host an event
+            <span className="text-[10px] font-bold uppercase tracking-wide text-[#D4AF37] bg-[#D4AF37]/10 border border-[#D4AF37]/30 rounded-full px-1.5 py-px">Gold</span>
+          </a>
+        )}
       </div>
-      )}
       <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
         {TABS.map((tab) => (
           <button

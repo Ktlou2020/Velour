@@ -3,6 +3,11 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { sendPushToUser } from '@/lib/push'
 import { findMatchesBetween, getPartnerMap, isBlockedBetween, sideOf } from '@/lib/couples'
+import { startOfDaySAST } from '@/lib/plans'
+import { getBlockedIds, getCallerContext, memberSelect, toMemberResult } from '@/app/api/members/search'
+import {
+  countLikesToday, countSuperLikesInPeriod, dayResetsAt, getAllowance, loadPlan, superLikeResetsAt,
+} from './limits'
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,31 +47,74 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid like type' }, { status: 400 })
     }
 
-    // Enforce super like credit limit
-    if (type === 'SUPERLIKE') {
-      const dbUser = await db.user.findUnique({
-        where: { id: session.user.id },
-        select: { superLikeCredits: true, role: true },
-      })
-      if (!dbUser || (dbUser.role !== 'ADMIN' && (dbUser.superLikeCredits ?? 0) < 1)) {
-        return NextResponse.json({ error: 'No super like credits remaining. Earn more by logging in daily!' }, { status: 403 })
+    const userId = session.user.id
+    const target = await db.user.findUnique({ where: { id: toUserId }, select: { id: true, isActive: true } })
+    if (!target || !target.isActive) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+
+    const now = new Date()
+    const plan = await loadPlan(userId)
+    const existing = await db.like.findUnique({
+      where: { fromUserId_toUserId: { fromUserId: userId, toUserId } },
+      select: { type: true, createdAt: true },
+    })
+
+    // Repeating the same action is a no-op: it must not spend allowance or
+    // move the like into today's count.
+    const repeat = !!existing && existing.type === type
+    if (!repeat) {
+      // Daily like allowance (LIKE / WINK / SUPERLIKE count; PASS never does).
+      // A row that already counts today (e.g. LIKE → WINK) doesn't count twice.
+      // Super likes have their own allowance and are never blocked by this cap.
+      const alreadyCountedToday = !!existing && existing.type !== 'PASS' && existing.createdAt >= startOfDaySAST(now)
+      if (type !== 'PASS' && type !== 'SUPERLIKE' && plan.ent.likesPerDay !== null && !alreadyCountedToday) {
+        const used = await countLikesToday(userId, now)
+        if (used >= plan.ent.likesPerDay) {
+          return NextResponse.json({
+            error: `You've used today's ${plan.ent.likesPerDay} likes. They refresh at midnight.`,
+            code: 'LIKE_LIMIT',
+            limit: plan.ent.likesPerDay,
+            resetsAt: dayResetsAt(now).toISOString(),
+            upgrade: true,
+            allowance: await getAllowance(userId),
+          }, { status: 429 })
+        }
       }
-      await db.user.update({
-        where: { id: session.user.id },
-        data: { superLikeCredits: { decrement: 1 } },
+
+      // Super likes: the plan's period allowance first, then bonus credits.
+      if (type === 'SUPERLIKE') {
+        const used = await countSuperLikesInPeriod(userId, plan.ent, now)
+        if (used >= plan.ent.superLikes) {
+          const spent = await db.user.updateMany({
+            where: { id: userId, superLikeCredits: { gt: 0 } },
+            data: { superLikeCredits: { decrement: 1 } },
+          })
+          if (spent.count === 0) {
+            const period = plan.ent.superLikePeriod === 'day' ? 'today' : 'this week'
+            return NextResponse.json({
+              error: `You've used your super likes for ${period}. ${plan.ent.superLikePeriod === 'day' ? 'A new one arrives at midnight' : 'More arrive on Monday'} — or keep your login streak going to earn bonus ones.`,
+              code: 'SUPERLIKE_LIMIT',
+              limit: plan.ent.superLikes,
+              period: plan.ent.superLikePeriod,
+              resetsAt: superLikeResetsAt(plan.ent, now).toISOString(),
+              upgrade: plan.tier !== 'PLATINUM',
+              allowance: await getAllowance(userId),
+            }, { status: 429 })
+          }
+        }
+      }
+
+      await db.like.upsert({
+        where: { fromUserId_toUserId: { fromUserId: userId, toUserId } },
+        update: { type, createdAt: now },
+        create: { fromUserId: userId, toUserId, type },
       })
     }
 
-    // Upsert to avoid duplicates
-    await db.like.upsert({
-      where: { fromUserId_toUserId: { fromUserId: session.user.id, toUserId } },
-      update: { type, createdAt: new Date() },
-      create: { fromUserId: session.user.id, toUserId, type },
-    })
+    const allowance = await getAllowance(userId)
 
     // Passes don't create matches
     if (type === 'PASS') {
-      return NextResponse.json({ passed: true, matched: false })
+      return NextResponse.json({ passed: true, matched: false, allowance })
     }
 
     // Linked couples like as one: a like from either partner counts for the couple.
@@ -125,8 +173,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Push notification for a plain like/wink
-    if (!matched) {
+    // Push notification for a plain like/wink (not for a repeated tap)
+    if (!matched && !repeat) {
       const labels: Record<string, string> = { LIKE: 'liked', SUPERLIKE: 'super liked', WINK: 'winked at' }
       sendPushToUser(toUserId, {
         title: 'New Activity — Hush',
@@ -136,56 +184,64 @@ export async function POST(req: NextRequest) {
       }).catch(() => {})
     }
 
-    return NextResponse.json({ liked: true, matched })
+    return NextResponse.json({ liked: true, matched, allowance })
   } catch (error) {
     console.error('POST /api/likes error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
+/**
+ * GET /api/likes — people who liked (or winked / super liked) the caller and
+ * whom the caller hasn't responded to yet. Blocked and deactivated members
+ * are excluded.
+ *   Gold+ → { locked: false, count, superCount, likes: [{ id, type, createdAt, member }] }
+ *   Free  → { locked: true, count, superCount, likes: [] } — the count sells the
+ *           upgrade; no names or photos are sent to the client.
+ */
 export async function GET() {
   try {
     const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const userId = session.user.id
+    const plan = await loadPlan(userId)
 
-    // Check membership tier — only GOLD/PLATINUM can see who liked them
-    const profile = await db.profile.findUnique({
-      where: { userId: session.user.id },
-      select: { membershipTier: true },
-    })
-
-    if (!profile || profile.membershipTier === 'FREE') {
-      return NextResponse.json(
-        { error: 'Upgrade to Gold or Platinum to see who liked you' },
-        { status: 403 }
-      )
+    const [blockedIds, myActions] = await Promise.all([
+      getBlockedIds(userId),
+      db.like.findMany({ where: { fromUserId: userId }, select: { toUserId: true } }),
+    ])
+    const excluded = [...blockedIds, ...myActions.map((a) => a.toUserId)]
+    const where = {
+      toUserId: userId,
+      type: { not: 'PASS' as const },
+      fromUserId: { notIn: excluded },
+      fromUser: { isActive: true },
     }
 
-    const likes = await db.like.findMany({
-      where: { toUserId: session.user.id },
-      include: {
-        fromUser: {
-          select: {
-            id: true,
-            username: true,
-            profile: {
-              select: {
-                displayName: true,
-                profilePhoto: true,
-                city: true,
-                country: true,
-                gender: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+    const [count, superCount] = await Promise.all([
+      db.like.count({ where }),
+      db.like.count({ where: { ...where, type: 'SUPERLIKE' as const } }),
+    ])
 
-    return NextResponse.json({ likes })
+    if (!plan.ent.seeWhoLikedYou) {
+      return NextResponse.json({ locked: true, count, superCount, likes: [] })
+    }
+
+    const rows = await db.like.findMany({
+      where,
+      orderBy: [{ createdAt: 'desc' }],
+      take: 60,
+      select: { id: true, type: true, createdAt: true, fromUser: { select: memberSelect } },
+    })
+    const caller = await getCallerContext(userId, plan.role ?? undefined)
+    const likes = rows
+      // Super likes first, then newest
+      .sort((a, b) => Number(b.type === 'SUPERLIKE') - Number(a.type === 'SUPERLIKE') || b.createdAt.getTime() - a.createdAt.getTime())
+      .map((r) => ({ id: r.id, type: r.type, createdAt: r.createdAt, member: toMemberResult(r.fromUser, caller) }))
+
+    return NextResponse.json({ locked: false, count, superCount, likes })
   } catch (error) {
     console.error('GET /api/likes error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

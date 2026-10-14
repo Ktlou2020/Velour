@@ -4,7 +4,8 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { isPaid } from '@/lib/premium'
 import { normalizeReactions } from '@/lib/reactions'
-import { computeReceipt, getTypingAs } from '@/lib/couples'
+import { computeReceipt, getPartnerMap, getTypingAs, sideOf } from '@/lib/couples'
+import { messageForViewer, redactGameMeta } from '@/lib/chat-games'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,7 @@ const POLL_MS = 1500
  *  { type: 'receipt', messageId, seenBy, allSeen, readAt }   (paid callers only;
  *        for the caller's latest message — "Seen" once every other participant read it)
  *  { type: 'reaction', messageId, reactions }
+ *  { type: 'game', messageId, meta }   (someone played a chat game; meta redacted for the caller)
  *  { type: 'participants' }   (someone joined/left, e.g. a partner was linked)
  *  { type: 'revoked' }        (the caller is no longer a participant)
  *
@@ -53,6 +55,19 @@ export async function GET(
   let participantsKey = ''
   const typingState = new Map<string, string>()
   const reactionCache = new Map<string, string>()
+  const gameCache = new Map<string, string>()
+  let viewerSide: string[] = [userId]
+  const GAME_WINDOW = 60
+  const loadGames = () => db.message.findMany({
+    where: { conversationId, kind: 'GAME' },
+    orderBy: { createdAt: 'desc' },
+    take: GAME_WINDOW,
+    select: { id: true, senderId: true, meta: true },
+  })
+  const refreshSide = async () => {
+    const ps = await db.conversationParticipant.findMany({ where: { conversationId }, select: { userId: true } })
+    viewerSide = sideOf(userId, await getPartnerMap(ps.map((p) => p.userId)))
+  }
   let closed = false
   let polling = false
 
@@ -71,7 +86,7 @@ export async function GET(
       send({ type: 'connected' })
 
       // Seed state with the current latest
-      const [latest, conv, reacted] = await Promise.all([
+      const [latest, conv, reacted, games] = await Promise.all([
         db.message.findFirst({
           where: { conversationId },
           orderBy: { createdAt: 'desc' },
@@ -82,8 +97,11 @@ export async function GET(
           where: { conversationId, reactions: { not: Prisma.AnyNull } },
           select: { id: true, reactions: true },
         }),
+        loadGames(),
+        refreshSide(),
       ])
       lastMessageId = latest?.id ?? null
+      for (const g of games) gameCache.set(g.id, JSON.stringify(redactGameMeta(g.meta, g.senderId, userId, viewerSide)))
       lastUpdatedAt = conv?.updatedAt.getTime() ?? 0
       for (const r of reacted) reactionCache.set(r.id, JSON.stringify(normalizeReactions(r.reactions)))
 
@@ -115,7 +133,10 @@ export async function GET(
 
           // ── Participants joined / left ────────────────────────────────
           const pKey = others.map((p) => p.userId).sort().join(',')
-          if (participantsKey && pKey !== participantsKey) send({ type: 'participants' })
+          if (participantsKey && pKey !== participantsKey) {
+            await refreshSide()
+            send({ type: 'participants' })
+          }
           participantsKey = pKey
 
           // ── Typing (every other participant, named) ───────────────────
@@ -147,7 +168,7 @@ export async function GET(
           if (updatedAt !== lastUpdatedAt) {
             lastUpdatedAt = updatedAt
 
-            const [newMessages, reacted] = await Promise.all([
+            const [newMessages, reacted, games] = await Promise.all([
               db.message.findMany({
                 where: {
                   conversationId,
@@ -158,6 +179,11 @@ export async function GET(
                   id: true,
                   content: true,
                   imageUrl: true,
+                  kind: true,
+                  audioUrl: true,
+                  audioDurationSec: true,
+                  meta: true,
+                  isPriority: true,
                   senderId: true,
                   senderPartnerName: true,
                   sender: {
@@ -177,11 +203,14 @@ export async function GET(
                 where: { conversationId, reactions: { not: Prisma.AnyNull } },
                 select: { id: true, reactions: true },
               }),
+              loadGames(),
             ])
 
             // ── New messages ────────────────────────────────────────────
             const incomingIds: string[] = []
-            for (const msg of newMessages) {
+            for (const raw of newMessages) {
+              const msg = messageForViewer(raw, userId, viewerSide)
+              if (msg.kind === 'GAME') gameCache.set(msg.id, JSON.stringify(msg.meta))
               const own = msg.senderId === userId
               send({
                 type: 'message',
@@ -225,6 +254,16 @@ export async function GET(
               if (!seen.has(id)) {
                 reactionCache.delete(id)
                 send({ type: 'reaction', messageId: id, reactions: {} })
+              }
+            }
+
+            // ── Game answers ────────────────────────────────────────────
+            for (const g of games) {
+              const meta = redactGameMeta(g.meta, g.senderId, userId, viewerSide)
+              const key = JSON.stringify(meta)
+              if (gameCache.get(g.id) !== key) {
+                gameCache.set(g.id, key)
+                send({ type: 'game', messageId: g.id, meta })
               }
             }
           }

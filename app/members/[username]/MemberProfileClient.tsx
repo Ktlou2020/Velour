@@ -14,6 +14,11 @@ import ProtectedImage from '@/components/ProtectedImage';
 import MemberAlbums from '@/components/albums/MemberAlbums';
 import PersonCard from '@/app/profile/identity/PersonCard';
 import type { PublicIdentity } from '@/lib/identity';
+import StatusPill from '@/components/status/StatusPill';
+import type { ActiveStatus } from '@/components/status/status';
+import BadgeRow from '@/components/badges/BadgeRow';
+import SparkAnswers, { type SparkAnswerView } from '@/components/spark/SparkAnswers';
+import type { Badge } from '@/lib/badges';
 
 interface Photo {
   id: string;
@@ -47,6 +52,9 @@ interface Profile {
   distance?: string;
   videoUrl?: string;
   prompts?: { question: string; answer: string }[];
+  status?: ActiveStatus | null;
+  badges?: Badge[];
+  sparkAnswers?: SparkAnswerView[];
 }
 
 interface Props {
@@ -221,6 +229,8 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                   : p.memberSince && <span className="flex items-center gap-1.5"><UserCheck size={13} />Since {p.memberSince}</span>
                 }
               </div>
+              {p.status && <StatusPill status={p.status} className="mt-3" />}
+              {(p.badges?.length ?? 0) > 0 && <BadgeRow badges={p.badges ?? []} max={5} className="mt-3" />}
             </div>
           </div>
 
@@ -341,6 +351,11 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                 </div>
               ))}
             </div>
+          )}
+
+          {/* Daily Spark answers */}
+          {(p.sparkAnswers?.length ?? 0) > 0 && (
+            <SparkAnswers title="Their Spark answers" answers={p.sparkAnswers ?? []} />
           )}
 
           {/* Video profile */}

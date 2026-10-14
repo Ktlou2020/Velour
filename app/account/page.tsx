@@ -3,7 +3,11 @@
 import { useState, useRef, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { useSession, signOut } from 'next-auth/react';
-import { Shield, Download, Trash2, Camera, CheckCircle, Clock, XCircle, Flame, Moon } from 'lucide-react';
+import Link from 'next/link';
+import { Shield, Download, Trash2, Camera, CheckCircle, Clock, XCircle, Flame, Moon, BarChart3, CreditCard, ChevronRight } from 'lucide-react';
+import TravelModeCard from '@/components/plans/TravelModeCard';
+import PlanChip from '@/components/plans/PlanChip';
+import type { Allowance } from '@/components/plans/AllowanceMeter';
 import { useToast } from '@/lib/toast-context';
 
 const SNOOZE_OPTIONS = [
@@ -29,6 +33,11 @@ export default function AccountPage() {
   const [snooze, setSnooze] = useState<{ isSnoozed: boolean; snoozedUntil: string | null } | null>(null);
   const [snoozeChoice, setSnoozeChoice] = useState<string>('24h');
   const [snoozeBusy, setSnoozeBusy] = useState(false);
+  const [allowance, setAllowance] = useState<Allowance | null>(null);
+
+  useEffect(() => {
+    fetch('/api/likes/allowance').then(r => r.ok ? r.json() : null).then(d => { if (d) setAllowance(d); }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch('/api/account/snooze').then(r => r.ok ? r.json() : null).then(d => { if (d) setSnooze(d); }).catch(() => {});
@@ -140,11 +149,41 @@ export default function AccountPage() {
               <p className="text-white/55 text-xs mt-1">{7 - (streak % 7)} days until next Super Like reward</p>
             </div>
             <div className="text-center glass rounded-xl p-3 order-2 sm:order-3 ml-auto sm:ml-0">
-              <div className="text-2xl font-bold text-[#D4AF37]">{superLikes}</div>
+              <div className="text-2xl font-bold text-[#D4AF37]">{allowance ? allowance.superLikes.available : superLikes}</div>
               <div className="text-white/60 text-xs">super likes</div>
+              {allowance && allowance.superLikes.bonus > 0 && <div className="text-white/45 text-[10px]">incl. {allowance.superLikes.bonus} bonus</div>}
             </div>
           </div>
         </div>
+
+        {/* Plan & insights */}
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Link href="/subscription" className="glass rounded-2xl p-5 flex items-center gap-3 hover:bg-white/[0.07] transition-colors">
+            <CreditCard size={20} className="text-[#D4AF37] flex-shrink-0" aria-hidden="true" />
+            <span className="min-w-0">
+              <span className="block text-white font-semibold text-sm">My plan · {allowance ? { FREE: 'Free', GOLD: 'Gold', PLATINUM: 'Platinum' }[allowance.tier] : '…'}</span>
+              <span className="block text-white/55 text-xs truncate">
+                {allowance
+                  ? allowance.likes.limit === null ? 'Unlimited likes' : `${allowance.likes.remaining} likes left today`
+                  : 'Allowances & billing'}
+              </span>
+            </span>
+            <ChevronRight size={16} className="text-white/40 ml-auto flex-shrink-0" aria-hidden="true" />
+          </Link>
+          <Link href="/insights" className="glass rounded-2xl p-5 flex items-center gap-3 hover:bg-white/[0.07] transition-colors">
+            <BarChart3 size={20} className="text-purple-300 flex-shrink-0" aria-hidden="true" />
+            <span className="min-w-0">
+              <span className="flex items-center gap-2 text-white font-semibold text-sm">
+                Profile insights {allowance && !allowance.features.profileInsights && <PlanChip tier="PLATINUM" />}
+              </span>
+              <span className="block text-white/55 text-xs truncate">Views, likes & your best time to be online</span>
+            </span>
+            <ChevronRight size={16} className="text-white/40 ml-auto flex-shrink-0" aria-hidden="true" />
+          </Link>
+        </div>
+
+        {/* Travel mode */}
+        <TravelModeCard />
 
         {/* Photo Verification */}
         <div className="glass rounded-2xl p-6">

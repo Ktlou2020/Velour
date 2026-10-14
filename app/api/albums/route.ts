@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { rateLimit, TOO_MANY_REQUESTS_MESSAGE } from '@/lib/rate-limit'
 import { ALBUM_DESC_MAX, MAX_ALBUMS, USER_ALBUM_WHERE, USER_SUMMARY_SELECT, albumCards, cleanAlbumName, userSummary } from '@/lib/albums'
 import { ACCESS, blockedIdsFor } from '@/lib/media-access'
+import { entitlements } from '@/lib/plans'
 
 /**
  * GET /api/albums
@@ -79,6 +80,31 @@ export async function POST(req: NextRequest) {
 
     const count = await db.album.count({ where: { ownerId: userId, ...USER_ALBUM_WHERE } })
     if (count >= MAX_ALBUMS) return NextResponse.json({ error: `You can have up to ${MAX_ALBUMS} albums` }, { status: 400 })
+
+    // Private album allowance (lib/plans.ts → privateAlbums; Free: 1).
+    // System albums (names starting "__") never count.
+    if (isPrivate) {
+      const owner = await db.user.findUnique({
+        where: { id: userId },
+        select: { role: true, profile: { select: { membershipTier: true } } },
+      })
+      const maxPrivate = entitlements(owner?.profile?.membershipTier, owner?.role).privateAlbums
+      if (maxPrivate !== null) {
+        const privateCount = await db.album.count({
+          // USER_ALBUM_WHERE excludes system albums (names starting "__"). Note: a Prisma
+          // `startsWith: '__'` would NOT work — "_" is a LIKE wildcard.
+          where: { ownerId: userId, isPrivate: true, ...USER_ALBUM_WHERE },
+        })
+        if (privateCount >= maxPrivate) {
+          return NextResponse.json({
+            error: `Your plan includes ${maxPrivate} private album${maxPrivate === 1 ? '' : 's'}. Upgrade to Gold for unlimited private albums — or add these photos to your existing private album.`,
+            code: 'PRIVATE_ALBUM_LIMIT',
+            limit: maxPrivate,
+            upgrade: true,
+          }, { status: 403 })
+        }
+      }
+    }
 
     const album = await db.album.create({
       data: { ownerId: userId, name: cleaned.name, description, isPrivate, order: count },

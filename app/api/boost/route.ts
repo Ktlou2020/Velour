@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { BOOST_DURATION_MS, isBoosted, isPaid, nextBoostAvailableAt } from '@/lib/premium'
+import { BOOST_DURATION_MS, isBoosted, nextBoostAvailableAt } from '@/lib/premium'
+import { entitlements } from '@/lib/plans'
 
 async function loadState(userId: string) {
   const user = await db.user.findUnique({
@@ -13,7 +14,9 @@ async function loadState(userId: string) {
   })
   const tier = user?.profile?.membershipTier ?? 'FREE'
   const role = user?.role ?? null
-  const paid = isPaid(tier, role)
+  // Boosts come from the plan (lib/plans.ts → boostEveryDays; null = no boosts)
+  const ent = entitlements(tier, role)
+  const paid = ent.boostEveryDays !== null
   const boostedUntil = user?.profile?.boostedUntil ?? null
   const active = isBoosted(boostedUntil)
   const lastBoostAt = user?.profile?.lastBoostAt ?? null
@@ -29,6 +32,7 @@ async function loadState(userId: string) {
       boostedUntil: active ? boostedUntil : null,
       nextAvailableAt: nextAt && nextAt.getTime() > Date.now() ? nextAt : null,
       canBoost,
+      everyDays: ent.boostEveryDays,
     },
   }
 }
@@ -51,7 +55,7 @@ export async function POST() {
   try {
     const state = await loadState(session.user.id)
     if (!state.public.paid) {
-      return NextResponse.json({ error: 'Profile boosts are available on Gold and Platinum' }, { status: 403 })
+      return NextResponse.json({ error: 'Profile boosts are available on Gold and Platinum', upgrade: true }, { status: 403 })
     }
     if (!state.hasProfile) {
       return NextResponse.json({ error: 'Complete your profile first' }, { status: 400 })
@@ -79,6 +83,7 @@ export async function POST() {
       boostedUntil,
       nextAvailableAt: nextBoostAvailableAt(now, state.tier, state.role),
       canBoost: false,
+      everyDays: entitlements(state.tier, state.role).boostEveryDays,
     })
   } catch (error) {
     console.error('POST /api/boost error:', error)

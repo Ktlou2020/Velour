@@ -8,6 +8,8 @@ export interface GalleryPhoto {
   albumId?: string | null;
   order: number;
   createdAt: string;
+  /** Likes from Explore. */
+  likeCount?: number;
 }
 
 export interface AlbumSummary {

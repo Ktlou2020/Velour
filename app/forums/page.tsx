@@ -2,10 +2,10 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import EmptyState from '@/components/EmptyState';
 import Link from 'next/link';
-import { MessageSquare, Users, TrendingUp, Clock, Flame, Plus, Crown } from 'lucide-react';
+import { MessageSquare, Users, TrendingUp, Clock, Flame, Plus } from 'lucide-react';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { isPaid } from '@/lib/premium';
+import { entitlements } from '@/lib/plans';
 
 interface ForumCategory {
   id: string;
@@ -102,7 +102,7 @@ export default async function ForumsPage() {
       where: { id: userId },
       select: { role: true, profile: { select: { membershipTier: true } } },
     });
-    canPost = isPaid(u?.profile?.membershipTier, u?.role);
+    canPost = entitlements(u?.profile?.membershipTier, u?.role).forumPosting;
   }
 
   return (
@@ -128,11 +128,11 @@ export default async function ForumsPage() {
               )
             ) : (
               <Link
-                href="/upgrade"
-                className="bg-gradient-to-r from-[#D4AF37] to-[#B8960C] text-[#0A0A0F] px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 text-sm transition-all"
+                href="/auth/signin?callbackUrl=/forums"
+                className="glass border border-white/15 hover:border-white/30 text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 text-sm transition-all"
               >
-                <Crown size={16} />
-                Upgrade to post
+                <Plus size={16} />
+                Sign in to post
               </Link>
             )}
           </div>

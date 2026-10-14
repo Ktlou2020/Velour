@@ -16,6 +16,15 @@ import { PromptsEditor, VideoProfileCard, LocationCard, PrivacySettingsCard } fr
 import IdentityEditor, { type IdentityInitial } from './IdentityEditor';
 import CoupleLinkCard from './CoupleLinkCard';
 import type { ProfilePrompt } from './prompts';
+import ProfileStrength from './ProfileStrength';
+import type { StrengthFacts } from './strength';
+import StatusControl from '@/components/status/StatusControl';
+import type { ActiveStatus } from '@/components/status/status';
+import BadgeGrid from '@/components/badges/BadgeGrid';
+import BadgeRow from '@/components/badges/BadgeRow';
+import SparkAnswers, { type SparkAnswerView } from '@/components/spark/SparkAnswers';
+import type { Badge } from '@/lib/badges';
+import Link from 'next/link';
 
 interface Photo {
   id: string;
@@ -52,6 +61,10 @@ interface Profile {
   isPlatinum?: boolean;
   identity?: IdentityInitial;
   pronouns?: string | null;
+  status?: ActiveStatus | null;
+  badges?: Badge[];
+  strength?: StrengthFacts;
+  sparkAnswers?: SparkAnswerView[];
 }
 
 interface Props {
@@ -82,9 +95,13 @@ export default function ProfileClient({ session, initialProfile }: Props) {
   const username = profile.username || user.username || user.email?.split('@')[0] || 'User';
   const name = profile.displayName || displayName || user.name || username;
   const tier = profile.membershipTier || 'FREE';
-  // Display only: clamp so a stale or over-counted value never shows e.g. "111%".
-  const completeness = Math.min(100, Math.max(0, Math.round(profile.completeness ?? 60)));
   const photos: Photo[] = profile.photos || [];
+  // Earned badges for the header row (Verified already has its own pill; one Spark tier only).
+  const headerBadges = (() => {
+    const earned = (profile.badges ?? []).filter((b) => b.earned && b.id !== 'verified');
+    const top = ['spark_30', 'spark_7', 'spark_3'].find((id) => earned.some((b) => b.id === id));
+    return earned.filter((b) => !b.id.startsWith('spark_') || b.id === top);
+  })();
 
   async function saveBio() {
     setSaving(true);
@@ -196,7 +213,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
 
       <main className="pt-16">
         {/* Header */}
-        <div className="bg-gradient-to-b from-[#1A0007] to-[#0A0A0F] py-12 px-4 border-b border-white/5">
+        <div id="profile-header" className="bg-gradient-to-b from-[#1A0007] to-[#0A0A0F] py-12 px-4 border-b border-white/5 scroll-mt-16">
           <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center sm:items-start gap-6">
             {/* Avatar */}
             <div className="relative">
@@ -287,24 +304,24 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                 )}
               </div>
 
-              {/* Completeness */}
-              <div>
-                <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="text-white/65">Profile completeness</span>
-                  <span className="text-[#FF4D6D] font-semibold">{completeness}%</span>
+              {/* Status ("Free tonight 🍷") + earned badges */}
+              <StatusControl initial={profile.status ?? null} className="mb-3" />
+              {headerBadges.length > 0 && (
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                  <BadgeRow badges={headerBadges} max={4} className="justify-center sm:justify-start" />
+                  <a href="#badges" className="text-xs text-white/55 hover:text-white">All badges</a>
                 </div>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[#DC143C] to-[#8F0D25] rounded-full transition-all" style={{ width: `${completeness}%` }} />
-                </div>
-                {completeness < 100 && (
-                  <p className="text-white/60 text-xs mt-1.5">Complete profiles get noticed more — add photos and answer a prompt or two.</p>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </div>
 
         <div className="max-w-4xl mx-auto px-4 py-8">
+          {/* Profile strength (identity completeness + photos, prompts & more) */}
+          {profile.strength && (
+            <ProfileStrength facts={{ ...profile.strength, publicPhotos: photos.filter((p) => !p.isPrivate).length }} />
+          )}
+
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {stats.map(({ icon: Icon, label, value, color }) => (
@@ -317,7 +334,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
           </div>
 
           {/* Bio */}
-          <div className="glass rounded-2xl p-6 mb-6">
+          <div id="bio" className="glass rounded-2xl p-6 mb-6 scroll-mt-24">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-white font-semibold flex items-center gap-2">
                 <MessageCircle size={16} className="text-[#DC143C]" />
@@ -357,16 +374,33 @@ export default function ProfileClient({ session, initialProfile }: Props) {
           </div>
 
           {/* Identity, who you'd like to meet, about-me details (and both partners for couples) */}
-          {profile.identity && <IdentityEditor initial={profile.identity} />}
+          <div id="identity" className="scroll-mt-24">
+            {profile.identity && <IdentityEditor initial={profile.identity} />}
+          </div>
 
           {/* Boost */}
           <BoostCard className="mb-6" />
 
           {/* Prompts */}
-          <PromptsEditor initial={profile.prompts ?? []} />
+          <div id="prompts" className="scroll-mt-24">
+            <PromptsEditor initial={profile.prompts ?? []} />
+          </div>
+
+          {/* Daily Spark answers (the last few show on your profile) */}
+          <SparkAnswers
+            className="mb-6"
+            title="Your Spark answers"
+            answers={profile.sparkAnswers ?? []}
+            emptyText="Answer the Daily Spark and your latest answers show here — an easy conversation starter."
+            footer={
+              <Link href="/spark" className="inline-flex items-center gap-1 mt-4 text-sm font-semibold text-[#FF4D6D] hover:text-[#FF85A1]">
+                Go to today&apos;s Spark →
+              </Link>
+            }
+          />
 
           {/* Photos */}
-          <div className="glass rounded-2xl p-6 mb-6">
+          <div id="photos" className="glass rounded-2xl p-6 mb-6 scroll-mt-24">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-white font-semibold flex items-center gap-2">
                 <Camera size={16} className="text-[#DC143C]" />
@@ -459,6 +493,9 @@ export default function ProfileClient({ session, initialProfile }: Props) {
             <p className="text-white/55 text-xs mt-3">JPEG, PNG, WEBP accepted. Hover a photo to manage it.</p>
           </div>
 
+          {/* Badges */}
+          {(profile.badges ?? []).length > 0 && <BadgeGrid badges={profile.badges ?? []} className="mb-6" />}
+
           {/* Video profile */}
           <VideoProfileCard initialUrl={profile.videoUrl ?? null} platinum={!!profile.isPlatinum} />
 
@@ -501,7 +538,9 @@ export default function ProfileClient({ session, initialProfile }: Props) {
           </div>
 
           {/* Linked-accounts couples */}
-          <CoupleLinkCard />
+          <div id="couple-link" className="scroll-mt-24">
+            <CoupleLinkCard />
+          </div>
         </div>
       </main>
 

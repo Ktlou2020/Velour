@@ -4,7 +4,10 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import MemberProfileClient from './MemberProfileClient';
-import { sendPushToUser } from '@/lib/push';
+import { recordProfileView } from '@/lib/views';
+import { activeStatus } from '@/components/status/status';
+import { earnedForDisplay, loadBadges } from '@/lib/badges';
+import { loadSparkAnswers } from '@/app/api/spark/data';
 import { compatibility, ageFromDob } from '@/lib/compat';
 import { distanceKm, formatDistance } from '@/lib/geo';
 import { parsePrompts } from '@/app/profile/prompts';
@@ -37,6 +40,7 @@ export default async function MemberProfilePage({ params }: PageProps) {
       username: true,
       createdAt: true,
       isVerified: true,
+      isActive: true,
       profile: {
         select: {
           ...PERSON_FIELDS,
@@ -45,6 +49,7 @@ export default async function MemberProfilePage({ params }: PageProps) {
           latitude: true, longitude: true, videoUrl: true, prompts: true,
           interestedIn: true, intentions: true, isCouple: true, coupleType: true,
           coupleMembers: true, hasChildren: true,
+          statusText: true, statusEmoji: true, statusUntil: true,
           partner: { select: { ...PERSON_FIELDS, user: { select: { username: true, isActive: true } } } },
         },
       },
@@ -64,7 +69,8 @@ export default async function MemberProfilePage({ params }: PageProps) {
       })
     : null;
 
-  if (!user || blocked) return (
+  // Deactivated accounts are hidden like blocked ones.
+  if (!user || blocked || !user.isActive) return (
     <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
       <p className="text-white/65">Member not found.</p>
     </div>
@@ -90,40 +96,13 @@ export default async function MemberProfilePage({ params }: PageProps) {
       })
     : null;
 
-  // Track profile view (non-self, non-incognito, non-critical)
-  if (currentUser?.id && viewer && !viewer.profile?.incognito) {
-    const viewerId = currentUser.id;
-    const viewerUsername = viewer.username ?? currentUser.username ?? '';
-    db.profile.update({ where: { userId: user.id }, data: { profileViews: { increment: 1 } } }).catch(() => {});
-    // Deduplicate notifications per viewer per 24h
-    (async () => {
-      const existing = await db.notification.findFirst({
-        where: {
-          userId: user.id,
-          type: 'PROFILE_VIEW',
-          createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-          data: { path: ['viewerId'], equals: viewerId },
-        },
-        select: { id: true },
-      });
-      if (existing) return;
-      await db.notification.create({
-        data: {
-          userId: user.id,
-          type: 'PROFILE_VIEW',
-          title: 'Someone viewed your profile',
-          body: viewerUsername ? `@${viewerUsername} visited your profile` : 'A member visited your profile',
-          data: { viewerId, viewerUsername },
-        },
-      });
-      await sendPushToUser(user.id, {
-        title: 'Someone viewed your profile',
-        body: 'A member just visited your Hush profile',
-        url: '/views',
-        tag: `view-${viewerId}`,
-      });
-    })().catch(() => {});
-  }
+  // Track the view: deduped per 24h, never for incognito viewers; members
+  // who can see their viewers are notified (all inside recordProfileView).
+  const [badges, sparkAnswers] = await Promise.all([
+    loadBadges(user.id),
+    loadSparkAnswers(user.id, 3),
+    currentUser?.id && viewer ? recordProfileView(currentUser.id, user.id) : Promise.resolve(),
+  ]);
 
   // Compatibility + coarse distance (raw coordinates never leave the server)
   const ownerInterests = user.interests.map(i => i.interest?.name ?? '').filter(Boolean);
@@ -197,6 +176,10 @@ export default async function MemberProfilePage({ params }: PageProps) {
     sharedInterests: insights ? compat?.sharedInterests ?? [] : [],
     insightsLocked: !!compat && !insights,
     distance: distanceLabel,
+    status: activeStatus(user.profile),
+    // The hero already shows the Verified pill.
+    badges: earnedForDisplay(badges).filter((b) => b.id !== 'verified'),
+    sparkAnswers,
   };
 
   return (

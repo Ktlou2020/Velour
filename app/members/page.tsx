@@ -5,7 +5,7 @@ import MemberCardSkeleton from '@/components/MemberCardSkeleton';
 import MembersContent from './MembersContent';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { getCallerContext, searchMembers, type MemberResult } from '@/app/api/members/search';
+import { getCallerContext, getSpotlight, searchMembers, type MemberResult } from '@/app/api/members/search';
 
 type SearchParams = Record<string, string | undefined> & {
   gender?: string;
@@ -31,15 +31,15 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const callerProfile = userId
     ? await db.profile.findUnique({
         where: { userId },
-        select: { city: true, country: true },
+        select: { city: true, country: true, latitude: true, longitude: true },
       })
     : null;
 
   const profileCity = callerProfile?.city ?? '';
   const profileCountry = callerProfile?.country ?? '';
-  const canChangeCity = caller.paid;
+  const canChangeCity = caller.ent.searchAnyCity;
 
-  // City: GOLD/PLATINUM can filter; FREE are locked to their own city (or no filter if city unset)
+  // Location-first: radius from the member's location (lib/plans maxSearchRadiusKm caps it)
   const result = await searchMembers(caller, {
     page: String(page),
     limit: String(limit),
@@ -52,7 +52,19 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
     online: params.online,
     sort: params.sort,
     maxKm: params.maxKm,
+    radius: params.radius,
+    anyCity: params.anyCity,
+    heightMin: params.heightMin,
+    heightMax: params.heightMax,
+    bodyType: params.bodyType,
+    intentions: params.intentions,
+    languages: params.languages,
+    verified: params.verified,
+    photos: params.photos,
+    active: params.active,
   });
+  // Platinum spotlight row (first page only)
+  const spotlight = userId && page === 1 ? await getSpotlight(caller, { limit: 4 }).catch(() => []) : [];
   const effectiveCity = result.effectiveCity ?? '';
   const total = result.total;
   const members: MemberData[] = result.members;
@@ -76,8 +88,18 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             members={members}
             total={total}
             currentPage={page}
-            searchParams={{ ...params, city: effectiveCity }}
+            searchParams={{ ...params, city: effectiveCity || undefined }}
             canChangeCity={canChangeCity}
+            advancedFilters={caller.ent.advancedFilters}
+            travel={caller.travel ? { city: caller.travel.city, until: caller.travel.until.toISOString() } : null}
+            canTravel={caller.ent.travelMode}
+            spotlight={spotlight}
+            radiusKm={result.radiusKm}
+            maxRadiusKm={caller.ent.maxSearchRadiusKm}
+            sort={result.sort}
+            unknownDistance={result.unknownDistance}
+            homeLat={callerProfile?.latitude ?? null}
+            homeLng={callerProfile?.longitude ?? null}
             profileCity={profileCity}
             profileCountry={profileCountry}
             callerHasLocation={result.callerHasLocation}

@@ -7,7 +7,16 @@ import EmptyState from '@/components/EmptyState';
 import MatchOverlay from '@/components/MatchOverlay';
 import ProtectedImage from '@/components/ProtectedImage';
 import { useSession } from 'next-auth/react';
-import { X, Heart, Star, MapPin, Zap, Navigation, Sparkles, Undo2, Crown, Lock, Quote } from 'lucide-react';
+import { X, Heart, Star, MapPin, Zap, Navigation, Sparkles, Undo2, Crown, Lock, Quote, Plane, MessageCircle, Moon } from 'lucide-react';
+import AllowanceMeter, { resetPhrase, type Allowance } from '@/components/plans/AllowanceMeter';
+import UpgradeNudge from '@/components/plans/UpgradeNudge';
+import StatusPill from '@/components/status/StatusPill';
+import SparkCard from '@/components/spark/SparkCard';
+import LocationPrompt from '@/components/plans/LocationPrompt';
+
+function savedRadius(): string | null {
+  try { return localStorage.getItem('hush_search_radius'); } catch { return null; }
+}
 
 interface Profile {
   id?: string;
@@ -30,6 +39,13 @@ interface Profile {
   isCouple?: boolean;
   coupleBadge?: string;
   ages?: number[];
+  status?: { text: string; emoji?: string };
+  visiting?: { city: string; until: string };
+  isSpotlight?: boolean;
+}
+
+function shortDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', timeZone: 'Africa/Johannesburg' });
 }
 
 function agesText(p: Profile): string | undefined {
@@ -55,18 +71,36 @@ export default function DiscoverPage() {
   const [picks, setPicks] = useState<Profile[]>([]);
   const [picksLimit, setPicksLimit] = useState(5);
   const [actedIds, setActedIds] = useState<Set<string>>(new Set());
-  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [nudge, setNudge] = useState<'undo' | 'superlike' | null>(null);
+  const [allowance, setAllowance] = useState<Allowance | null>(null);
+  const [nextTierPicks, setNextTierPicks] = useState<number | null>(null);
+  const [travel, setTravel] = useState<{ city: string; until: string } | null>(null);
+  const [hasLocation, setHasLocation] = useState(true);
+  const [radiusKm, setRadiusKm] = useState<number | null>(null);
   const [undoing, setUndoing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const actionInProgress = useRef(false);
   const pendingAction = useRef<Promise<unknown> | null>(null);
   const dragStartX = useRef<number | null>(null);
   const dragStartY = useRef<number | null>(null);
+  const indexRef = useRef(0);
+  useEffect(() => { indexRef.current = currentIndex; }, [currentIndex]);
 
   useEffect(() => {
-    loadProfiles();
+    loadProfiles(true);
     loadPicks();
+    loadAllowance();
   }, []);
+
+  async function loadAllowance() {
+    try {
+      const res = await fetch('/api/likes/allowance');
+      if (res.ok) setAllowance(await res.json() as Allowance);
+    } catch { /* ignore */ }
+  }
+
+  const canUndo = allowance ? allowance.features.undoSwipe : isPaid;
+  const outOfLikes = !!allowance && allowance.likes.limit !== null && (allowance.likes.remaining ?? 0) <= 0;
 
   useEffect(() => {
     if (!toast) return;
@@ -78,10 +112,12 @@ export default function DiscoverPage() {
     try {
       const res = await fetch('/api/picks');
       if (res.ok) {
-        const data = await res.json() as { picks?: Profile[]; limit?: number; isPaid?: boolean };
+        const data = await res.json() as { picks?: Profile[]; limit?: number; isPaid?: boolean; nextTierPicks?: number | null; travel?: { city: string; until: string } | null };
         setPicks(data.picks || []);
         if (data.limit) setPicksLimit(data.limit);
         setIsPaid(!!data.isPaid);
+        setNextTierPicks(data.nextTierPicks ?? null);
+        setTravel(data.travel ?? null);
       }
     } catch { /* ignore */ }
   }
@@ -108,13 +144,25 @@ export default function DiscoverPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profiles, currentIndex]);
 
-  async function loadProfiles() {
+  async function loadProfiles(withSpotlight = false) {
     setLoading(true);
     try {
-      const res = await fetch('/api/members?limit=10&discover=1');
+      const [res, spot] = await Promise.all([
+        fetch(`/api/members?limit=10&discover=1${(() => { const r = savedRadius(); return r ? `&radius=${encodeURIComponent(r)}` : ''; })()}`),
+        withSpotlight ? fetch('/api/members/spotlight?discover=1&limit=1').catch(() => null) : Promise.resolve(null),
+      ]);
       if (res.ok) {
         const data = await res.json();
-        setProfiles(data.members || data || []);
+        let list: Profile[] = data.members || data || [];
+        setHasLocation(data.callerHasLocation !== false);
+        setRadiusKm(typeof data.radiusKm === 'number' ? data.radiusKm : null);
+        // Platinum spotlight takes the first slot of a fresh deck
+        if (spot?.ok) {
+          const s = await spot.json() as { members?: Profile[] };
+          const featured = s.members?.[0];
+          if (featured) list = [featured, ...list.filter((p) => p.id !== featured.id)];
+        }
+        setProfiles(list);
         setCurrentIndex(0);
       }
     } finally {
@@ -122,10 +170,33 @@ export default function DiscoverPage() {
     }
   }
 
+  // Put a card back on top of the deck (after the server refused the like).
+  // Runs after the swipe animation so the deck index has settled.
+  function restoreCard(profile: Profile) {
+    setTimeout(() => {
+      setProfiles(prev => {
+        const was = prev.findIndex(p => p.id === profile.id);
+        const rest = prev.filter(p => p.id !== profile.id);
+        const at = Math.max(0, Math.min(rest.length, was !== -1 && was < indexRef.current ? indexRef.current - 1 : indexRef.current));
+        setCurrentIndex(at);
+        return [...rest.slice(0, at), profile, ...rest.slice(at)];
+      });
+      if (profile.id) setActedIds(prev => { const n = new Set(prev); n.delete(profile.id!); return n; });
+      setUndoStack(prev => prev.filter(p => p.id !== profile.id));
+    }, 340);
+  }
+
   async function doAction(type: ActionType, dir: AnimDir) {
     if (actionInProgress.current) return;
     const profile = profiles[currentIndex];
     if (!profile) return;
+    // Out of likes: the end-of-likes card is showing; passes still work.
+    if (outOfLikes && (type === 'LIKE' || type === 'WINK')) return;
+    if (type === 'SUPER_LIKE' && allowance && allowance.superLikes.available <= 0) {
+      setToast(`No super likes left ${allowance.superLikes.period === 'day' ? 'today' : 'this week'} — they refresh ${resetPhrase(allowance.superLikes.resetsAt)}.`);
+      if (allowance.tier !== 'PLATINUM') setNudge('superlike');
+      return;
+    }
 
     actionInProgress.current = true;
     setAnimDir(dir);
@@ -144,10 +215,17 @@ export default function DiscoverPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ toUserId: profile.id, type }),
         });
-        if (res.ok && type !== 'PASS') {
-          const data = await res.json();
-          if (data.matched) {
-            setTimeout(() => setMatchProfile(profile), 350);
+        const data = await res.json().catch(() => ({})) as { matched?: boolean; allowance?: Allowance; code?: string; error?: string };
+        if (data.allowance) setAllowance(data.allowance);
+        if (res.ok && type !== 'PASS' && data.matched) {
+          setTimeout(() => setMatchProfile(profile), 350);
+        }
+        if (res.status === 429) {
+          // Allowance ran out server-side: give the card back.
+          restoreCard(profile);
+          if (data.code === 'SUPERLIKE_LIMIT') {
+            setToast(data.error || 'No super likes left right now');
+            if (data.allowance?.tier !== 'PLATINUM') setNudge('superlike');
           }
         }
       } catch { /* ignore */ }
@@ -166,7 +244,7 @@ export default function DiscoverPage() {
   }
 
   async function handleUndo() {
-    if (!isPaid) { setShowUpgrade(true); return; }
+    if (!canUndo) { setNudge('undo'); return; }
     if (undoing || actionInProgress.current) return;
     setUndoing(true);
     try {
@@ -175,7 +253,7 @@ export default function DiscoverPage() {
       const res = await fetch('/api/likes/undo', { method: 'POST' });
       const data = await res.json().catch(() => ({})) as { userId?: string; unmatched?: boolean; error?: string; upgrade?: boolean };
       if (!res.ok) {
-        if (data.upgrade) { setIsPaid(false); setShowUpgrade(true); }
+        if (data.upgrade) { setIsPaid(false); setNudge('undo'); }
         else setToast(data.error || 'Could not undo that swipe');
         return;
       }
@@ -183,6 +261,7 @@ export default function DiscoverPage() {
       setUndoStack(prev => prev.filter(p => p.id !== data.userId));
       if (data.userId) setActedIds(prev => { const n = new Set(prev); n.delete(data.userId!); return n; });
       if (data.unmatched) { setMatchProfile(null); setToast('Swipe undone — match removed'); }
+      loadAllowance();
       if (restored) {
         // Put the card back on top of the deck
         setProfiles(prev => {
@@ -247,12 +326,26 @@ export default function DiscoverPage() {
       <main className="pt-16 min-h-screen flex flex-col">
         {/* Header Bar */}
         <div className="glass-dark border-b border-white/5 px-4 py-3">
-          <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-3 flex-wrap">
             <div>
               <h1 className="font-serif text-white text-xl font-bold">Discover</h1>
               <p className="text-white/60 text-xs">{remaining.length} profile{remaining.length !== 1 ? 's' : ''} to discover</p>
             </div>
+            {travel && (
+              <Link href="/account#travel" className="inline-flex items-center gap-1.5 rounded-full border border-sky-300/25 bg-sky-400/10 px-3 py-1 text-xs text-sky-100 hover:bg-sky-400/15">
+                <Plane size={12} aria-hidden="true" />
+                Exploring {travel.city} until {shortDate(travel.until)} <span className="text-sky-200/70">· Change</span>
+              </Link>
+            )}
           </div>
+          <div className="max-w-4xl mx-auto mt-2">
+            <AllowanceMeter allowance={allowance} />
+          </div>
+          {!travel && !hasLocation && (
+            <div className="max-w-4xl mx-auto mt-3">
+              <LocationPrompt hasLocation={false} onSaved={() => { loadProfiles(true); loadPicks(); }} />
+            </div>
+          )}
         </div>
 
         {/* Today's picks */}
@@ -265,10 +358,10 @@ export default function DiscoverPage() {
                   Today&apos;s picks
                   <span className="text-white/55 font-normal text-xs">· {picks.length} of {picksLimit}</span>
                 </h2>
-                {!isPaid && (
-                  <Link href="/upgrade" className="flex items-center gap-1 text-[#D4AF37] text-xs font-medium hover:underline">
+                {nextTierPicks && (
+                  <Link href="/upgrade#compare" className="flex items-center gap-1 text-[#D4AF37] text-xs font-medium hover:underline">
                     <Crown size={11} />
-                    Get 10 daily picks
+                    Get {nextTierPicks} daily picks
                   </Link>
                 )}
               </div>
@@ -328,6 +421,40 @@ export default function DiscoverPage() {
               <div className="flex justify-center gap-4 mt-8">
                 {[64, 56, 64, 56].map((d, i) => <div key={i} className="rounded-full skeleton" style={{ width: d, height: d }} />)}
               </div>
+            </div>
+          ) : outOfLikes && current ? (
+            <div className="w-full max-w-sm text-center">
+              <div className="glass rounded-3xl p-7 sm:p-8 border border-white/10 relative overflow-hidden">
+                <div aria-hidden="true" className="absolute -top-16 left-1/2 -translate-x-1/2 w-56 h-56 rounded-full bg-[#DC143C]/15 blur-3xl" />
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#DC143C]/25 to-[#D4AF37]/15 border border-white/10 flex items-center justify-center mx-auto mb-5">
+                    <Moon size={26} className="text-[#FFB3C1]" aria-hidden="true" />
+                  </div>
+                  <h2 className="font-serif text-white text-2xl font-bold mb-2">That&apos;s a lot of love for one day</h2>
+                  <p className="text-white/70 text-sm leading-relaxed mb-6">
+                    You&apos;ve used today&apos;s {allowance?.likes.limit} likes — they refresh at midnight.
+                    Meanwhile, here are some lovely ways to keep the spark going.
+                  </p>
+                  <SparkCard className="mb-2 text-left" />
+                  <div className="grid gap-2 text-left">
+                    <Link href="/matches" className="flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/10 hover:border-[#DC143C]/40 px-4 py-3 transition-colors">
+                      <MessageCircle size={18} className="text-[#FF4D6D] flex-shrink-0" aria-hidden="true" />
+                      <span><span className="block text-white text-sm font-semibold">Check your matches</span><span className="block text-white/55 text-xs">Say hello before a match expires</span></span>
+                    </Link>
+                    <Link href="/members" className="flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/10 hover:border-white/25 px-4 py-3 transition-colors">
+                      <Heart size={18} className="text-white/70 flex-shrink-0" aria-hidden="true" />
+                      <span><span className="block text-white text-sm font-semibold">Browse members</span><span className="block text-white/55 text-xs">Read profiles now, like them tomorrow</span></span>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+              <UpgradeNudge
+                className="mt-5 text-left"
+                feature="unlimited-likes"
+                title="Never run out"
+                body="Gold members get unlimited likes, see who already liked them, and can rewind a swipe."
+                tier="GOLD"
+              />
             </div>
           ) : current ? (
             <div className="w-full max-w-sm">
@@ -398,10 +525,20 @@ export default function DiscoverPage() {
                         {current.compatibility}% match
                       </div>
                     )}
-                    {current.isBoosted && (
-                      <div className="absolute top-14 left-4 bg-[#DC143C]/80 backdrop-blur-sm px-2.5 py-1 rounded-full text-white text-xs font-bold flex items-center gap-1">
-                        <Zap size={11} className="fill-white" />
-                        Boosted
+                    {(current.isSpotlight || current.isBoosted) && (
+                      <div className="absolute top-14 left-4 flex flex-col items-start gap-1.5">
+                        {current.isSpotlight && (
+                          <div className="bg-gradient-to-r from-purple-600/90 to-[#D4AF37]/80 backdrop-blur-sm px-2.5 py-1 rounded-full text-white text-xs font-bold flex items-center gap-1" title="Platinum spotlight">
+                            <Sparkles size={11} aria-hidden="true" />
+                            Spotlight
+                          </div>
+                        )}
+                        {current.isBoosted && (
+                          <div className="bg-[#DC143C]/80 backdrop-blur-sm px-2.5 py-1 rounded-full text-white text-xs font-bold flex items-center gap-1">
+                            <Zap size={11} className="fill-white" />
+                            Boosted
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -419,6 +556,12 @@ export default function DiscoverPage() {
                         {current.displayName || current.username}{agesText(current) ? `, ${agesText(current)}` : ''}
                         {current.pronouns && <span className="text-white/65 text-sm font-sans font-normal ml-2">({current.pronouns})</span>}
                       </h2>
+                      {current.status && <StatusPill status={{ emoji: current.status.emoji ?? null, text: current.status.text }} size="sm" className="mt-1.5 mr-1.5" />}
+                      {current.visiting && (
+                        <span className="inline-flex items-center gap-1 mt-1.5 mr-1.5 bg-sky-400/15 border border-sky-300/30 text-sky-100 text-[11px] font-semibold px-2 py-0.5 rounded-full">
+                          <Plane size={10} aria-hidden="true" /> Visiting until {shortDate(current.visiting.until)}
+                        </span>
+                      )}
                       {current.isCouple && (
                         <span className="inline-block mt-1.5 bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] text-[11px] font-bold px-2 py-0.5 rounded-full">
                           {current.coupleBadge ?? 'Couple'}
@@ -518,9 +661,9 @@ export default function DiscoverPage() {
                     disabled={undoing}
                     className="flex items-center gap-1.5 glass px-3 py-1.5 rounded-lg text-white/65 hover:text-white text-xs transition-all hover:bg-white/10 disabled:opacity-50"
                     aria-label="Undo last swipe"
-                    title={isPaid ? 'Undo your last swipe (within 10 minutes)' : 'Undo is a Gold & Platinum feature'}
+                    title={canUndo ? 'Undo your last swipe (within 10 minutes)' : 'Undo is a Gold & Platinum feature'}
                   >
-                    {isPaid ? <Undo2 size={12} /> : <Lock size={11} className="text-[#D4AF37]" />}
+                    {canUndo ? <Undo2 size={12} /> : <Lock size={11} className="text-[#D4AF37]" />}
                     {undoing ? 'Undoing…' : 'Undo'}
                   </button>
                 )}
@@ -530,43 +673,35 @@ export default function DiscoverPage() {
                 <p className="md:hidden text-white/45 text-xs">Swipe or tap to decide</p>
               </div>
 
+              {nudge && (
+                <UpgradeNudge
+                  key={nudge}
+                  takeover
+                  className="mt-5"
+                  feature={nudge === 'undo' ? 'undo-swipe' : 'super-likes'}
+                  title={nudge === 'undo' ? 'Changed your mind?' : 'Want more super likes?'}
+                  body={nudge === 'undo'
+                    ? 'Gold and Platinum members can rewind their last swipe and get that profile back.'
+                    : 'Gold includes 5 super likes a week and Platinum 10 — super liked profiles see you first.'}
+                  tier="GOLD"
+                  onDismiss={() => setNudge(null)}
+                />
+              )}
+
             </div>
           ) : (
             <EmptyState
               icon={Zap}
               title="You’re all caught up"
-              description="We only show people who’d like to meet you too. New members join every week — come back tomorrow, or widen who you’d like to meet on your profile."
-              action={{ label: 'Browse members', href: '/members' }}
+              description={radiusKm !== null
+                ? `No one new within ${radiusKm} km right now. Try a bigger radius on Members, or come back tomorrow — new people join every week.`
+                : 'We only show people who’d like to meet you too. New members join every week — come back tomorrow, or widen who you’d like to meet on your profile.'}
+              action={{ label: radiusKm !== null ? 'Widen my radius' : 'Browse members', href: '/members' }}
               secondaryAction={{ label: 'See my matches', href: '/matches' }}
             />
           )}
         </div>
       </main>
-
-      {/* Undo upgrade prompt */}
-      {showUpgrade && (
-        <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center px-4" onClick={() => setShowUpgrade(false)}>
-          <div className="glass rounded-3xl p-6 max-w-sm w-full text-center border border-[#D4AF37]/20" onClick={(e) => e.stopPropagation()}>
-            <div className="w-14 h-14 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 flex items-center justify-center mx-auto mb-4">
-              <Undo2 className="text-[#D4AF37]" size={24} />
-            </div>
-            <h3 className="text-white font-serif text-xl font-bold mb-2">Changed your mind?</h3>
-            <p className="text-white/65 text-sm mb-6">Gold and Platinum members can undo their last swipe and get that profile back.</p>
-            <div className="flex flex-col gap-2">
-              <Link
-                href="/upgrade"
-                className="flex items-center justify-center gap-2 bg-[#DC143C] hover:bg-[#FF1744] text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
-              >
-                <Crown size={14} />
-                Upgrade to undo
-              </Link>
-              <button onClick={() => setShowUpgrade(false)} className="text-white/60 hover:text-white/70 text-sm py-2">
-                Maybe later
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 glass-dark border border-white/10 px-4 py-2.5 rounded-xl text-white/80 text-sm shadow-xl max-w-[90vw] text-center">

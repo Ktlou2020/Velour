@@ -1,36 +1,44 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Check, Crown, Star, Zap, Shield, MessageCircle, Eye, Heart, ChevronDown, Loader2 } from 'lucide-react'
+import { Check, Crown, Star, Plane, Eye, Heart, ChevronDown, Loader2, MessageCircle } from 'lucide-react'
+import { NEW_MEMBER_UNLIMITED_MESSAGES_DAYS, PLANS, type PlanTier } from '@/lib/plans'
+import PlanComparison from '@/components/plans/PlanComparison'
 
+// Card highlights only — the full, enforced list is the comparison table below
+// (rendered from lib/plans.ts PLAN_FEATURES).
 const FREE_FEATURES = [
-  'Browse & message members',
-  'Search members in your own city',
-  'Create singles or couples profile',
-  'Community forum access (read only)',
-  'See your own matches',
-  'Photo verification badge',
+  `${PLANS.FREE.likesPerDay} likes a day + ${PLANS.FREE.superLikes} super like a day`,
+  `Messages: unlimited for your first ${NEW_MEMBER_UNLIMITED_MESSAGES_DAYS} days, then ${PLANS.FREE.messagesPer24h} per 24 hours`,
+  'Reactions, chat games & icebreakers',
+  `Search up to ${PLANS.FREE.maxSearchRadiusKm} km from you`,
+  `${PLANS.FREE.dailyPicks} hand-picked matches every day`,
+  'Daily Spark, status & profile badges',
+  'Post in forums, RSVP to events',
+  `${PLANS.FREE.privateAlbums} private photo album`,
+  'Singles & couples profiles, safety centre',
 ]
 const GOLD_FEATURES = [
-  'Search any city & filter by distance',
-  'See everyone who liked you',
-  'See who viewed your profile',
-  'Private photo access',
-  'Events & meetups access',
-  'Profile boost (1× per month)',
-  'Read receipts',
-  'Undo your last swipe',
-  'Couples: meet singles or other couples in any city',
-  'Priority in search results',
-  'Forum posting & replies',
+  'Unlimited messaging',
+  `${PLANS.GOLD.chatVideoMaxSec}-second videos in chat`,
+  'Unlimited likes',
+  `${PLANS.GOLD.superLikes} super likes a week`,
+  'See who liked you & who viewed you',
+  'Search anywhere & travel mode',
+  'Advanced filters & undo your last swipe',
+  `Read receipts & ${PLANS.GOLD.priorityMessagesPerWeek} priority messages a week`,
+  `${PLANS.GOLD.dailyPicks} daily picks, monthly boost, priority in search`,
+  'Unlimited private albums & host events',
 ]
 const PLATINUM_FEATURES = [
   'Everything in Gold',
-  'Weekly profile boost',
-  'Anonymous / incognito browsing',
-  'Compatibility scores & insights',
-  'Video profile (30 sec)',
+  `${PLANS.PLATINUM.superLikes} super likes a week & unlimited priority messages`,
+  `${PLANS.PLATINUM.dailyPicks} daily picks & a weekly boost`,
+  'Spotlight at the top of discover',
+  'Profile insights dashboard',
+  'Incognito browsing & compatibility insights',
+  'Video profile',
 ]
 
 const FAQS = [
@@ -47,6 +55,14 @@ export default function UpgradePage() {
   const [annual, setAnnual] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
   const [loadingTier, setLoadingTier] = useState<Tier | null>(null)
+  const [current, setCurrent] = useState<PlanTier | null>(null)
+
+  useEffect(() => {
+    fetch('/api/likes/allowance')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { tier?: PlanTier } | null) => { if (d?.tier) setCurrent(d.tier) })
+      .catch(() => {})
+  }, [])
 
   const goldPrice = annual ? '139' : '199'
   const platinumPrice = annual ? '249' : '349'
@@ -108,11 +124,11 @@ export default function UpgradePage() {
             <span className="text-[#D4AF37] text-sm font-medium">Premium Membership</span>
           </div>
           <h1 className="text-4xl lg:text-5xl font-serif font-bold text-white mb-4">
-            Unlock Your Full<br />
-            <span className="text-gradient-crimson">Potential</span>
+            Free is generous.<br />
+            <span className="text-gradient-crimson">Gold is effortless.</span>
           </h1>
           <p className="text-gray-400 text-lg max-w-xl mx-auto">
-            Join thousands of members who found extraordinary connections with Hush Premium.
+            Everyone can match, chat and join the community for free. Upgrade for unlimited messaging and likes, to see who&apos;s already interested, and to search anywhere.
           </p>
 
           {/* Billing toggle */}
@@ -135,15 +151,19 @@ export default function UpgradePage() {
           <div className="glass rounded-2xl p-6">
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-white mb-1">Free</h3>
-              <p className="text-gray-500 text-sm">Freemium — always free, no card needed</p>
+              <p className="text-gray-500 text-sm">Always free, no card needed</p>
             </div>
             <div className="mb-6">
               <span className="text-4xl font-bold text-white">R0</span>
               <span className="text-gray-500 text-sm">/month</span>
             </div>
-            <Link href="/auth/signup" className="block w-full py-3 rounded-xl border border-white/15 text-center text-gray-300 hover:bg-white/5 transition-colors font-medium mb-6">
-              Start for Free — No Card Needed
-            </Link>
+            {current === 'FREE' || current === null ? (
+              <div className="block w-full py-3 rounded-xl border border-white/15 text-center text-gray-300 font-medium mb-6" aria-live="polite">
+                {current === 'FREE' ? 'Your current plan' : 'Included with every account'}
+              </div>
+            ) : (
+              <div className="block w-full py-3 rounded-xl border border-white/10 text-center text-gray-500 font-medium mb-6">Always included</div>
+            )}
             <ul className="space-y-3">
               {FREE_FEATURES.map(f => (
                 <li key={f} className="flex items-start gap-2.5 text-sm text-gray-400">
@@ -158,14 +178,14 @@ export default function UpgradePage() {
           <div className="relative rounded-2xl p-[1px] bg-gradient-to-b from-[#D4AF37] to-[#B8960C]" style={{boxShadow: '0 0 30px rgba(212,175,55,0.2)'}}>
             <div className="bg-[#12121A] rounded-2xl p-6 h-full">
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                <span className="bg-gradient-to-r from-[#D4AF37] to-[#B8960C] text-[#0A0A0F] text-xs font-bold px-4 py-1 rounded-full">MOST POPULAR</span>
+                <span className="bg-gradient-to-r from-[#D4AF37] to-[#B8960C] text-[#0A0A0F] text-xs font-bold px-4 py-1 rounded-full">RECOMMENDED</span>
               </div>
               <div className="mb-6 mt-2">
                 <div className="flex items-center gap-2 mb-1">
                   <Star className="w-5 h-5 text-[#D4AF37]" />
                   <h3 className="text-lg font-semibold text-white">Gold</h3>
                 </div>
-                <p className="text-gray-400 text-sm">The complete experience</p>
+                <p className="text-gray-400 text-sm">The complete experience{current === 'GOLD' ? ' · your plan' : ''}</p>
               </div>
               <div className="mb-6">
                 <span className="text-4xl font-bold text-white">R{goldPrice}</span>
@@ -201,7 +221,7 @@ export default function UpgradePage() {
                 <Crown className="w-5 h-5 text-purple-400" />
                 <h3 className="text-lg font-semibold text-white">Platinum</h3>
               </div>
-              <p className="text-gray-500 text-sm">For the most discerning members</p>
+              <p className="text-gray-500 text-sm">Be seen first, know what works{current === 'PLATINUM' ? ' · your plan' : ''}</p>
             </div>
             <div className="mb-6">
               <span className="text-4xl font-bold text-white">R{platinumPrice}</span>
@@ -230,15 +250,22 @@ export default function UpgradePage() {
           </div>
         </div>
 
+        {/* Comparison */}
+        <div id="compare" className="mb-16 scroll-mt-24">
+          <h2 className="text-2xl font-serif font-bold text-white text-center mb-2">Compare plans</h2>
+          <p className="text-gray-400 text-sm text-center mb-8">Exactly what each plan includes — this is the same list the app uses to unlock features.</p>
+          <PlanComparison current={current} highlight="GOLD" />
+        </div>
+
         {/* Benefits */}
         <div className="mb-16">
-          <h2 className="text-2xl font-serif font-bold text-white text-center mb-8">Why Hush Premium?</h2>
+          <h2 className="text-2xl font-serif font-bold text-white text-center mb-8">Why members upgrade</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { icon: MessageCircle, title: 'Unlimited Messaging', desc: 'Connect with anyone, anytime' },
-              { icon: Eye, title: 'See Who Views You', desc: 'Know who is interested' },
-              { icon: Zap, title: 'Boosted Visibility', desc: 'Get seen by more members' },
-              { icon: Shield, title: 'Verified & Safe', desc: 'Premium safety features' },
+              { icon: MessageCircle, title: 'Unlimited messaging', desc: 'Plus 60-second videos in chat' },
+              { icon: Heart, title: 'See who liked you', desc: 'Like them back for an instant match' },
+              { icon: Eye, title: 'See who viewed you', desc: 'Know who is curious about you' },
+              { icon: Plane, title: 'Travel mode', desc: 'Meet people before you land' },
             ].map(({ icon: Icon, title, desc }) => (
               <div key={title} className="glass rounded-xl p-5 text-center">
                 <div className="w-12 h-12 rounded-xl bg-[#DC143C]/10 flex items-center justify-center mx-auto mb-3">
@@ -274,12 +301,12 @@ export default function UpgradePage() {
 
         {/* CTA */}
         <div className="mt-16 text-center glass-crimson rounded-2xl p-10">
-          <h2 className="text-2xl font-serif font-bold text-white mb-3">Ready to meet someone extraordinary?</h2>
-          <p className="text-gray-400 mb-6">Join 52,000+ members who have already found their connection.</p>
-          <Link href="/auth/signup" className="inline-flex items-center gap-2 bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white px-8 py-3.5 rounded-xl font-semibold transition-all shadow-lg shadow-[#DC143C]/20">
-            Start Free Today <Heart className="w-4 h-4" />
+          <h2 className="text-2xl font-serif font-bold text-white mb-3">Not ready yet? That&apos;s fine.</h2>
+          <p className="text-gray-400 mb-6">Free never expires. Keep discovering — your likes refresh every midnight, and your first 3 days of messaging are unlimited.</p>
+          <Link href="/discover" className="inline-flex items-center gap-2 bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white px-8 py-3.5 rounded-xl font-semibold transition-all shadow-lg shadow-[#DC143C]/20">
+            Keep discovering <Heart className="w-4 h-4" />
           </Link>
-          <p className="text-gray-600 text-xs mt-4">No credit card required for free tier · Cancel anytime</p>
+          <p className="text-gray-500 text-xs mt-4">Secure payments by PayFast · Cancel anytime</p>
         </div>
       </div>
     </div>

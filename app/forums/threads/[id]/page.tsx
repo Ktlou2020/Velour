@@ -238,15 +238,9 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                 </Link>
               </div>
             ) : !canReply ? (
-              <div className="flex items-center gap-3 glass rounded-xl p-4 border border-[#D4AF37]/20">
-                <Lock size={20} className="text-[#D4AF37] flex-shrink-0" />
-                <div>
-                  <p className="text-white font-medium text-sm">Gold Membership Required</p>
-                  <p className="text-white/65 text-xs mt-0.5">Upgrade to Gold or Platinum to post replies in forums.</p>
-                </div>
-                <Link href="/upgrade" className="ml-auto bg-gradient-to-r from-[#D4AF37] to-[#B8960C] text-[#0A0A0F] font-bold px-4 py-2 rounded-lg text-xs whitespace-nowrap">
-                  Upgrade
-                </Link>
+              <div className="flex items-center gap-3 glass rounded-xl p-4 border border-white/10">
+                <Lock size={18} className="text-white/60 flex-shrink-0" />
+                <p className="text-white/70 text-sm">Replies aren&apos;t available on this thread right now.</p>
               </div>
             ) : (
               <>

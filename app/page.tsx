@@ -54,6 +54,8 @@ const FEATURES = [
   { icon: Users, title: 'Inclusive by design', desc: 'Women, men, non-binary people and couples of every kind. Share your identity on your terms, and couples can share one profile or link two.' },
   { icon: CalendarHeart, title: 'Curated events', desc: 'Intimate member gatherings — sundowners, tastings, workshops — where introductions come naturally.' },
   { icon: MessageCircle, title: 'Conversation, not small talk', desc: 'Profile prompts and icebreakers give you something real to reply to, plus a members-only forum.' },
+  { icon: Sparkles, title: 'A Daily Spark', desc: 'One light question a day — braai or salads, Joburg or Cape Town — answer it, see what others said, and reply to the ones that make you smile.' },
+  { icon: Heart, title: 'Status, badges & a little fun', desc: 'Let people know you’re “Up for coffee” tonight, earn badges as you go, and see what would make your profile shine. All free.' },
 ];
 
 const TIERS = [

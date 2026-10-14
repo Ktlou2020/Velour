@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { isValidId } from '@/lib/security'
-import { ALBUM_DESC_MAX, cleanAlbumName, findUserAlbum, userSummary, viewerAlbumState } from '@/lib/albums'
+import { ALBUM_DESC_MAX, USER_ALBUM_WHERE, cleanAlbumName, findUserAlbum, userSummary, viewerAlbumState } from '@/lib/albums'
+import { entitlements } from '@/lib/plans'
 
 type Ctx = { params: Promise<{ id: string }> }
 const notFound = () => NextResponse.json({ error: 'Album not found' }, { status: 404 })
@@ -84,6 +85,17 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       } else return NextResponse.json({ error: 'Invalid coverPhotoId' }, { status: 400 })
     }
     if (typeof body.order === 'number' && Number.isInteger(body.order) && body.order >= 0 && body.order < 1000) data.order = body.order
+
+    if (data.isPrivate === true && !album.isPrivate) {
+      const owner = await db.user.findUnique({ where: { id: userId }, select: { role: true, profile: { select: { membershipTier: true } } } })
+      const maxPrivate = entitlements(owner?.profile?.membershipTier, owner?.role).privateAlbums
+      if (maxPrivate !== null) {
+        const privateCount = await db.album.count({ where: { ownerId: userId, isPrivate: true, ...USER_ALBUM_WHERE } })
+        if (privateCount >= maxPrivate) {
+          return NextResponse.json({ error: `Your plan includes ${maxPrivate} private album${maxPrivate === 1 ? '' : 's'}. Upgrade to Gold for unlimited private albums.`, code: 'PRIVATE_ALBUM_LIMIT', limit: maxPrivate, upgrade: true }, { status: 403 })
+        }
+      }
+    }
 
     if (data.isPrivate === true && !album.isPrivate) {
       const main = await db.photo.findFirst({ where: { albumId: id, isProfile: true }, select: { id: true } })

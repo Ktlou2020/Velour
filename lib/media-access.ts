@@ -5,8 +5,9 @@
  *   - owner: always
  *   - admin: always
  *   - owner deactivated, or a Block in either direction: never
- *   - chat image (hidden "__chat" album) or any photo sent in a chat:
- *       participants of a conversation containing a message with that image
+ *   - chat image / voice note / chat video (hidden "__chat" album) or any photo sent in a chat:
+ *       participants of a conversation containing a message with that image/audio/video
+ *       (videos: Message.meta.videoUrl)
  *   - profile video (hidden "__video" album): any logged-in member
  *   - photo in a user album: public album → any logged-in member;
  *       private album → members with AlbumAccess GRANTED
@@ -55,12 +56,12 @@ export async function viewerRole(userId: string): Promise<string | null> {
   return u?.isActive ? u.role : null
 }
 
-/** True when `viewerId` takes part in a conversation that contains this image. */
+/** True when `viewerId` takes part in a conversation that contains this image or voice note. */
 async function seenInChat(photoId: string, viewerId: string): Promise<boolean> {
   const url = mediaUrl(photoId)
   const msg = await db.message.findFirst({
     where: {
-      OR: [{ imageUrl: url }, { imageUrl: { endsWith: url } }],
+      OR: [{ imageUrl: url }, { imageUrl: { endsWith: url } }, { audioUrl: url }, { kind: 'VIDEO', meta: { path: ['videoUrl'], equals: url } }],
       conversation: { participants: { some: { userId: viewerId } } },
     },
     select: { id: true },
@@ -111,7 +112,7 @@ export async function photoVisibility(photo: MediaPhoto, viewer: Viewer | null):
     if (access?.status === ACCESS.GRANTED) return 'private'
   }
 
-  // Any image that was sent in a chat is visible to that chat's participants.
+  // Any image / voice note sent in a chat is visible to that chat's participants.
   if (await seenInChat(photo.id, viewer.id)) return 'private'
   return null
 }
@@ -159,4 +160,35 @@ export async function isSendableChatImage(url: unknown, senderId: string): Promi
   if (url !== mediaUrl(id)) return false // store only the canonical relative URL
   const photo = await db.photo.findUnique({ where: { id }, select: { userId: true, mimeType: true, storageKey: true } })
   return !!photo && photo.userId === senderId && !!photo.storageKey && !!photo.mimeType?.startsWith('image/')
+}
+
+/**
+ * May `senderId` attach `url` as a voice note? Must be the canonical URL of an
+ * audio file the sender uploaded (POST /api/upload purpose=voice).
+ */
+export async function isSendableVoiceNote(url: unknown, senderId: string): Promise<boolean> {
+  if (typeof url !== 'string' || url.length > 200) return false
+  const id = mediaIdFromUrl(url)
+  if (!id || url !== mediaUrl(id)) return false
+  const photo = await db.photo.findUnique({ where: { id }, select: { userId: true, mimeType: true, storageKey: true } })
+  return !!photo && photo.userId === senderId && !!photo.storageKey && !!photo.mimeType?.startsWith('audio/')
+}
+
+/**
+ * May `senderId` send `url` as a chat video? Must be the canonical URL of a
+ * video the sender uploaded with purpose=chatvideo (hidden chat album).
+ * Returns the parsed length in seconds (null = unknown), or false.
+ */
+export async function sendableChatVideo(url: unknown, senderId: string): Promise<{ durationSec: number | null } | false> {
+  if (typeof url !== 'string' || url.length > 200) return false
+  const id = mediaIdFromUrl(url)
+  if (!id || url !== mediaUrl(id)) return false
+  const photo = await db.photo.findUnique({
+    where: { id },
+    select: { userId: true, mimeType: true, storageKey: true, order: true, album: { select: { name: true } } },
+  })
+  if (!photo || photo.userId !== senderId || !photo.storageKey || !photo.mimeType?.startsWith('video/')) return false
+  if (photo.album?.name !== CHAT_ALBUM_NAME) return false
+  // `order` holds the length in ms for chat videos (see POST /api/upload, purpose=chatvideo)
+  return { durationSec: photo.order >= 0 ? photo.order / 1000 : null }
 }

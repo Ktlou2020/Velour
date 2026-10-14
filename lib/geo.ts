@@ -22,10 +22,14 @@ export function boundingBox(lat: number, lng: number, radiusKm: number) {
   }
 }
 
-/** Human-friendly distance, deliberately coarse so exact locations aren't revealed. */
+/**
+ * Human-friendly, deliberately approximate distance so exact locations aren't
+ * revealed: "Less than 1 km away", "≈ 12 km away", and beyond 250 km rounded
+ * to the nearest 10 km ("≈ 600 km away").
+ */
 export function formatDistance(km: number | null | undefined): string | null {
   if (km === null || km === undefined || Number.isNaN(km)) return null
-  if (km < 2) return 'Less than 2 km away'
-  if (km < 100) return `${Math.round(km)} km away`
-  return `${Math.round(km / 10) * 10} km away`
+  if (km < 1) return 'Less than 1 km away'
+  if (km <= 250) return `≈ ${Math.round(km)} km away`
+  return `≈ ${(Math.round(km / 10) * 10).toLocaleString('en-ZA')} km away`
 }

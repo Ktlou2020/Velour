@@ -4,7 +4,8 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { isPlatinum } from '@/lib/premium'
 import { getClientIp, rateLimit, TOO_MANY_REQUESTS_MESSAGE } from '@/lib/rate-limit'
-import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, MediaError, deleteFiles, photoFileKeys, saveImage, saveVideo } from '@/lib/storage'
+import { MAX_AUDIO_BYTES, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, MediaError, deleteFiles, photoFileKeys, saveAudio, saveImage, saveVideo, sniffVideo, videoDurationSec } from '@/lib/storage'
+import { CHAT_VIDEO_MAX_BYTES, chatVideoRules, getMessageAllowance, messageLimitError } from '@/lib/chat-priority'
 import { CHAT_ALBUM_NAME, VIDEO_ALBUM_NAME, isSystemAlbumName, mediaThumbUrl, mediaUrl } from '@/lib/media'
 import { systemAlbumId } from '@/lib/media-access'
 import { isValidId } from '@/lib/security'
@@ -18,7 +19,7 @@ function newMediaId(): string {
   return 'm' + crypto.randomBytes(15).toString('hex').slice(0, 24)
 }
 
-/** Delete this user's chat images that were uploaded > 1 day ago but never sent. */
+/** Delete this user's chat images / voice notes that were uploaded > 1 day ago but never sent. */
 async function sweepUnsentChatImages(userId: string, albumId: string) {
   const stale = await db.photo.findMany({
     where: { userId, albumId, createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
@@ -26,11 +27,23 @@ async function sweepUnsentChatImages(userId: string, albumId: string) {
     take: 50,
   })
   if (!stale.length) return
+  const urls = stale.map((s) => s.url)
   const used = await db.message.findMany({
-    where: { senderId: userId, imageUrl: { in: stale.map((s) => s.url) } },
-    select: { imageUrl: true },
+    where: {
+      senderId: userId,
+      OR: [
+        { imageUrl: { in: urls } },
+        { audioUrl: { in: urls } },
+        ...urls.map((url) => ({ meta: { path: ['videoUrl'], equals: url } })),
+      ],
+    },
+    select: { imageUrl: true, audioUrl: true, meta: true },
   })
-  const usedSet = new Set(used.map((u) => u.imageUrl))
+  const usedSet = new Set(used.flatMap((u) => [
+    u.imageUrl,
+    u.audioUrl,
+    u.meta && typeof u.meta === 'object' && !Array.isArray(u.meta) ? (u.meta as { videoUrl?: string }).videoUrl : null,
+  ]))
   const orphans = stale.filter((s) => !usedSet.has(s.url))
   if (!orphans.length) return
   await db.photo.deleteMany({ where: { id: { in: orphans.map((o) => o.id) } } })
@@ -40,7 +53,7 @@ async function sweepUnsentChatImages(userId: string, albumId: string) {
 /**
  * POST /api/upload  (multipart/form-data)
  *   file     the image or video
- *   purpose  "gallery" (default) | "chat" | "video"   (legacy: kind=video)
+ *   purpose  "gallery" (default) | "chat" | "voice" | "chatvideo" | "video"   (legacy: kind=video)
  *   albumId  optional, gallery uploads only: put the photo straight into one of my albums
  *
  * Gallery photos are created immediately as normal Photo rows owned by the
@@ -49,6 +62,11 @@ async function sweepUnsentChatImages(userId: string, albumId: string) {
  * hidden per-user albums and never appear in the gallery.
  *
  * 201 → { url, thumbnailUrl, id, photo, width?, height? }
+ * 201 (purpose=voice) → { url, id, mimeType }   (WebM / MP4·M4A / Ogg, ≤ 5MB)
+ * 201 (purpose=chatvideo) → { url, id, mimeType, durationSec }  (MP4 / MOV / WebM; size and
+ *     length capped per plan — the length is read from the file itself)
+ * Chat uploads are refused (429) when the Free plan's message allowance is
+ * used up, so nobody uploads for nothing — POST messages enforces it again.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -62,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     // Refuse obviously oversized bodies before buffering them.
     const declared = Number(req.headers.get('content-length') || 0)
-    if (declared > MAX_VIDEO_BYTES + 1024 * 1024) {
+    if (declared > Math.max(MAX_VIDEO_BYTES, CHAT_VIDEO_MAX_BYTES.PLATINUM) + 1024 * 1024) {
       return NextResponse.json({ error: 'File is too large' }, { status: 413 })
     }
 
@@ -75,7 +93,79 @@ export async function POST(req: NextRequest) {
     if (!formData || !file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
     const rawPurpose = formData.get('purpose') ?? (formData.get('kind') === 'video' ? 'video' : 'gallery')
-    const purpose = rawPurpose === 'chat' || rawPurpose === 'video' ? rawPurpose : 'gallery'
+    const purpose = rawPurpose === 'chat' || rawPurpose === 'video' || rawPurpose === 'voice' || rawPurpose === 'chatvideo' ? rawPurpose : 'gallery'
+
+    if (purpose === 'chat' || purpose === 'voice' || purpose === 'chatvideo') {
+      const allowance = await getMessageAllowance(userId)
+      if (allowance.remaining !== null && allowance.remaining <= 0) {
+        return NextResponse.json(messageLimitError(allowance), { status: 429 })
+      }
+    }
+
+    if (purpose === 'chatvideo') {
+      const rules = await chatVideoRules(userId)
+      if (file.size > rules.maxBytes) {
+        return NextResponse.json({ error: `Videos must be under ${Math.round(rules.maxBytes / 1024 / 1024)}MB on your plan` }, { status: 413 })
+      }
+      const input = Buffer.from(await file.arrayBuffer())
+      const sniffed = sniffVideo(input)
+      if (!sniffed) return NextResponse.json({ error: 'Please send an MP4, MOV or WebM video' }, { status: 415 })
+      // Length from the file bytes (moov/mvhd or WebM Info/Clusters), +0.5s tolerance
+      const duration = videoDurationSec(input, sniffed)
+      if (duration === null && rules.plan === 'FREE') {
+        return NextResponse.json({ error: 'We couldn’t read this video’s length. Please try a different MP4 or MOV.' }, { status: 415 })
+      }
+      if (duration !== null && duration > rules.maxSec + 0.5) {
+        return NextResponse.json({
+          error: rules.plan === 'FREE'
+            ? `Free plan videos can be up to ${rules.maxSec} seconds — trim it or go Gold for 60-second videos`
+            : `Videos can be up to ${rules.maxSec} seconds on your plan`,
+          maxSec: rules.maxSec,
+          durationSec: Math.round(duration * 10) / 10,
+          upgrade: rules.plan !== 'PLATINUM',
+        }, { status: 422 })
+      }
+      const stored = await saveVideo(input, rules.maxBytes)
+      // Serve MOV as MP4: same ISO-BMFF container, and Chrome/Android play it as video/mp4
+      const mimeType = stored.mimeType === 'video/quicktime' ? 'video/mp4' : stored.mimeType
+      const albumId = await systemAlbumId(userId, CHAT_ALBUM_NAME)
+      sweepUnsentChatImages(userId, albumId).catch(() => {})
+      const id = newMediaId()
+      const url = mediaUrl(id)
+      try {
+        await db.photo.create({
+          data: {
+            id, userId, url, albumId, isPrivate: true, storageKey: stored.key, mimeType, sizeBytes: stored.sizeBytes,
+            // Chat videos never appear in the gallery, so `order` holds the parsed
+            // length in milliseconds (-1 = unknown) for POST messages to re-check.
+            order: duration === null ? -1 : Math.round(duration * 1000),
+          },
+        })
+      } catch (e) {
+        await deleteFiles([stored.key])
+        throw e
+      }
+      return NextResponse.json({ url, id, mimeType, durationSec: duration === null ? null : Math.round(duration * 10) / 10 }, { status: 201 })
+    }
+
+    if (purpose === 'voice') {
+      if (file.size > MAX_AUDIO_BYTES) return NextResponse.json({ error: 'Voice notes must be under 5MB' }, { status: 413 })
+      // Type is decided by sniffing the bytes, never by the client's mime type.
+      const stored = await saveAudio(Buffer.from(await file.arrayBuffer()))
+      const albumId = await systemAlbumId(userId, CHAT_ALBUM_NAME)
+      sweepUnsentChatImages(userId, albumId).catch(() => {})
+      const id = newMediaId()
+      const url = mediaUrl(id)
+      try {
+        await db.photo.create({
+          data: { id, userId, url, albumId, isPrivate: true, storageKey: stored.key, mimeType: stored.mimeType, sizeBytes: stored.sizeBytes },
+        })
+      } catch (e) {
+        await deleteFiles([stored.key])
+        throw e
+      }
+      return NextResponse.json({ url, id, mimeType: stored.mimeType }, { status: 201 })
+    }
 
     if (purpose === 'video') {
       const user = await db.user.findUnique({

@@ -1,8 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { sendPushToUser } from '@/lib/push'
 import { isPaid } from '@/lib/premium'
+import { chatVideoRules, checkPriority, getMessageAllowance, messageLimitError } from '@/lib/chat-priority'
+import {
+  GAME_INFO,
+  MAX_ANSWER_TEXT,
+  MAX_STATEMENT,
+  findChoicePrompt,
+  findQuestion,
+  fmtDuration,
+  gamePreview,
+  isGameKind,
+  messageForViewer,
+  voicePreview,
+  type GameMeta,
+} from '@/lib/chat-games'
 import {
   computeReceipt,
   effectiveExpiry,
@@ -14,6 +29,72 @@ import {
 } from '@/lib/couples'
 
 const MAX_CONTENT = 2000
+const MAX_VOICE_SEC = 60
+
+type Body = {
+  content?: unknown
+  imageUrl?: unknown
+  senderPartnerName?: unknown
+  kind?: unknown
+  audioUrl?: unknown
+  audioDurationSec?: unknown
+  videoUrl?: unknown
+  videoDurationSec?: unknown
+  waveform?: unknown
+  game?: unknown
+  isPriority?: unknown
+}
+
+/** Up to 48 bar heights 0–100 recorded client-side for the voice-note waveform. */
+function cleanWaveform(raw: unknown): number[] | null {
+  if (!Array.isArray(raw)) return null
+  const out = raw.slice(0, 48).map((v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(100, Math.round(v))) : 0))
+  return out.length >= 4 ? out : null
+}
+
+function cleanText(v: unknown, max: number): string | null {
+  if (typeof v !== 'string') return null
+  // Strip control characters (keep newlines out of game text)
+  const t = v.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim()
+  return t && t.length <= max ? t : null
+}
+
+/** Validate a new game from the request body → stored meta, or an error message. */
+function buildGame(raw: unknown, senderId: string, as: string | null): GameMeta | string {
+  if (!raw || typeof raw !== 'object') return 'Choose a game'
+  const g = raw as Record<string, unknown>
+  if (!isGameKind(g.game)) return 'Unknown game'
+  const at = new Date().toISOString()
+  if (g.game === 'this_or_that' || g.game === 'would_you_rather') {
+    const p = findChoicePrompt(g.game, g.promptId)
+    if (!p) return 'Pick a question'
+    if (g.choice !== 0 && g.choice !== 1) return 'Make your own pick first'
+    return {
+      game: g.game, v: 1, promptId: p.id,
+      prompt: g.game === 'this_or_that' ? `${p.a} or ${p.b}?` : `Would you rather ${p.a.charAt(0).toLowerCase()}${p.a.slice(1)} or ${p.b.charAt(0).toLowerCase()}${p.b.slice(1)}?`,
+      options: [p.a, p.b],
+      answers: { [senderId]: { choice: g.choice, as, at } },
+    }
+  }
+  if (g.game === 'questions') {
+    const q = findQuestion(g.promptId)
+    if (!q) return 'Pick a question'
+    const text = g.text === undefined || g.text === '' ? null : cleanText(g.text, MAX_ANSWER_TEXT)
+    if (g.text !== undefined && g.text !== '' && !text) return `Answers must be under ${MAX_ANSWER_TEXT} characters`
+    return {
+      game: 'questions', v: 1, promptId: q.id, prompt: q.q,
+      answers: text ? { [senderId]: { text, as, at } } : {},
+    }
+  }
+  // Two truths and a lie
+  const statements = Array.isArray(g.statements) ? g.statements.map((x) => cleanText(x, MAX_STATEMENT)) : []
+  if (statements.length !== 3 || statements.some((x) => !x)) return `Write three statements (up to ${MAX_STATEMENT} characters each)`
+  if (g.lie !== 0 && g.lie !== 1 && g.lie !== 2) return 'Mark which statement is the lie'
+  return {
+    game: 'two_truths', v: 1, prompt: GAME_INFO.two_truths.title,
+    options: statements as string[], lie: g.lie, answers: {},
+  }
+}
 
 /**
  * Only accept images the sender uploaded to Hush (`/api/media/<id>`, from
@@ -105,7 +186,9 @@ export async function GET(
     // With several recipients "read" means every other participant has read it.
     const receipt = paid ? await computeReceipt(conversationId, userId) : null
     const multi = access.userIds.length > 2
-    const out = messages.reverse().map((m) => {
+    const viewerSide = sideOf(userId, await getPartnerMap(access.userIds))
+    const out = messages.reverse().map((raw) => {
+      const m = messageForViewer(raw, userId, viewerSide)
       if (m.senderId !== userId) return m
       if (!paid) return { ...m, isRead: false, readAt: null }
       if (multi) {
@@ -134,20 +217,62 @@ export async function POST(
     const userId = session.user.id
 
     const { id: conversationId } = await params
-    const body = await req.json().catch(() => ({}))
-    const { content: rawContent, imageUrl: rawImageUrl, senderPartnerName: rawPartnerName } =
-      body as { content?: unknown; imageUrl?: unknown; senderPartnerName?: unknown }
+    const body = (await req.json().catch(() => ({}))) as Body
+    const { content: rawContent, imageUrl: rawImageUrl, senderPartnerName: rawPartnerName } = body
+    const kind = body.kind === 'VOICE' || body.kind === 'GAME' || body.kind === 'VIDEO' ? body.kind : 'TEXT'
+    const isPriority = body.isPriority === true
 
-    const content = typeof rawContent === 'string' ? rawContent.trim() : ''
+    // Text, or an optional caption on a video
+    const content = (kind === 'TEXT' || kind === 'VIDEO') && typeof rawContent === 'string' ? rawContent.trim() : ''
     let imageUrl: string | null = null
-    if (rawImageUrl !== undefined && rawImageUrl !== null && rawImageUrl !== '') {
+    if (kind === 'TEXT' && rawImageUrl !== undefined && rawImageUrl !== null && rawImageUrl !== '') {
       if (typeof rawImageUrl !== 'string' || !(await isValidImageUrl(rawImageUrl, userId))) {
         return NextResponse.json({ error: 'Invalid image URL' }, { status: 400 })
       }
       imageUrl = rawImageUrl
     }
 
-    if (!content && !imageUrl) {
+    // Voice note: our own uploaded audio, duration measured client-side (clamped)
+    let audioUrl: string | null = null
+    let audioDurationSec: number | null = null
+    let waveform: number[] | null = null
+    if (kind === 'VOICE') {
+      const { isSendableVoiceNote } = await import('@/lib/media-access')
+      if (!(await isSendableVoiceNote(body.audioUrl, userId))) {
+        return NextResponse.json({ error: 'Invalid voice note' }, { status: 400 })
+      }
+      audioUrl = body.audioUrl as string
+      const d = typeof body.audioDurationSec === 'number' && Number.isFinite(body.audioDurationSec) ? body.audioDurationSec : 1
+      audioDurationSec = Math.max(1, Math.min(MAX_VOICE_SEC, Math.round(d)))
+      waveform = cleanWaveform(body.waveform)
+    }
+
+    // Chat video: our own upload (purpose=chatvideo); length comes from the file, re-checked against the plan
+    let videoMeta: { videoUrl: string; durationSec: number | null } | null = null
+    if (kind === 'VIDEO') {
+      const { sendableChatVideo } = await import('@/lib/media-access')
+      const v = await sendableChatVideo(body.videoUrl, userId)
+      if (!v) return NextResponse.json({ error: 'Invalid video' }, { status: 400 })
+      const rules = await chatVideoRules(userId)
+      if (v.durationSec === null && rules.plan === 'FREE') {
+        return NextResponse.json({ error: 'We couldn’t read this video’s length. Please try a different MP4 or MOV.' }, { status: 415 })
+      }
+      if (v.durationSec !== null && v.durationSec > rules.maxSec + 0.5) {
+        return NextResponse.json({
+          error: rules.plan === 'FREE'
+            ? `Free plan videos can be up to ${rules.maxSec} seconds — trim it or go Gold for 60-second videos`
+            : `Videos can be up to ${rules.maxSec} seconds on your plan`,
+          upgrade: rules.plan !== 'PLATINUM',
+        }, { status: 422 })
+      }
+      let durationSec = v.durationSec
+      if (durationSec === null && typeof body.videoDurationSec === 'number' && Number.isFinite(body.videoDurationSec)) {
+        durationSec = Math.max(0, Math.min(rules.maxSec, body.videoDurationSec))
+      }
+      videoMeta = { videoUrl: body.videoUrl as string, durationSec: durationSec === null ? null : Math.round(durationSec * 10) / 10 }
+    }
+
+    if (kind === 'TEXT' && !content && !imageUrl) {
       return NextResponse.json({ error: 'content or imageUrl is required' }, { status: 400 })
     }
     if (content.length > MAX_CONTENT) {
@@ -179,6 +304,13 @@ export async function POST(
       senderPartnerName = wanted
     }
 
+    let gameMeta: GameMeta | null = null
+    if (kind === 'GAME') {
+      const g = buildGame(body.game, userId, senderPartnerName)
+      if (typeof g === 'string') return NextResponse.json({ error: g }, { status: 400 })
+      gameMeta = g
+    }
+
     const otherParticipants = access.userIds.filter((u) => u !== userId).map((u) => ({ userId: u }))
     const partnerMap = await getPartnerMap(access.userIds)
     const mySide = sideOf(userId, partnerMap)
@@ -194,6 +326,23 @@ export async function POST(
       }
     }
 
+    // Priority (Gold 3/week, Platinum unlimited, 1 per conversation per day)
+    if (isPriority) {
+      const check = await checkPriority(userId, conversationId)
+      if (!check.ok) {
+        return NextResponse.json(
+          { error: check.error, upgrade: check.upgrade ?? false, allowance: check.allowance },
+          { status: check.status },
+        )
+      }
+    }
+
+    // Free plan: 5 messages of any kind per rolling 24 hours (per account; new members get a welcome period)
+    const quota = await getMessageAllowance(userId)
+    if (quota.remaining !== null && quota.remaining <= 0) {
+      return NextResponse.json(messageLimitError(quota), { status: 429 })
+    }
+
     const message = await db.message.create({
       data: {
         conversationId,
@@ -201,6 +350,13 @@ export async function POST(
         content,
         imageUrl,
         senderPartnerName,
+        kind: kind === 'TEXT' && imageUrl && !content ? 'IMAGE' : kind,
+        audioUrl,
+        audioDurationSec,
+        isPriority,
+        ...(gameMeta ? { meta: gameMeta as unknown as Prisma.InputJsonValue } : {}),
+        ...(waveform ? { meta: { waveform } } : {}),
+        ...(videoMeta ? { meta: videoMeta } : {}),
       },
       include: {
         sender: {
@@ -215,7 +371,21 @@ export async function POST(
       },
     })
 
-    const preview = content ? content.slice(0, 100) : '📷 Photo'
+    const videoLen = videoMeta?.durationSec != null ? ` (${fmtDuration(videoMeta.durationSec)})` : ''
+    const listPreview = kind === 'VOICE'
+      ? voicePreview(audioDurationSec)
+      : videoMeta
+        ? `🎥 Video${videoLen}`
+        : gameMeta
+        ? gamePreview(gameMeta.game)
+        : content ? content.slice(0, 100) : '📷 Photo'
+    const preview = kind === 'VOICE'
+      ? `Sent you a voice note 🎤 (${fmtDuration(audioDurationSec)})`
+      : videoMeta
+        ? `Sent you a video 🎥${videoLen}`
+        : gameMeta
+        ? `Sent you a game: ${GAME_INFO[gameMeta.game].title} 🎲`
+        : listPreview
     // "Thandi" — or for a linked couple member "Thandi (Thandi & Sipho)"
     const myName = me?.displayName || me?.user.username || 'Someone'
     const partnerOfMe = mySide.find((u) => u !== userId)
@@ -233,7 +403,7 @@ export async function POST(
     await db.$transaction([
       db.conversation.update({
         where: { id: conversationId },
-        data: { lastMessage: content || '📷 Photo', lastMessageAt: new Date() },
+        data: { lastMessage: listPreview, lastMessageAt: new Date() },
       }),
       db.conversationParticipant.update({
         where: { conversationId_userId: { conversationId, userId } },
@@ -251,13 +421,17 @@ export async function POST(
         data: {
           userId: participant.userId,
           type: 'MESSAGE',
-          title: `New message from ${senderLabel}`,
+          title: isPriority ? `⚡ Priority message from ${senderLabel}` : `New message from ${senderLabel}`,
           body: preview,
-          data: { conversationId, senderId: userId, ...(senderPartnerName ? { senderPartnerName } : {}) },
+          data: {
+            conversationId, senderId: userId,
+            ...(senderPartnerName ? { senderPartnerName } : {}),
+            ...(isPriority ? { priority: true } : {}),
+          },
         },
       })
       sendPushToUser(participant.userId, {
-        title: `${senderLabel} — Hush`,
+        title: isPriority ? `⚡ ${senderLabel} — Hush` : `${senderLabel} — Hush`,
         body: preview,
         url: `/messages?conv=${conversationId}`,
         tag: `message-${conversationId}`,
@@ -272,7 +446,8 @@ export async function POST(
       }).catch(() => {})
     }
 
-    return NextResponse.json({ message }, { status: 201 })
+    const messageAllowance = quota.limit === null ? quota : await getMessageAllowance(userId)
+    return NextResponse.json({ message, messageAllowance }, { status: 201 })
   } catch (error) {
     console.error('POST /api/conversations/[id]/messages error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

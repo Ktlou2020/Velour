@@ -94,6 +94,17 @@ export async function GET() {
       if (m) lastSenders.set(v.id, m)
     }))
 
+    // Unread priority messages from someone outside my side → pinned to the top
+    const unreadIds = visible.filter((v) => v.unreadCount > 0).map((v) => v.id)
+    const priorityRows = unreadIds.length
+      ? await db.message.findMany({
+          where: { conversationId: { in: unreadIds }, isPriority: true, isRead: false, senderId: { notIn: mySide } },
+          select: { conversationId: true },
+          distinct: ['conversationId'],
+        })
+      : []
+    const prioritySet = new Set(priorityRows.map((r) => r.conversationId))
+
     const now = Date.now()
     const conversations = visible.map((v) => {
       const others = v.userIds.filter((u) => u !== userId)
@@ -143,8 +154,11 @@ export async function GET() {
         participantCount: v.userIds.length,
         avatars,
         partnerName: partnerHere.length ? (people.get(partnerHere[0])?.name ?? null) : null,
+        priority: prioritySet.has(v.id),
       }
     })
+    // Stable: priority chats first, otherwise the existing recency order
+    conversations.sort((a, b) => Number(b.priority) - Number(a.priority))
 
     return NextResponse.json({ conversations })
   } catch (error) {

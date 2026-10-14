@@ -6,6 +6,7 @@ import { isPlatinum } from '@/lib/premium'
 import { validatePrompts } from '@/app/profile/prompts'
 import { Prisma } from '@prisma/client'
 import { completenessOf, effectiveInterestedIn, isAdult, parseIdentityInput } from '@/lib/identity'
+import { parseStatusInput } from '@/components/status/status'
 
 function bad(error: string, status = 400) {
   return NextResponse.json({ error }, { status })
@@ -123,6 +124,13 @@ export async function PUT(req: NextRequest) {
     if (body.showChatImages !== undefined) {
       if (typeof body.showChatImages !== 'boolean') return bad('showChatImages must be true or false')
       updateData.showChatImages = body.showChatImages
+    }
+
+    // Status ("Free tonight 🍷"): { emoji, text, duration: 'tonight' | '24h' | '3d' } or null to clear
+    if (body.status !== undefined) {
+      const result = parseStatusInput(body.status)
+      if ('error' in result) return bad(result.error)
+      Object.assign(updateData, result.data)
     }
 
     // Video profile (Platinum only to set; anyone may remove)

@@ -3,7 +3,7 @@ import Footer from '@/components/Footer';
 import EventsClient, { type EventItem } from './EventsClient';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { isPaid } from '@/lib/premium';
+import { entitlements } from '@/lib/plans';
 
 const TZ = 'Africa/Johannesburg';
 
@@ -114,7 +114,7 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
   const events = (upcomingRows as EventRow[]).map((e) => toItem(e, attending));
   const featured = events.find((e) => e.isFeatured) || events[0] || null;
 
-  const canCreate = userRole === 'ADMIN' || isPaid(profile?.membershipTier, userRole);
+  const canCreate = !!userId && entitlements(profile?.membershipTier, userRole).createEvents;
 
   return (
     <div className="min-h-screen bg-[#0A0A0F]">

@@ -1,6 +1,6 @@
 'use client';
 
-import { Lock, Star } from 'lucide-react';
+import { Heart, Lock, Star, Trophy } from 'lucide-react';
 import type { GalleryPhoto } from './types';
 
 export function Switch({ checked, onChange, label, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
@@ -35,16 +35,21 @@ export function Avatar({ url, name, size = 36 }: { url: string | null; name: str
 }
 
 /** Square photo tile for the owner's own photos (no watermark needed). */
-export function PhotoTile({ photo, onClick, albumName, children, selected }: {
+export function PhotoTile({ photo, onClick, albumName, children, selected, showLikes, mostLiked }: {
   photo: GalleryPhoto;
   onClick?: () => void;
   albumName?: string | null;
   children?: React.ReactNode;
   selected?: boolean;
+  /** Show the Explore like count. */
+  showLikes?: boolean;
+  /** Highlight as "Your most liked photo". */
+  mostLiked?: boolean;
 }) {
-  const label = `${photo.caption || 'Photo'}${photo.isProfile ? ', main photo' : ''}${photo.isPrivate ? ', private' : ''}${albumName ? `, in ${albumName}` : ''}`;
+  const likes = photo.likeCount ?? 0;
+  const label = `${photo.caption || 'Photo'}${photo.isProfile ? ', main photo' : ''}${photo.isPrivate ? ', private' : ''}${albumName ? `, in ${albumName}` : ''}${showLikes && likes > 0 ? `, ${likes} like${likes === 1 ? '' : 's'}` : ''}${mostLiked ? ', your most liked photo' : ''}`;
   return (
-    <div className={`relative aspect-square rounded-xl overflow-hidden bg-white/5 group ${selected ? 'ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#0A0A0F]' : ''}`}>
+    <div className={`relative aspect-square rounded-xl overflow-hidden bg-white/5 group ${selected ? 'ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#0A0A0F]' : mostLiked ? 'ring-2 ring-[#D4AF37]/80' : ''}`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={photo.thumbnailUrl ?? photo.url} alt="" loading="lazy" decoding="async" draggable={false} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
       {onClick && (
@@ -58,8 +63,14 @@ export function PhotoTile({ photo, onClick, albumName, children, selected }: {
           <span className="flex items-center bg-black/70 text-white p-1 rounded-full" title="Private"><Lock size={10} aria-hidden="true" /></span>
         )}
       </div>
+      {mostLiked && (
+        <span className="absolute top-1.5 right-1.5 flex items-center gap-0.5 bg-[#D4AF37] text-[#0A0A0F] text-[10px] font-bold px-1.5 py-0.5 rounded-full pointer-events-none" title="Your most liked photo"><Trophy size={9} aria-hidden="true" /> Top</span>
+      )}
+      {showLikes && likes > 0 && (
+        <span className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 bg-black/70 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full pointer-events-none tabular-nums"><Heart size={9} className="fill-[#DC143C] text-[#DC143C]" aria-hidden="true" /> {likes}</span>
+      )}
       {albumName && (
-        <span className="absolute bottom-1.5 left-1.5 right-1.5 truncate text-[10px] text-white/90 bg-black/60 px-1.5 py-0.5 rounded-md pointer-events-none w-fit max-w-[calc(100%-12px)]">{albumName}</span>
+        <span className={`absolute bottom-1.5 left-1.5 right-1.5 truncate text-[10px] text-white/90 bg-black/60 px-1.5 py-0.5 rounded-md pointer-events-none w-fit ${showLikes && likes > 0 ? 'max-w-[calc(100%-60px)]' : 'max-w-[calc(100%-12px)]'}`}>{albumName}</span>
       )}
       {children}
     </div>

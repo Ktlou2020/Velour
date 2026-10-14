@@ -10,6 +10,12 @@ import type { MembershipTier } from '@prisma/client'
 export type PlanTier = 'FREE' | 'GOLD' | 'PLATINUM'
 
 export interface Entitlements {
+  /** Messages a member can send in any rolling 24 hours; null = unlimited. */
+  messagesPer24h: number | null
+  /** Chat media (photos, videos, voice notes) a member can send in any rolling 24 hours; null = unlimited. */
+  chatMediaPer24h: number | null
+  /** Longest video that can be sent in chat, in seconds. */
+  chatVideoMaxSec: number
   /** Likes (incl. winks) per calendar day (SAST); null = unlimited. */
   likesPerDay: number | null
   /** Super likes granted per day (free) or week (paid) — see superLikePeriod. */
@@ -25,7 +31,10 @@ export interface Entitlements {
   readReceipts: boolean
   undoSwipe: boolean
   advancedFilters: boolean
+  /** "Anywhere" search (no distance limit) and the city text filter. */
   searchAnyCity: boolean
+  /** Largest search radius in km from the member's location; null = Anywhere. */
+  maxSearchRadiusKm: number | null
   travelMode: boolean
   /** Boost cooldown in days; null = no boosts. */
   boostEveryDays: number | null
@@ -43,6 +52,9 @@ export interface Entitlements {
 
 export const PLANS: Record<PlanTier, Entitlements> = {
   FREE: {
+    messagesPer24h: 5,
+    chatMediaPer24h: null,
+    chatVideoMaxSec: 5,
     likesPerDay: 50,
     superLikes: 1,
     superLikePeriod: 'day',
@@ -55,6 +67,7 @@ export const PLANS: Record<PlanTier, Entitlements> = {
     undoSwipe: false,
     advancedFilters: false,
     searchAnyCity: false,
+    maxSearchRadiusKm: 250,
     travelMode: false,
     boostEveryDays: null,
     priorityInSearch: false,
@@ -69,6 +82,9 @@ export const PLANS: Record<PlanTier, Entitlements> = {
     chatGames: true,
   },
   GOLD: {
+    messagesPer24h: null,
+    chatMediaPer24h: null,
+    chatVideoMaxSec: 60,
     likesPerDay: null,
     superLikes: 5,
     superLikePeriod: 'week',
@@ -81,6 +97,7 @@ export const PLANS: Record<PlanTier, Entitlements> = {
     undoSwipe: true,
     advancedFilters: true,
     searchAnyCity: true,
+    maxSearchRadiusKm: null,
     travelMode: true,
     boostEveryDays: 30,
     priorityInSearch: true,
@@ -95,6 +112,9 @@ export const PLANS: Record<PlanTier, Entitlements> = {
     chatGames: true,
   },
   PLATINUM: {
+    messagesPer24h: null,
+    chatMediaPer24h: null,
+    chatVideoMaxSec: 180,
     likesPerDay: null,
     superLikes: 10,
     superLikePeriod: 'week',
@@ -107,6 +127,7 @@ export const PLANS: Record<PlanTier, Entitlements> = {
     undoSwipe: true,
     advancedFilters: true,
     searchAnyCity: true,
+    maxSearchRadiusKm: null,
     travelMode: true,
     boostEveryDays: 7,
     priorityInSearch: true,
@@ -120,6 +141,46 @@ export const PLANS: Record<PlanTier, Entitlements> = {
     voiceNotes: true,
     chatGames: true,
   },
+}
+
+/** New members send chat media without limits for their first 3 days, whatever their plan. */
+export const NEW_MEMBER_UNLIMITED_MESSAGES_DAYS = 3
+export const NEW_MEMBER_UNLIMITED_MEDIA_DAYS = NEW_MEMBER_UNLIMITED_MESSAGES_DAYS
+
+/**
+ * Effective rolling-24h message limit for a member: null (unlimited) for paid
+ * plans, admins, and members whose account is younger than
+ * NEW_MEMBER_UNLIMITED_MESSAGES_DAYS; otherwise the plan's messagesPer24h.
+ */
+export function messageLimitFor(
+  tier: MembershipTier | PlanTier | null | undefined,
+  role: string | null | undefined,
+  accountCreatedAt: Date | string,
+  now = new Date(),
+): { limit: number | null; welcomeUntil: Date | null } {
+  const base = entitlements(tier, role).messagesPer24h
+  if (base === null) return { limit: null, welcomeUntil: null }
+  const welcomeUntil = new Date(new Date(accountCreatedAt).getTime() + NEW_MEMBER_UNLIMITED_MESSAGES_DAYS * 24 * 60 * 60 * 1000)
+  if (welcomeUntil.getTime() > now.getTime()) return { limit: null, welcomeUntil }
+  return { limit: base, welcomeUntil: null }
+}
+
+/**
+ * Effective rolling-24h chat media limit (photos, videos, voice notes): null
+ * (unlimited) for paid plans, admins, and members in their first
+ * NEW_MEMBER_UNLIMITED_MEDIA_DAYS; otherwise the plan's chatMediaPer24h.
+ */
+export function mediaLimitFor(
+  tier: MembershipTier | PlanTier | null | undefined,
+  role: string | null | undefined,
+  accountCreatedAt: Date | string,
+  now = new Date(),
+): { limit: number | null; welcomeUntil: Date | null } {
+  const base = entitlements(tier, role).chatMediaPer24h
+  if (base === null) return { limit: null, welcomeUntil: null }
+  const welcomeUntil = new Date(new Date(accountCreatedAt).getTime() + NEW_MEMBER_UNLIMITED_MEDIA_DAYS * 24 * 60 * 60 * 1000)
+  if (welcomeUntil.getTime() > now.getTime()) return { limit: null, welcomeUntil }
+  return { limit: base, welcomeUntil: null }
 }
 
 /** Admins get everything Platinum has. */
@@ -163,7 +224,7 @@ export const PLAN_FEATURES: { group: string; items: { label: string; values: Rec
       { label: "Today's picks", values: { FREE: '5', GOLD: '10', PLATINUM: '15' } },
       { label: 'Daily Spark question & answers', values: { FREE: true, GOLD: true, PLATINUM: true } },
       { label: 'Distance search near you', values: { FREE: true, GOLD: true, PLATINUM: true } },
-      { label: 'Search any city', values: { FREE: false, GOLD: true, PLATINUM: true } },
+      { label: 'Search radius', values: { FREE: 'Up to 250 km', GOLD: 'Anywhere', PLATINUM: 'Anywhere' } },
       { label: 'Travel mode', values: { FREE: false, GOLD: true, PLATINUM: true } },
       { label: 'Advanced filters', values: { FREE: false, GOLD: true, PLATINUM: true } },
       { label: 'Undo last swipe', values: { FREE: false, GOLD: true, PLATINUM: true } },
@@ -172,8 +233,9 @@ export const PLAN_FEATURES: { group: string; items: { label: string; values: Rec
   {
     group: 'Chat',
     items: [
-      { label: 'Messaging, photos & reactions', values: { FREE: true, GOLD: true, PLATINUM: true } },
-      { label: 'Voice notes', values: { FREE: true, GOLD: true, PLATINUM: true } },
+      { label: 'Messages you can send (text, photos, videos, voice notes)', values: { FREE: 'Unlimited for 3 days, then 5 / 24 hours', GOLD: 'Unlimited', PLATINUM: 'Unlimited' } },
+      { label: 'Reactions & receiving messages', values: { FREE: true, GOLD: true, PLATINUM: true } },
+      { label: 'Video length in chat', values: { FREE: '5 sec', GOLD: '60 sec', PLATINUM: '3 min' } },
       { label: 'Chat games & icebreakers', values: { FREE: true, GOLD: true, PLATINUM: true } },
       { label: 'Read receipts', values: { FREE: false, GOLD: true, PLATINUM: true } },
       { label: 'Priority messages', values: { FREE: false, GOLD: '3 / week', PLATINUM: 'Unlimited' } },

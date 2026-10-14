@@ -1,8 +1,10 @@
 'use client';
 
 import { useRef, useState, type ReactNode } from 'react';
-import { EyeOff } from 'lucide-react';
+import { EyeOff, Zap } from 'lucide-react';
 import { REACTION_EMOJIS, type Reactions } from '@/lib/reactions';
+import VoiceNotePlayer from '@/components/chat/VoiceNotePlayer';
+import VideoBubble from '@/components/chat/VideoBubble';
 
 export interface ChatMessage {
   id: string;
@@ -19,6 +21,27 @@ export interface ChatMessage {
   readAt?: string | null;
   reactions?: Reactions | null;
   createdAt?: string;
+  /** TEXT | IMAGE | VOICE | GAME */
+  kind?: string | null;
+  audioUrl?: string | null;
+  audioDurationSec?: number | null;
+  /** VOICE: { waveform }, GAME: GameMeta (redacted for the viewer by the server) */
+  meta?: unknown;
+  isPriority?: boolean;
+}
+
+function videoOf(meta: unknown): { url: string; durationSec: number | null } | null {
+  if (!meta || typeof meta !== 'object') return null;
+  const m = meta as { videoUrl?: unknown; durationSec?: unknown };
+  return typeof m.videoUrl === 'string'
+    ? { url: m.videoUrl, durationSec: typeof m.durationSec === 'number' ? m.durationSec : null }
+    : null;
+}
+
+function waveformOf(meta: unknown): number[] | null {
+  if (!meta || typeof meta !== 'object') return null;
+  const w = (meta as { waveform?: unknown }).waveform;
+  return Array.isArray(w) ? w.filter((x): x is number => typeof x === 'number') : null;
 }
 
 interface Props {
@@ -37,12 +60,16 @@ interface Props {
   onClosePicker: () => void;
   onReact: (emoji: string) => void;
   onImageLoad?: () => void;
+  /** Rendered in place of the text for GAME messages */
+  gameNode?: ReactNode;
+  /** Search: dim bubbles that don't match */
+  dimmed?: boolean;
 }
 
 const LONG_PRESS_MS = 450;
 
 export default function MessageBubble({
-  msg, myId, blurReceivedImages, avatar, senderLabel, fromPartner = false, footer, pickerOpen, onOpenPicker, onClosePicker, onReact, onImageLoad,
+  msg, myId, blurReceivedImages, avatar, senderLabel, fromPartner = false, footer, pickerOpen, onOpenPicker, onClosePicker, onReact, onImageLoad, gameNode, dimmed = false,
 }: Props) {
   const sent = msg.isSent ?? false;
   const isTemp = msg.id.startsWith('temp-');
@@ -53,6 +80,10 @@ export default function MessageBubble({
 
   const blurred = !!msg.imageUrl && !sent && blurReceivedImages && !revealed;
   const reactionEntries = Object.entries(msg.reactions ?? {}).filter(([, ids]) => ids.length > 0);
+  const isVoice = msg.kind === 'VOICE' && !!msg.audioUrl;
+  const isGame = msg.kind === 'GAME' && !!gameNode;
+  const video = msg.kind === 'VIDEO' ? videoOf(msg.meta) : null;
+  const priorityRing = msg.isPriority ? 'ring-1 ring-[#D4AF37]/70 shadow-[0_0_18px_-6px_rgba(212,175,55,0.6)]' : '';
 
   function startPress() {
     if (isTemp) return;
@@ -90,9 +121,9 @@ export default function MessageBubble({
   );
 
   return (
-    <div className={`flex ${sent ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex ${sent ? 'justify-end' : 'justify-start'} transition-opacity ${dimmed ? 'opacity-25' : ''}`}>
       {!sent && avatar}
-      <div className={`max-w-[72%] min-w-0 flex flex-col gap-1 ${sent ? 'items-end' : 'items-start'}`}>
+      <div className={`${isGame ? 'max-w-[86%]' : 'max-w-[72%]'} min-w-0 flex flex-col gap-1 ${sent ? 'items-end' : 'items-start'}`}>
         {senderLabel && (
           <div className={`px-1 text-[11px] leading-tight max-w-full truncate ${sent ? 'text-right' : 'text-left'}`}>
             {senderLabel}
@@ -132,8 +163,32 @@ export default function MessageBubble({
               )}
             </div>
           )}
-          {msg.content && (
-            <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${sent ? 'bg-[#DC143C] text-white rounded-tr-sm' : `glass text-white/90 rounded-tl-sm ${fromPartner ? 'ring-1 ring-[#D4AF37]/25' : ''}`} ${isTemp ? 'opacity-60' : ''}`}>
+          {isVoice && (
+            <div className={`rounded-2xl ${sent ? 'rounded-tr-sm' : 'rounded-tl-sm'} ${priorityRing}`}>
+              <VoiceNotePlayer
+                src={msg.audioUrl!}
+                durationSec={msg.audioDurationSec}
+                waveform={waveformOf(msg.meta)}
+                sent={sent}
+                pending={isTemp}
+              />
+            </div>
+          )}
+          {video && (
+            <div className={`${msg.content ? 'mb-1' : ''} rounded-2xl ${sent ? 'rounded-tr-sm' : 'rounded-tl-sm'} ${priorityRing}`}>
+              <VideoBubble
+                src={video.url}
+                durationSec={video.durationSec}
+                sent={sent}
+                blurred={!sent && blurReceivedImages}
+                pending={isTemp}
+                onLoaded={onImageLoad}
+              />
+            </div>
+          )}
+          {isGame && <div className={`rounded-2xl ${sent ? 'rounded-tr-sm' : 'rounded-tl-sm'} ${priorityRing}`}>{gameNode}</div>}
+          {!isVoice && !isGame && msg.content && (
+            <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${sent ? 'bg-[#DC143C] text-white rounded-tr-sm' : `glass text-white/90 rounded-tl-sm ${fromPartner && !msg.isPriority ? 'ring-1 ring-[#D4AF37]/25' : ''}`} ${priorityRing} ${isTemp ? 'opacity-60' : ''}`}>
               {msg.content}
             </div>
           )}
@@ -159,6 +214,11 @@ export default function MessageBubble({
         )}
 
         <div className={`flex flex-wrap items-center gap-x-1.5 gap-y-0.5 px-1 ${sent ? 'justify-end' : ''}`}>
+          {msg.isPriority && (
+            <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-[#D4AF37] whitespace-nowrap">
+              <Zap size={10} fill="currentColor" aria-hidden="true" /> Priority
+            </span>
+          )}
           {time && <span className="text-white/25 text-xs whitespace-nowrap">{time}</span>}
           {footer}
         </div>

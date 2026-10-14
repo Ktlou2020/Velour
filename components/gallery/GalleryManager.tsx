@@ -12,6 +12,8 @@ import Modal from '@/components/albums/Modal';
 import ShareAlbumDialog from '@/components/albums/ShareAlbumDialog';
 import AlbumViewer from '@/components/albums/AlbumViewer';
 import PhotoSheet from './PhotoSheet';
+import ExploreCard from './ExploreCard';
+import LikersSheet from './LikersSheet';
 import { useUploads } from './useUploads';
 import { api, type AlbumSummary, type GalleryPhoto, type SharedAlbum } from './types';
 import { Avatar, GridSkeleton, PhotoTile, Spinner, Switch, btnDanger, btnGhost, btnPrimary } from './ui';
@@ -47,6 +49,7 @@ export default function GalleryManager() {
   const [reorder, setReorder] = useState<string[] | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [likersFor, setLikersFor] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadTarget = useRef<string | null>(null);
 
@@ -220,6 +223,12 @@ export default function GalleryManager() {
     unsorted: photos?.filter((p) => !p.albumId).length ?? 0,
   };
   const pending = data?.pendingRequests ?? 0;
+  // "Your most liked photo" highlight (only once it has at least one like).
+  const mostLikedId = useMemo(() => {
+    let best: GalleryPhoto | null = null;
+    for (const p of photos ?? []) if ((p.likeCount ?? 0) > 0 && (!best || (p.likeCount ?? 0) > (best.likeCount ?? 0))) best = p;
+    return best?.id ?? null;
+  }, [photos]);
   const loading = photos === null || data === null;
 
   return (
@@ -234,12 +243,14 @@ export default function GalleryManager() {
           <p className="text-white/60 text-sm mt-1">Upload photos, choose your main photo and keep private albums for the people you trust.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/gallery/explore" className={`${btnGhost} hidden sm:inline-flex`}><Compass size={15} aria-hidden="true" /> Explore</Link>
+          <Link href="/gallery/explore" className={btnGhost}><Compass size={15} aria-hidden="true" /> Explore</Link>
           <button type="button" onClick={() => pickFiles(tab === 'albums' && openAlbumId ? openAlbumId : null)} className={btnPrimary}>
             <Upload size={15} aria-hidden="true" /> Upload photos
           </button>
         </div>
       </div>
+
+      <ExploreCard photos={photos} onOpenPhoto={(id) => { setFilter('all'); if (tab !== 'photos') setTab('photos'); setSheetId(id); }} />
 
       {/* Tabs */}
       <div role="tablist" aria-label="Gallery sections" className="flex gap-1 p-1 glass rounded-2xl mb-5">
@@ -366,7 +377,7 @@ export default function GalleryManager() {
                 <ul className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-1.5 sm:gap-2">
                   {visiblePhotos.map((p) => (
                     <li key={p.id}>
-                      <PhotoTile photo={p} albumName={p.albumId ? albumById.get(p.albumId)?.name : null} onClick={() => setSheetId(p.id)} />
+                      <PhotoTile photo={p} albumName={p.albumId ? albumById.get(p.albumId)?.name : null} onClick={() => setSheetId(p.id)} showLikes mostLiked={p.id === mostLikedId} />
                     </li>
                   ))}
                   <li>
@@ -435,7 +446,7 @@ export default function GalleryManager() {
                 <ul className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-1.5 sm:gap-2">
                   {visiblePhotos.map((p) => (
                     <li key={p.id}>
-                      <PhotoTile photo={p} onClick={() => setSheetId(p.id)} selected={openAlbum.coverPhotoId === p.id}>
+                      <PhotoTile photo={p} onClick={() => setSheetId(p.id)} selected={openAlbum.coverPhotoId === p.id} showLikes mostLiked={p.id === mostLikedId}>
                         {openAlbum.coverPhotoId === p.id && <span className="absolute bottom-1.5 left-1.5 text-[10px] bg-black/70 text-white px-1.5 py-0.5 rounded-md pointer-events-none">Cover</span>}
                       </PhotoTile>
                     </li>
@@ -507,6 +518,8 @@ export default function GalleryManager() {
         onClose={() => setSheetId(null)}
         onUpdated={onPhotoUpdated}
         onDeleted={onPhotoDeleted}
+        onShowLikers={(id) => { setSheetId(null); setLikersFor(id); }}
+        isMostLiked={!!sheetPhoto && sheetPhoto.id === mostLikedId}
         onCoverSet={(albumId, photoId) => setData((d) => d && { ...d, albums: d.albums.map((a) => (a.id === albumId ? { ...a, coverPhotoId: photoId, coverUrl: photos?.find((p) => p.id === photoId)?.thumbnailUrl ?? a.coverUrl } : a)) })}
         onPrev={sheetIndex > 0 ? () => setSheetId(sheetList[sheetIndex - 1].id) : undefined}
         onNext={sheetIndex >= 0 && sheetIndex < sheetList.length - 1 ? () => setSheetId(sheetList[sheetIndex + 1].id) : undefined}
@@ -524,6 +537,8 @@ export default function GalleryManager() {
           })}
         />
       )}
+
+      <LikersSheet photoId={likersFor} onClose={() => setLikersFor(null)} />
 
       <AlbumViewer
         albumId={viewSharedId}

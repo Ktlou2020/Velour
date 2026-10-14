@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { isPaid } from '@/lib/premium'
+import { entitlements } from '@/lib/plans'
 
 export async function GET(
   req: NextRequest,
@@ -68,15 +68,15 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // GOLD/PLATINUM (or admin) only
+    // Forum posting is open to every plan (lib/plans.ts → forumPosting)
     const poster = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true, profile: { select: { membershipTier: true } } },
     })
 
-    if (!isPaid(poster?.profile?.membershipTier, poster?.role)) {
+    if (!entitlements(poster?.profile?.membershipTier, poster?.role).forumPosting) {
       return NextResponse.json(
-        { error: 'Upgrade to Gold or Platinum to post in forums' },
+        { error: 'Your plan does not include forum posting', upgrade: true },
         { status: 403 }
       )
     }

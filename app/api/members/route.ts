@@ -28,11 +28,28 @@ export async function GET(req: NextRequest) {
       discover: searchParams.get('discover'),
       show: searchParams.get('show'),
       coupleType: searchParams.get('coupleType'),
+      anyCity: searchParams.get('anyCity'),
+      radius: searchParams.get('radius'),
+      heightMin: searchParams.get('heightMin'),
+      heightMax: searchParams.get('heightMax'),
+      bodyType: searchParams.get('bodyType'),
+      intentions: searchParams.get('intentions'),
+      languages: searchParams.get('languages'),
+      verified: searchParams.get('verified'),
+      photos: searchParams.get('photos'),
+      active: searchParams.get('active'),
     })
 
     return NextResponse.json({
       members: result.members,
       callerHasLocation: result.callerHasLocation,
+      effectiveCity: result.effectiveCity,
+      radiusKm: result.radiusKm,
+      sort: result.sort,
+      unknownDistance: result.unknownDistance,
+      travel: caller.travel ? { city: caller.travel.city, until: caller.travel.until } : null,
+      // Advanced filters need Gold+; for other plans they're ignored, not errors.
+      ...(result.ignoredFilters.length ? { ignoredFilters: result.ignoredFilters, upgrade: true } : {}),
       pagination: {
         page: result.page,
         limit: result.limit,

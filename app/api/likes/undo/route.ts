@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { isPaid } from '@/lib/premium'
+import { countSuperLikesInPeriod, loadPlan } from '../limits'
 
 const UNDO_WINDOW_MS = 10 * 60 * 1000
 
@@ -17,13 +17,8 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     const userId = session.user.id
-    const role = (session.user as { role?: string }).role
-
-    const profile = await db.profile.findUnique({
-      where: { userId },
-      select: { membershipTier: true },
-    })
-    if (!isPaid(profile?.membershipTier, role)) {
+    const plan = await loadPlan(userId)
+    if (!plan.ent.undoSwipe) {
       return NextResponse.json(
         { error: 'Undo is a Gold & Platinum feature. Upgrade to rewind your last swipe.', upgrade: true },
         { status: 403 }
@@ -80,6 +75,12 @@ export async function POST() {
       }
     }
 
+    // Super likes are counted from Like rows, so deleting the row gives the
+    // period allowance back by itself. If this one was paid for with a bonus
+    // credit (the period allowance was already used up), refund the credit.
+    const refundBonus = like.type === 'SUPERLIKE'
+      && (await countSuperLikesInPeriod(userId, plan.ent)) > plan.ent.superLikes
+
     await db.$transaction(async (tx) => {
       await tx.like.delete({ where: { id: like.id } })
 
@@ -102,8 +103,7 @@ export async function POST() {
         unmatched = true
       }
 
-      // Refund a spent super like (admins never spend credits)
-      if (like.type === 'SUPERLIKE' && role !== 'ADMIN') {
+      if (refundBonus) {
         await tx.user.update({ where: { id: userId }, data: { superLikeCredits: { increment: 1 } } })
       }
     })

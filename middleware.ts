@@ -5,7 +5,7 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth
   const { pathname } = req.nextUrl
 
-  const protectedPaths = ['/members', '/discover', '/matches', '/messages', '/events', '/forums', '/profile', '/upgrade', '/onboarding', '/admin', '/views', '/gallery', '/account', '/notifications', '/spark', '/insights']
+  const protectedPaths = ['/members', '/discover', '/matches', '/messages', '/events', '/forums', '/profile', '/upgrade', '/onboarding', '/admin', '/views', '/gallery', '/account', '/notifications', '/spark', '/insights', '/subscription']
   const isProtected = protectedPaths.some(p => pathname.startsWith(p))
   const isAuthPage = pathname.startsWith('/auth/')
 

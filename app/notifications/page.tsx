@@ -25,6 +25,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; href
   PROFILE_VIEW: { icon: Eye,            color: 'text-purple-400', href: () => '/members' },
   COUPLE_INVITE:{ icon: Users,          color: 'text-emerald-400',href: () => '/profile#couple' },
   COUPLE_UPDATE:{ icon: Users,          color: 'text-emerald-400',href: () => '/profile#couple' },
+  PHOTO_LIKE:   { icon: Heart,          color: 'text-[#DC143C]',  href: () => '/gallery/explore' },
   ALBUM_INVITE: { icon: ImageIcon,      color: 'text-[#D4AF37]',  href: () => '/gallery?tab=shared' },
   ALBUM_REQUEST:{ icon: Lock,           color: 'text-[#D4AF37]',  href: () => '/gallery?tab=albums' },
   ALBUM_GRANTED:{ icon: ImageIcon,      color: 'text-emerald-400',href: () => '/gallery?tab=shared' },

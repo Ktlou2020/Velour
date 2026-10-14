@@ -7,9 +7,15 @@ import EmptyState from '@/components/EmptyState';
 import MessageBubble, { type ChatMessage } from '@/components/chat/MessageBubble';
 import ExpiryCountdown from '@/components/chat/ExpiryCountdown';
 import Icebreakers from '@/components/chat/Icebreakers';
+import GameBubble from '@/components/chat/GameBubble';
+import GameSheet, { type NewGame } from '@/components/chat/GameSheet';
+import VoiceRecorderBar from '@/components/chat/VoiceRecorderBar';
+import { useVoiceRecorder } from '@/components/chat/useVoiceRecorder';
 import { useSession } from 'next-auth/react';
-import { Search, Send, Heart, ArrowLeft, ImagePlus, X, Crown, Users, ChevronDown } from 'lucide-react';
+import { Search, Send, Heart, ArrowLeft, ImagePlus, X, Crown, Users, ChevronDown, Mic, Dices, Zap, Lock } from 'lucide-react';
 import type { Reactions } from '@/lib/reactions';
+import { parseGameMeta, type GameMeta } from '@/lib/chat-games';
+import { PLANS } from '@/lib/plans';
 
 interface Avatar { name: string; photo?: string | null; username?: string }
 
@@ -28,7 +34,22 @@ interface Conversation {
   participantCount?: number;
   avatars?: Avatar[];
   partnerName?: string | null;
+  /** Unread priority message waiting → pinned to the top */
+  priority?: boolean;
 }
+
+interface PriorityAllowance {
+  plan: 'FREE' | 'GOLD' | 'PLATINUM';
+  limit: number | null;
+  used: number;
+  remaining: number | null;
+  usedInConversationToday?: boolean;
+  resetsAt: string;
+}
+
+/** Free plan: messages per rolling 24h (limit null = unlimited) */
+interface MessageAllowance { limit: number | null; remaining: number | null; resetsAt: string | null; welcomeUntil?: string | null }
+const WELCOME_NOTE_KEY = 'hush_welcome_msgs_seen';
 
 interface Side {
   userIds: string[];
@@ -59,7 +80,7 @@ interface ConvInfo {
     participants?: Record<string, ParticipantInfo>;
     partner?: { id: string; name: string } | null;
   };
-  me: { isPaid: boolean; showChatImages: boolean; coupleNames?: string[] };
+  me: { isPaid: boolean; showChatImages: boolean; coupleNames?: string[]; priority?: PriorityAllowance; messageAllowance?: MessageAllowance; video?: { maxSec: number; maxBytes: number } };
   icebreakers: string[];
 }
 
@@ -79,6 +100,25 @@ const TYPING_THROTTLE_MS = 2000;
 const RR_HINT_KEY = 'velour_rr_hint_shown';
 const SEND_AS_KEY = 'hush_send_as';
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_DRAFT = 2000;
+
+/** ?draft= from a deep link (e.g. Daily Spark "Reply"): already URL-decoded by URLSearchParams. */
+function cleanDraft(raw: string | null): string {
+  if (!raw) return '';
+  // eslint-disable-next-line no-control-regex
+  // (also drops U+FFFD left behind by malformed %-escapes)
+  return raw.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\ufffd]/g, '').slice(0, MAX_DRAFT);
+}
+
+/** Text a message can be found by in the in-chat search. */
+function searchableText(m: ChatMessage): string {
+  if (m.kind === 'GAME') {
+    const g = parseGameMeta(m.meta);
+    if (!g) return '';
+    return [g.prompt, ...(g.options ?? []), ...Object.values(g.answers).map(a => a.text ?? '')].join(' ');
+  }
+  return m.content || '';
+}
 
 function gradientFor(u: string) { return GRADIENTS[(u || '?').charCodeAt(0) % GRADIENTS.length]; }
 function initialsFor(n: string) { return (n || '?').slice(0, 2).toUpperCase(); }
@@ -92,6 +132,15 @@ function fmtTime(d?: string) {
 }
 function clock(d?: string | null) {
   return d ? new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+}
+/** "6:24 PM", "tomorrow 6:24 PM" or "Fri 6:24 PM" — when a free message slot refills. */
+function refillLabel(iso: string) {
+  const d = new Date(iso), now = new Date();
+  const t = clock(iso);
+  if (d.toDateString() === now.toDateString()) return t;
+  const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
+  if (d.toDateString() === tomorrow.toDateString()) return `tomorrow ${t}`;
+  return `${d.toLocaleDateString([], { weekday: 'short' })} ${t}`;
 }
 function listNames(names: string[]) {
   if (names.length <= 1) return names[0] ?? '';
@@ -164,11 +213,21 @@ export default function MessagesPage() {
   const [typing, setTyping] = useState<Record<string, string | null>>({});
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<{ url: string; preview: string } | null>(null);
+  const [pendingVideo, setPendingVideo] = useState<{ url: string; preview: string; durationSec: number | null } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRrHint, setShowRrHint] = useState(false);
   const [convsLoaded, setConvsLoaded] = useState(false);
   const [sendAs, setSendAs] = useState<string>('');
+  const [gameOpen, setGameOpen] = useState(false);
+  const [priorityOn, setPriorityOn] = useState(false);
+  const [priorityNudge, setPriorityNudge] = useState(false);
+  const [msgSearchOpen, setMsgSearchOpen] = useState(false);
+  const [msgQuery, setMsgQuery] = useState('');
+  const [holding, setHolding] = useState(false);
+  const [voiceSending, setVoiceSending] = useState(false);
+  const [welcomeDismissed, setWelcomeDismissed] = useState(true);
+  const recorder = useVoiceRecorder((m) => setError(m));
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -187,6 +246,15 @@ export default function MessagesPage() {
   const sides = info?.conversation.sides ?? [];
   const partner = info?.conversation.partner ?? null;
   const coupleNames = info?.me.coupleNames ?? [];
+  const priority = info?.me.priority ?? null;
+  const priorityLocked = !!priority && priority.limit === 0;
+  const priorityUnavailable = !!priority && (priority.usedInConversationToday || (priority.remaining !== null && priority.remaining <= 0));
+  const quota = info?.me.messageAllowance ?? null;
+  const quotaLimited = !!quota && quota.limit !== null;
+  const quotaLocked = quotaLimited && (quota!.remaining ?? 0) <= 0;
+  const welcomeUntil = quota?.welcomeUntil ?? null;
+  const showWelcome = !!welcomeUntil && !welcomeDismissed && new Date(welcomeUntil).getTime() > Date.now();
+  const mySide = [myId, ...(info?.conversation.partner ? [info.conversation.partner.id] : [])];
   const participantCount = info?.conversation.participantCount ?? activeConv?.participantCount ?? 2;
   // Name every message once more than two people are in the room, or a couple is involved
   const showSenders = participantCount > 2 || sides.some(s => s.isCouple) || coupleNames.length >= 2;
@@ -216,6 +284,8 @@ export default function MessagesPage() {
     if (convId) {
       setActiveConvId(convId);
       setMobileView('chat');
+      const draft = cleanDraft(params.get('draft'));
+      if (draft.trim()) setInput(draft);
       // Clean up URL without reload
       window.history.replaceState({}, '', '/messages');
     }
@@ -279,7 +349,13 @@ export default function MessagesPage() {
     setTyping({});
     setPickerFor(null);
     setPendingImage(null);
+    setPendingVideo(null);
     setError(null);
+    setPriorityOn(false);
+    setPriorityNudge(false);
+    setMsgSearchOpen(false);
+    setMsgQuery('');
+    setGameOpen(false);
     loadMessages(activeConvId);
     loadInfo(activeConvId);
 
@@ -306,7 +382,8 @@ export default function MessagesPage() {
             }
             setMessages(prev => {
               const filtered = prev.filter(m =>
-                !m.id.startsWith('temp-') || m.content !== msg.content || (m.imageUrl ?? null) !== (msg.imageUrl ?? null));
+                !m.id.startsWith('temp-') || m.content !== msg.content || (m.imageUrl ?? null) !== (msg.imageUrl ?? null) ||
+                (m.kind ?? 'TEXT') === 'VOICE' || (m.kind ?? 'TEXT') === 'GAME');
               if (filtered.some(m => m.id === msg.id)) return filtered;
               return [...filtered, msg];
             });
@@ -322,6 +399,8 @@ export default function MessagesPage() {
             }
           } else if (data.type === 'receipt') {
             applyReceipt(data as Receipt);
+          } else if (data.type === 'game') {
+            setMessages(prev => prev.map(m => m.id === data.messageId ? { ...m, meta: data.meta as GameMeta } : m));
           } else if (data.type === 'reaction') {
             setMessages(prev => prev.map(m => m.id === data.messageId ? { ...m, reactions: data.reactions as Reactions } : m));
           } else if (data.type === 'participants') {
@@ -382,6 +461,32 @@ export default function MessagesPage() {
     return () => { clearTimeout(t); document.removeEventListener('click', close); };
   }, [pickerFor]);
 
+  // ── New members: one-time "unlimited messages until …" note (per device) ──
+  useEffect(() => {
+    if (!welcomeUntil || !myId) return;
+    try { setWelcomeDismissed(localStorage.getItem(`${WELCOME_NOTE_KEY}:${myId}`) === welcomeUntil); } catch { setWelcomeDismissed(false); }
+  }, [welcomeUntil, myId]);
+  function dismissWelcome() {
+    setWelcomeDismissed(true);
+    try { if (welcomeUntil) localStorage.setItem(`${WELCOME_NOTE_KEY}:${myId}`, welcomeUntil); } catch { /* ignore */ }
+  }
+
+  // ── Free plan: re-check the allowance when the next message slot frees up ──
+  useEffect(() => {
+    if (!activeConvId || !quotaLocked || !quota?.resetsAt) return;
+    const ms = new Date(quota.resetsAt).getTime() - Date.now() + 1500;
+    const t = setTimeout(() => loadInfo(activeConvId), Math.max(1000, Math.min(ms, 2 ** 31 - 1)));
+    return () => clearTimeout(t);
+  }, [activeConvId, quotaLocked, quota?.resetsAt, loadInfo]);
+
+  // ── Composer grows with its text (up to max-h-32) ──
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = `${Math.min(ta.scrollHeight + 2, 128)}px`;
+  }, [input, activeConvId]);
+
   // ── Typing indicator (throttled) ──────────────────────────────────────────
   function notifyTyping() {
     if (!activeConvId) return;
@@ -395,10 +500,66 @@ export default function MessagesPage() {
     }).catch(() => {});
   }
 
+  // ── Video attach ──────────────────────────────────────────────────────────
+  /** Length of a local video file from its metadata (null if the browser can't tell, e.g. some WebM). */
+  function localVideoDuration(url: string): Promise<number | null> {
+    return new Promise((resolve) => {
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.muted = true;
+      const done = (d: number | null) => { v.removeAttribute('src'); v.load(); resolve(d); };
+      v.onloadedmetadata = () => done(Number.isFinite(v.duration) && v.duration > 0 ? v.duration : null);
+      v.onerror = () => done(null);
+      setTimeout(() => done(null), 8000);
+      v.src = url;
+    });
+  }
+
+  async function handleVideo(file: File) {
+    const rules = info?.me.video ?? { maxSec: 5, maxBytes: 15 * 1024 * 1024 };
+    if (file.size > rules.maxBytes) { setError(`Videos must be under ${Math.round(rules.maxBytes / 1024 / 1024)}MB on your plan`); return; }
+    const preview = URL.createObjectURL(file);
+    const dur = await localVideoDuration(preview);
+    if (dur !== null && dur > rules.maxSec + 0.5) {
+      URL.revokeObjectURL(preview);
+      setError(rules.maxSec <= 5
+        ? `Free plan videos can be up to ${rules.maxSec} seconds — trim it or go Gold for 60-second videos`
+        : `Videos can be up to ${rules.maxSec >= 120 ? `${Math.round(rules.maxSec / 60)} minutes` : `${rules.maxSec} seconds`} on your plan`);
+      return;
+    }
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('purpose', 'chatvideo');
+      const res = await fetch('/api/upload', { method: 'POST', body: form });
+      const data = await res.json().catch(() => ({})) as { url?: string; error?: string; durationSec?: number | null; quota?: boolean; limit?: number; resetsAt?: string | null };
+      if (data.quota) setInfo(prev => prev ? { ...prev, me: { ...prev.me, messageAllowance: { limit: data.limit ?? null, remaining: 0, resetsAt: data.resetsAt ?? null } } } : prev);
+      if (!res.ok || !data.url) throw new Error(data.error || 'Upload failed');
+      setPendingImage(prev => { if (prev) URL.revokeObjectURL(prev.preview); return null; });
+      setPendingVideo({ url: data.url, preview, durationSec: data.durationSec ?? dur });
+    } catch (e) {
+      URL.revokeObjectURL(preview);
+      setError(e instanceof Error ? e.message : 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function clearPendingVideo() {
+    if (pendingVideo) URL.revokeObjectURL(pendingVideo.preview);
+    setPendingVideo(null);
+  }
+
   // ── Image attach ──────────────────────────────────────────────────────────
   async function handleFile(file: File) {
     setError(null);
-    if (!file.type.startsWith('image/')) { setError('Only images can be sent'); return; }
+    if (file.type.startsWith('video/') || /\.(mp4|mov|m4v|webm)$/i.test(file.name)) {
+      await handleVideo(file);
+      if (fileRef.current) fileRef.current.value = '';
+      return;
+    }
+    if (!file.type.startsWith('image/')) { setError('Only photos and videos can be sent'); return; }
     if (file.size > MAX_IMAGE_BYTES) { setError('Image must be under 10MB'); return; }
     const preview = URL.createObjectURL(file);
     setUploading(true);
@@ -408,8 +569,10 @@ export default function MessagesPage() {
       // Chat photos are stored privately (only conversation participants can view)
       form.append('purpose', 'chat');
       const res = await fetch('/api/upload', { method: 'POST', body: form });
-      const data = await res.json().catch(() => ({})) as { url?: string; error?: string };
+      const data = await res.json().catch(() => ({})) as { url?: string; error?: string; quota?: boolean; limit?: number; resetsAt?: string | null };
+      if (data.quota) setInfo(prev => prev ? { ...prev, me: { ...prev.me, messageAllowance: { limit: data.limit ?? null, remaining: 0, resetsAt: data.resetsAt ?? null } } } : prev);
       if (!res.ok || !data.url) throw new Error(data.error || 'Upload failed');
+      setPendingVideo(prev => { if (prev) URL.revokeObjectURL(prev.preview); return null; });
       setPendingImage({ url: data.url, preview });
     } catch (e) {
       URL.revokeObjectURL(preview);
@@ -426,52 +589,207 @@ export default function MessagesPage() {
   }
 
   // ── Send message ──────────────────────────────────────────────────────────
-  const canSend = (!!input.trim() || !!pendingImage) && !sending && !uploading && !expired && !blocked;
+  const canSend = (!!input.trim() || !!pendingImage || !!pendingVideo) && !sending && !uploading && !expired && !blocked;
 
   async function handleSend() {
     if (!canSend || !activeConvId) return;
     const text = input.trim();
     const image = pendingImage;
+    const video = pendingVideo;
     const as = coupleNames.length >= 2 && sendAs ? sendAs : null;
     setInput('');
     setPendingImage(null);
+    setPendingVideo(null);
     setSending(true);
     setError(null);
     lastTypingSentRef.current = 0;
 
     const tempId = `temp-${Date.now()}`;
     setMessages(prev => [...prev, {
-      id: tempId, content: text, imageUrl: image?.url ?? null, isSent: true, senderId: myId,
-      senderPartnerName: as, createdAt: new Date().toISOString(),
+      id: tempId, content: text, imageUrl: video ? null : image?.url ?? null, isSent: true, senderId: myId,
+      senderPartnerName: as, createdAt: new Date().toISOString(), isPriority: priorityOn && !priorityLocked,
+      ...(video ? { kind: 'VIDEO', meta: { videoUrl: video.url, durationSec: video.durationSec } } : {}),
     }]);
 
+    const err = await postMessage(video
+      ? { kind: 'VIDEO', videoUrl: video.url, videoDurationSec: video.durationSec, content: text }
+      : { content: text, ...(image ? { imageUrl: image.url } : {}) }, tempId);
+    if (err === null) {
+      if (image) URL.revokeObjectURL(image.preview);
+      if (video) URL.revokeObjectURL(video.preview);
+    } else if (err !== 'network') {
+      setInput(text);
+      if (image) setPendingImage(image);
+      if (video) setPendingVideo(video);
+    }
+    setSending(false);
+  }
+
+  /**
+   * POST a message (text / voice / game). Adds the shared bits (sending-as,
+   * priority), swaps the optimistic temp bubble for the saved message.
+   * Returns null on success, else an error message ('network' = offline; the temp is kept).
+   */
+  async function postMessage(payload: Record<string, unknown>, tempId?: string): Promise<string | null> {
+    if (!activeConvId) return 'No conversation';
+    const as = coupleNames.length >= 2 && sendAs ? sendAs : null;
+    const usePriority = priorityOn && !priorityLocked;
     try {
       const res = await fetch(`/api/conversations/${activeConvId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          content: text,
-          ...(image ? { imageUrl: image.url } : {}),
+          ...payload,
           ...(as ? { senderPartnerName: as } : {}),
+          ...(usePriority ? { isPriority: true } : {}),
         }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        const saved: Message = { ...(data.message ?? data), isSent: true };
+      const data = await res.json().catch(() => ({})) as {
+        message?: Message; error?: string; upgrade?: boolean; allowance?: PriorityAllowance;
+        messageAllowance?: MessageAllowance; quota?: boolean; limit?: number; resetsAt?: string | null;
+      };
+      if (res.ok && data.message) {
+        const saved: Message = { ...data.message, isSent: true };
         setMessages(prev => {
-          if (prev.some(m => m.id === saved.id)) return prev.filter(m => m.id !== tempId);
+          const without = tempId ? prev.filter(m => m.id !== tempId) : prev;
+          if (without.some(m => m.id === saved.id)) return without;
+          if (!tempId) return [...prev, saved];
           return prev.map(m => m.id === tempId ? saved : m);
         });
-        if (image) URL.revokeObjectURL(image.preview);
-        setInfo(prev => prev ? { ...prev, icebreakers: [], conversation: { ...prev.conversation, hasMessages: true, matchExpiresAt: null } } : prev);
+        setInfo(prev => {
+          if (!prev) return prev;
+          let me = prev.me;
+          if (usePriority && me.priority) {
+            const p = me.priority;
+            me = { ...me, priority: { ...p, used: p.used + 1, remaining: p.remaining === null ? null : Math.max(0, p.remaining - 1), usedInConversationToday: true } };
+          }
+          if (data.messageAllowance) me = { ...me, messageAllowance: data.messageAllowance };
+          return { ...prev, me, icebreakers: [], conversation: { ...prev.conversation, hasMessages: true, matchExpiresAt: null } };
+        });
+        if (usePriority) setPriorityOn(false);
         fetchConversations();
-      } else {
-        setMessages(prev => prev.filter(m => m.id !== tempId));
-        setInput(text);
-        if (image) setPendingImage(image);
-        setError((data as { error?: string }).error || 'Message failed to send');
+        return null;
       }
-    } catch { /* keep temp */ } finally { setSending(false); }
+      if (tempId) setMessages(prev => prev.filter(m => m.id !== tempId));
+      if (data.quota) {
+        setInfo(prev => prev ? { ...prev, me: { ...prev.me, messageAllowance: { limit: data.limit ?? null, remaining: 0, resetsAt: data.resetsAt ?? null } } } : prev);
+        return data.error || 'Message limit reached';
+      }
+      if (data.allowance) {
+        setInfo(prev => prev ? { ...prev, me: { ...prev.me, priority: data.allowance } } : prev);
+        setPriorityOn(false);
+        if (data.upgrade) setPriorityNudge(true);
+      }
+      const msg = data.error || 'Message failed to send';
+      setError(msg);
+      return msg;
+    } catch {
+      return 'network';
+    }
+  }
+
+  // ── Voice notes ───────────────────────────────────────────────────────────
+  const holdRef = useRef<{ x: number; at: number; pointerId: number } | null>(null);
+
+  function micPointerDown(e: React.PointerEvent<HTMLButtonElement>) {
+    if (e.button !== 0 || expired || blocked) return;
+    e.preventDefault();
+    setError(null);
+    holdRef.current = { x: e.clientX, at: 0, pointerId: e.pointerId };
+    setHolding(true);
+    recorder.start().then(() => {
+      if (holdRef.current) holdRef.current.at = Date.now();
+    });
+    const move = (ev: PointerEvent) => {
+      const h = holdRef.current;
+      if (!h || ev.pointerId !== h.pointerId) return;
+      if (h.x - ev.clientX > 90) { finish(); recorder.cancel(); }
+    };
+    const up = (ev: PointerEvent) => {
+      const h = holdRef.current;
+      if (!h || ev.pointerId !== h.pointerId) return;
+      // Long hold → release stops the recording (preview); a quick tap keeps recording (tap mode)
+      const held = h.at && Date.now() - h.at > 450;
+      finish();
+      if (held && recorder.stateRef.current === 'recording') recorder.stop();
+    };
+    function finish() {
+      holdRef.current = null;
+      setHolding(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    }
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  }
+
+  async function sendVoice() {
+    if (!activeConvId || voiceSending) return;
+    const clip = recorder.clip;
+    if (!clip) return;
+    setVoiceSending(true);
+    setError(null);
+    try {
+      const form = new FormData();
+      const ext = clip.mimeType.includes('mp4') ? 'm4a' : clip.mimeType.includes('ogg') ? 'ogg' : 'webm';
+      form.append('file', clip.blob, `voice.${ext}`);
+      form.append('purpose', 'voice');
+      const up = await fetch('/api/upload', { method: 'POST', body: form });
+      const updata = await up.json().catch(() => ({})) as { url?: string; error?: string };
+      if (!up.ok || !updata.url) { setError(updata.error || 'Voice note upload failed'); return; }
+      const err = await postMessage({
+        kind: 'VOICE',
+        audioUrl: updata.url,
+        audioDurationSec: clip.durationSec,
+        waveform: clip.waveform,
+      });
+      if (err === null) {
+        recorder.take();
+        URL.revokeObjectURL(clip.url);
+      } else if (err === 'network') {
+        setError('You seem to be offline — try again');
+      }
+    } finally {
+      setVoiceSending(false);
+    }
+  }
+
+  // ── Games ─────────────────────────────────────────────────────────────────
+  async function sendGame(game: NewGame): Promise<string | null> {
+    const err = await postMessage({ kind: 'GAME', game });
+    if (err === 'network') return 'You seem to be offline — try again';
+    if (err) setError(null); // shown inside the sheet instead
+    return err;
+  }
+
+  async function answerGame(messageId: string, answer: number | string): Promise<string | null> {
+    if (!activeConvId) return 'No conversation';
+    const as = coupleNames.length >= 2 && sendAs ? sendAs : null;
+    try {
+      const res = await fetch(`/api/conversations/${activeConvId}/messages/${messageId}/game`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answer, ...(as ? { as } : {}) }),
+      });
+      const data = await res.json().catch(() => ({})) as { meta?: GameMeta; error?: string };
+      if (res.ok && data.meta) {
+        setMessages(prev => prev.map(m => m.id === messageId ? { ...m, meta: data.meta } : m));
+        return null;
+      }
+      return data.error || 'Could not send your answer';
+    } catch {
+      return 'You seem to be offline — try again';
+    }
+  }
+
+  function togglePriority() {
+    if (!priority) return;
+    if (priorityLocked) { setPriorityNudge(v => !v); return; }
+    if (priorityUnavailable && !priorityOn) { setPriorityNudge(v => !v); return; }
+    setPriorityNudge(false);
+    setPriorityOn(v => !v);
   }
 
   // ── Reactions ─────────────────────────────────────────────────────────────
@@ -548,6 +866,14 @@ export default function MessagesPage() {
     );
   }
 
+  // In-chat search over the loaded messages: non-matches are dimmed
+  const msgQ = msgSearchOpen ? msgQuery.trim().toLowerCase() : '';
+  const searchMatches = new Set(msgQ ? messages.filter(m => searchableText(m).toLowerCase().includes(msgQ)).map(m => m.id) : []);
+  const lastMatchId = msgQ ? messages.filter(m => searchMatches.has(m.id)).pop()?.id ?? null : null;
+  useEffect(() => {
+    if (lastMatchId) document.getElementById(`msg-${lastMatchId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [lastMatchId]);
+
   const filtered = conversations.filter(c =>
     (c.displayName || c.username || '').toLowerCase().includes(search.toLowerCase())
   );
@@ -603,7 +929,7 @@ export default function MessagesPage() {
             <button
               key={conv.id}
               onClick={() => openConv(conv.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/5 transition-colors text-left border-b border-white/5 ${active ? 'bg-white/5 border-l-2 border-l-[#DC143C]' : ''} ${conv.expired ? 'opacity-50' : ''}`}
+              className={`w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/5 transition-colors text-left border-b border-white/5 ${active ? 'bg-white/5 border-l-2 border-l-[#DC143C]' : conv.priority ? 'bg-[#D4AF37]/[0.06] border-l-2 border-l-[#D4AF37]' : ''} ${conv.expired ? 'opacity-50' : ''}`}
             >
               <div className="relative flex-shrink-0">
                 <AvatarStack avatars={avatars} size={48} grayscale={conv.expired} />
@@ -614,6 +940,11 @@ export default function MessagesPage() {
                   <span className="flex items-center gap-1.5 min-w-0">
                     <span className="text-white font-medium text-sm truncate">{name}</span>
                     {conv.isCouple && <CoupleBadge />}
+                    {conv.priority && (
+                      <span className="flex-shrink-0 inline-flex items-center gap-0.5 text-[10px] font-semibold text-black bg-[#D4AF37] rounded-full px-1.5 py-px leading-none">
+                        <Zap size={9} fill="currentColor" aria-hidden="true" /> Priority
+                      </span>
+                    )}
                   </span>
                   <span className="text-white/55 text-xs flex-shrink-0">{fmtTime(conv.lastMessageAt)}</span>
                 </div>
@@ -709,7 +1040,38 @@ export default function MessagesPage() {
         {expiresAt && (
           <ExpiryCountdown expiresAt={expiresAt} nudge className="items-end text-right flex-shrink-0" />
         )}
+        {messages.length > 0 && (
+          <button
+            type="button"
+            onClick={() => { setMsgSearchOpen(v => !v); setMsgQuery(''); }}
+            className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${msgSearchOpen ? 'text-white bg-white/10' : 'text-white/60 hover:text-white'}`}
+            aria-label={msgSearchOpen ? 'Close search' : 'Search in conversation'}
+            aria-expanded={msgSearchOpen}
+          >
+            {msgSearchOpen ? <X size={18} /> : <Search size={17} />}
+          </button>
+        )}
       </div>
+      {msgSearchOpen && (
+        <div className="glass-dark border-b border-white/5 px-4 py-2 flex items-center gap-2">
+          <Search size={14} className="text-white/45 flex-shrink-0" aria-hidden="true" />
+          <input
+            type="search"
+            autoFocus
+            value={msgQuery}
+            onChange={e => setMsgQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Escape') { setMsgSearchOpen(false); setMsgQuery(''); } }}
+            placeholder="Search this conversation…"
+            aria-label="Search this conversation"
+            className="flex-1 min-w-0 bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none"
+          />
+          {msgQuery.trim() && (
+            <span className="text-xs text-white/55 flex-shrink-0" aria-live="polite">
+              {searchMatches.size} {searchMatches.size === 1 ? 'match' : 'matches'}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 pt-12 pb-6 space-y-3">
@@ -733,9 +1095,10 @@ export default function MessagesPage() {
           const runStart = !prev || prev.senderId !== msg.senderId ||
             (prev.senderPartnerName ?? null) !== (msg.senderPartnerName ?? null) || !!prev.isSent !== !!msg.isSent;
           const label = showSenders && runStart ? senderLabel(msg) : null;
+          const game = msg.kind === 'GAME' ? parseGameMeta(msg.meta) : null;
           return (
+            <div key={msg.id} id={`msg-${msg.id}`}>
             <MessageBubble
-              key={msg.id}
               msg={msg}
               myId={myId}
               blurReceivedImages={blurImages}
@@ -748,7 +1111,22 @@ export default function MessagesPage() {
               onClosePicker={() => setPickerFor(p => (p === msg.id ? null : p))}
               onReact={(emoji) => handleReact(msg.id, emoji)}
               onImageLoad={msg.id === messages[messages.length - 1]?.id ? scrollToEnd : undefined}
+              dimmed={!!msgQ && !searchMatches.has(msg.id)}
+              gameNode={game && msg.senderId ? (
+                <GameBubble
+                  meta={game}
+                  senderId={msg.senderId}
+                  myId={myId}
+                  mySide={mySide}
+                  sent={!!msg.isSent}
+                  nameOf={(uid) => nameOf(uid)}
+                  disabled={blocked}
+                  pending={msg.id.startsWith('temp-')}
+                  onAnswer={(a) => answerGame(msg.id, a)}
+                />
+              ) : undefined}
             />
+            </div>
           );
         })}
         {someoneTyping && (
@@ -784,6 +1162,24 @@ export default function MessagesPage() {
             </label>
           </div>
         )}
+        {pendingVideo && !uploading && (
+          <div className="mb-2 flex items-center gap-2">
+            <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-black flex items-center justify-center">
+              <video src={`${pendingVideo.preview}#t=0.1`} muted playsInline preload="metadata" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={clearPendingVideo}
+                className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center"
+                aria-label="Remove video"
+              >
+                <X size={12} />
+              </button>
+            </div>
+            <span className="text-white/60 text-xs">
+              Video attached{pendingVideo.durationSec != null ? ` · ${Math.max(1, Math.round(pendingVideo.durationSec))}s` : ''} — add a caption or send
+            </span>
+          </div>
+        )}
         {(pendingImage || uploading) && (
           <div className="mb-2 flex items-center gap-2">
             <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-white/5 flex items-center justify-center">
@@ -807,11 +1203,80 @@ export default function MessagesPage() {
             <span className="text-white/60 text-xs">{uploading ? 'Uploading…' : 'Photo attached'}</span>
           </div>
         )}
-        <div className="flex items-end gap-2">
+        {priority && (priorityOn || priorityNudge) && (
+          <div className={`mb-2 rounded-xl px-3 py-2 text-xs flex items-start gap-2 border ${priorityOn ? 'bg-[#D4AF37]/10 border-[#D4AF37]/40 text-[#E8C65A]' : 'bg-white/5 border-white/10 text-white/70'}`} role="status">
+            <Zap size={14} className="text-[#D4AF37] flex-shrink-0 mt-px" fill="currentColor" aria-hidden="true" />
+            <div className="flex-1 min-w-0">
+              {priorityOn ? (
+                <span>
+                  <strong className="font-semibold">Priority on</strong> — your next message is pinned to the top of {name}&rsquo;s inbox
+                  <span className="text-white/55"> · {priority.remaining === null ? 'Unlimited with Platinum' : `${priority.remaining} left this week`}</span>
+                </span>
+              ) : priorityLocked ? (
+                <span>
+                  Priority messages jump to the top of their inbox. Included with <strong className="text-[#D4AF37]">Gold</strong> (3 a week) and <strong className="text-[#D4AF37]">Platinum</strong> (unlimited).{' '}
+                  <Link href="/upgrade" className="inline-flex items-center gap-0.5 font-semibold text-[#D4AF37] hover:underline whitespace-nowrap"><Crown size={11} /> Upgrade</Link>
+                </span>
+              ) : priority.usedInConversationToday ? (
+                <span>You&rsquo;ve already sent a priority message in this chat today — try again tomorrow.</span>
+              ) : (
+                <span>
+                  You&rsquo;ve used all {priority.limit} priority messages this week. They reset on Monday.{' '}
+                  {priority.plan !== 'PLATINUM' && <Link href="/upgrade" className="font-semibold text-[#D4AF37] hover:underline whitespace-nowrap">Go unlimited with Platinum</Link>}
+                </span>
+              )}
+            </div>
+            <button type="button" onClick={() => { setPriorityNudge(false); setPriorityOn(false); }} className="text-white/45 hover:text-white flex-shrink-0" aria-label="Dismiss">
+              <X size={13} />
+            </button>
+          </div>
+        )}
+        {showWelcome && !blocked && !expired && (
+          <div className="mb-2 rounded-xl border border-[#D4AF37]/25 bg-[#D4AF37]/[0.07] px-3 py-2 text-xs text-white/75 flex items-start gap-2" role="status">
+            <span aria-hidden="true">✨</span>
+            <p className="flex-1 min-w-0 leading-snug">
+              <span className="text-[#E8C65A] font-medium">Welcome!</span> Unlimited messages until{' '}
+              {new Date(welcomeUntil!).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}
+              {' '}· then {PLANS.FREE.messagesPer24h} per 24 hours on Free ·{' '}
+              <Link href="/upgrade" className="text-[#D4AF37] font-medium hover:underline whitespace-nowrap">Go Gold for unlimited</Link>
+            </p>
+            <button type="button" onClick={dismissWelcome} className="text-white/45 hover:text-white flex-shrink-0" aria-label="Dismiss welcome note">
+              <X size={13} />
+            </button>
+          </div>
+        )}
+        {quotaLimited && !quotaLocked && !blocked && !expired && (
+          <p className="mb-1.5 text-[11px] text-white/45 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+            <span className={`whitespace-nowrap ${quota!.remaining === 1 ? 'text-[#D4AF37]/80' : ''}`}>
+              {quota!.remaining} of {quota!.limit} free messages left
+            </span>
+            {quota!.resetsAt && <span className="whitespace-nowrap">· next at {refillLabel(quota!.resetsAt)}</span>}
+            <Link href="/upgrade" className="ml-auto text-[#D4AF37]/70 hover:text-[#D4AF37] whitespace-nowrap">Unlimited with Gold</Link>
+          </p>
+        )}
+        {quotaLocked && !blocked && !expired ? (
+          <div className="rounded-2xl border border-[#D4AF37]/25 bg-gradient-to-br from-[#1a1022] to-[#12121a] px-4 py-3.5 flex flex-wrap sm:flex-nowrap items-center gap-3" role="status">
+            <div className="hidden sm:flex w-10 h-10 rounded-full bg-[#D4AF37]/15 items-center justify-center flex-shrink-0">
+              <Heart size={18} className="text-[#D4AF37]" aria-hidden="true" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-white font-medium leading-snug"><span className="sm:hidden text-[#D4AF37]" aria-hidden="true">♡ </span>You&rsquo;ve used today&rsquo;s {quota!.limit} free messages</p>
+              <p className="text-xs text-white/60 mt-0.5 leading-snug">
+                They refill gradually{quota!.resetsAt ? <> — your next one is ready at <span className="text-white/85 font-medium whitespace-nowrap">{refillLabel(quota!.resetsAt)}</span></> : ''}. You can still read, react and play games.
+              </p>
+            </div>
+            <Link href="/upgrade" className="btn-gold w-full sm:w-auto justify-center flex-shrink-0 text-xs font-semibold px-3 py-2 rounded-xl whitespace-nowrap inline-flex items-center gap-1">
+              <Crown size={12} aria-hidden="true" /> Go Gold for unlimited messaging
+            </Link>
+          </div>
+        ) : recorder.state !== 'idle' ? (
+          <VoiceRecorderBar rec={recorder} holding={holding} sending={voiceSending} onSend={sendVoice} />
+        ) : (
+        <div className="flex items-end gap-1.5 sm:gap-2">
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
+            accept="image/*,video/mp4,video/quicktime,video/webm,.mov,.m4v"
             className="hidden"
             onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
           />
@@ -819,34 +1284,78 @@ export default function MessagesPage() {
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading || expired || blocked}
-            className="w-10 h-10 rounded-xl glass flex items-center justify-center text-white/65 hover:text-white disabled:opacity-40 flex-shrink-0 transition-colors"
-            aria-label="Attach photo"
+            className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl glass flex items-center justify-center text-white/65 hover:text-white disabled:opacity-40 flex-shrink-0 transition-colors"
+            aria-label="Attach a photo or video"
+            title={`Photo or video (up to ${info?.me.video ? (info.me.video.maxSec >= 120 ? `${Math.round(info.me.video.maxSec / 60)} min` : `${info.me.video.maxSec}s`) : '5s'})`}
           >
             <ImagePlus size={18} />
           </button>
-          <textarea
-            ref={textareaRef}
-            aria-label={`Message ${name}`}
-            placeholder={blocked ? 'Messaging unavailable' : expired ? 'This match has expired' : `Message ${name}…`}
-            className="input-dark flex-1 min-w-0 px-4 py-2.5 rounded-xl text-sm resize-none min-h-[44px] max-h-32"
-            rows={1}
-            value={input}
-            disabled={expired || blocked}
-            maxLength={2000}
-            onChange={e => { setInput(e.target.value); if (e.target.value.trim()) notifyTyping(); }}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-          />
           <button
-            onClick={handleSend}
-            disabled={!canSend}
-            aria-label="Send message"
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${canSend ? 'bg-[#DC143C] hover:bg-[#FF1744]' : 'glass text-white/55 cursor-not-allowed'}`}
+            type="button"
+            onClick={() => setGameOpen(true)}
+            disabled={expired || blocked}
+            className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl glass flex items-center justify-center text-white/65 hover:text-[#D4AF37] disabled:opacity-40 flex-shrink-0 transition-colors"
+            aria-label="Play a game"
+            title="Play a game"
           >
-            {sending
-              ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              : <Send size={16} className="text-white" />}
+            <Dices size={18} />
           </button>
+          <div className="relative flex-1 min-w-0">
+            <textarea
+              ref={textareaRef}
+              aria-label={`Message ${name}`}
+              placeholder={blocked ? 'Messaging unavailable' : expired ? 'This match has expired' : `Message ${name}…`}
+              className={`input-dark w-full pl-4 ${priority ? 'pr-10' : 'pr-4'} py-2.5 rounded-xl text-sm resize-none min-h-[44px] max-h-32 block ${priorityOn ? 'ring-1 ring-[#D4AF37]/70' : ''}`}
+              rows={1}
+              value={input}
+              disabled={expired || blocked}
+              maxLength={2000}
+              onChange={e => { setInput(e.target.value); if (e.target.value.trim()) notifyTyping(); }}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+            />
+            {priority && !expired && !blocked && (
+              <button
+                type="button"
+                onClick={togglePriority}
+                aria-pressed={priorityOn}
+                aria-label={priorityLocked ? 'Priority messages (Gold feature)' : priorityOn ? 'Turn off priority' : 'Send as priority'}
+                title={priorityLocked ? 'Priority messages — Gold & Platinum' : priority.remaining === null ? 'Priority message (unlimited)' : `Priority message · ${priority.remaining} left this week`}
+                className={`absolute right-1.5 bottom-1.5 w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${priorityOn ? 'bg-[#D4AF37] text-black' : priorityLocked || priorityUnavailable ? 'text-white/35 hover:text-white/60' : 'text-[#D4AF37]/80 hover:text-[#D4AF37] hover:bg-white/5'}`}
+              >
+                <Zap size={16} fill={priorityOn ? 'currentColor' : 'none'} />
+                {(priorityLocked || priorityUnavailable) && (
+                  <Lock size={9} className="absolute right-1 bottom-1" aria-hidden="true" />
+                )}
+              </button>
+            )}
+          </div>
+          {!input.trim() && !pendingImage && !pendingVideo && !uploading ? (
+            <button
+              type="button"
+              onPointerDown={micPointerDown}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); recorder.start(); } }}
+              onContextMenu={e => e.preventDefault()}
+              disabled={expired || blocked}
+              aria-label="Record a voice note (tap, or hold and release)"
+              title="Tap to record · hold to talk"
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-[#DC143C] hover:bg-[#FF1744] flex items-center justify-center flex-shrink-0 transition-colors disabled:opacity-40 touch-none select-none"
+            >
+              <Mic size={18} className="text-white" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSend}
+              disabled={!canSend}
+              aria-label={priorityOn ? 'Send priority message' : 'Send message'}
+              className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${canSend ? (priorityOn ? 'bg-[#D4AF37] hover:bg-[#e8c65a]' : 'bg-[#DC143C] hover:bg-[#FF1744]') : 'glass text-white/55 cursor-not-allowed'}`}
+            >
+              {sending
+                ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                : priorityOn ? <Zap size={16} className="text-black" fill="currentColor" /> : <Send size={16} className="text-white" />}
+            </button>
+          )}
         </div>
+        )}
       </div>
     </div>
   ) : (
@@ -869,6 +1378,8 @@ export default function MessagesPage() {
         {ConvList}
         {ChatWindow}
       </main>
+      {/* Outside the glass (backdrop-filter) panels so position:fixed is relative to the viewport */}
+      <GameSheet open={gameOpen && !!activeConv} name={name} onClose={() => setGameOpen(false)} onSend={sendGame} />
     </div>
   );
 }

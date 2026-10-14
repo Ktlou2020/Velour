@@ -2,7 +2,9 @@
 // and /api/picks. Not a route file (Next only treats route.ts as a route).
 import { Prisma } from '@prisma/client'
 import { db } from '@/lib/db'
-import { isPaid, isBoosted } from '@/lib/premium'
+import { isBoosted, isTravelling } from '@/lib/premium'
+import { entitlements, planFor, type Entitlements, type PlanTier } from '@/lib/plans'
+import { activeStatus } from '@/components/status/status'
 import { boundingBox, distanceKm, formatDistance } from '@/lib/geo'
 import { compatibility, ageFromDob, type CompatInput } from '@/lib/compat'
 import {
@@ -43,13 +45,25 @@ export interface MemberResult {
   coupleBadge?: string
   /** Couples: both partners' ages, e.g. [31, 34] */
   ages?: number[]
+  /** Live status ("Free tonight"), only while statusUntil is in the future. */
+  status?: { text: string; emoji?: string }
+  /** Travel mode: the member is visiting the city being browsed. */
+  visiting?: { city: string; until: string }
+  /** Platinum spotlight slot. */
+  isSpotlight?: boolean
 }
 
 export interface CallerContext {
   userId: string
   role?: string
   paid: boolean
+  tier: PlanTier
+  ent: Entitlements
+  /** Where the caller browses from: their travel destination while travel mode is live, else home. */
   city: string | null
+  homeCity: string | null
+  /** Active travel mode (Gold+ only), else null. */
+  travel: { city: string; country: string | null; until: Date } | null
   latitude: number | null
   longitude: number | null
   /** What kind of member the caller is, for mutual-interest matching. */
@@ -75,6 +89,11 @@ export async function getCallerContext(userId: string, role?: string): Promise<C
           isCouple: true,
           gender: true,
           dateOfBirth: true,
+          travelCity: true,
+          travelCountry: true,
+          travelLat: true,
+          travelLng: true,
+          travelUntil: true,
         },
       },
       interests: { select: { interest: { select: { name: true } } } },
@@ -83,13 +102,24 @@ export async function getCallerContext(userId: string, role?: string): Promise<C
   const p = me?.profile
   const category = p ? categoryOf(p) : null
   const interestedIn = p ? effectiveInterestedIn(p) : []
-  const latitude = p?.latitude ?? null
-  const longitude = p?.longitude ?? null
+  const tier = planFor(p?.membershipTier, role)
+  const ent = entitlements(tier)
+  // Travel mode: browse as if located in the destination. Lapsed plans fall back to home.
+  const travel = ent.travelMode && p && isTravelling(p)
+    ? { city: p.travelCity!, country: p.travelCountry ?? null, until: p.travelUntil! }
+    : null
+  const latitude = travel ? (p?.travelLat ?? null) : (p?.latitude ?? null)
+  const longitude = travel ? (p?.travelLng ?? null) : (p?.longitude ?? null)
+  const city = travel ? travel.city : (p?.city ?? null)
   return {
     userId,
     role,
-    paid: isPaid(p?.membershipTier, role),
-    city: p?.city ?? null,
+    paid: tier !== 'FREE',
+    tier,
+    ent,
+    city,
+    homeCity: p?.city ?? null,
+    travel,
     latitude,
     longitude,
     category,
@@ -100,7 +130,7 @@ export async function getCallerContext(userId: string, role?: string): Promise<C
       interestedIn,
       intentions: p?.intentions ?? [],
       age: ageFromDob(p?.dateOfBirth),
-      city: p?.city ?? null,
+      city,
       latitude,
       longitude,
     },
@@ -114,6 +144,23 @@ export function notSnoozed(now = new Date()): Prisma.ProfileWhereInput {
       isSnoozed: true,
       OR: [{ snoozedUntil: null }, { snoozedUntil: { gt: now } }],
     },
+  }
+}
+
+/**
+ * Members in a city: those who live there, plus Gold+ members whose travel
+ * mode currently points there (they show a "Visiting" badge).
+ */
+export function cityWhere(city: string, now = new Date()): Prisma.ProfileWhereInput {
+  return {
+    OR: [
+      { city: { contains: city, mode: 'insensitive' } },
+      {
+        travelCity: { equals: city, mode: 'insensitive' },
+        travelUntil: { gt: now },
+        membershipTier: { in: ['GOLD', 'PLATINUM'] },
+      },
+    ],
   }
 }
 
@@ -193,6 +240,11 @@ export const memberSelect = {
       coupleType: true,
       coupleMembers: true,
       pronouns: true,
+      statusText: true,
+      statusEmoji: true,
+      statusUntil: true,
+      travelCity: true,
+      travelUntil: true,
       partner: { select: { dateOfBirth: true } },
     },
   },
@@ -242,9 +294,30 @@ function coupleExtras(p: NonNullable<SelectedUser['profile']>): Pick<MemberResul
   }
 }
 
-/** Map a DB user to the public card shape. Never exposes raw coordinates. */
-export function toMemberResult(u: SelectedUser, caller: CallerContext, promptLimit = 1): MemberResult {
+function liveStatus(p: NonNullable<SelectedUser['profile']>): MemberResult['status'] {
+  const s = activeStatus(p)
+  if (!s) return undefined
+  return { text: s.text.slice(0, 60), ...(s.emoji ? { emoji: s.emoji } : {}) }
+}
+
+function visitingFor(p: NonNullable<SelectedUser['profile']>, focusCity: string | null | undefined): MemberResult['visiting'] {
+  if (!focusCity || !p.travelCity || !p.travelUntil) return undefined
+  if (p.travelUntil.getTime() <= Date.now()) return undefined
+  if (p.membershipTier !== 'GOLD' && p.membershipTier !== 'PLATINUM') return undefined
+  if (p.travelCity.toLowerCase() !== focusCity.toLowerCase()) return undefined
+  if (p.city && p.city.toLowerCase() === focusCity.toLowerCase()) return undefined // lives there anyway
+  return { city: p.travelCity, until: p.travelUntil.toISOString() }
+}
+
+/**
+ * Map a DB user to the public card shape. Never exposes raw coordinates.
+ * `focusCity` is the city being browsed (defaults to the caller's own / travel
+ * city) — members visiting it get a `visiting` badge.
+ */
+export function toMemberResult(u: SelectedUser, caller: CallerContext, promptLimit = 1, focusCity?: string | null): MemberResult {
   const p = u.profile
+  const visiting = p ? visitingFor(p, focusCity ?? caller.city) : undefined
+  const status = p ? liveStatus(p) : undefined
   const interests = u.interests.map((i) => i.interest.name).filter(Boolean)
   const age = ageFromDob(p?.dateOfBirth) ?? undefined
   const compat = compatibility(caller.compat, {
@@ -272,8 +345,8 @@ export function toMemberResult(u: SelectedUser, caller: CallerContext, promptLim
     isVerified: u.isVerified,
     displayName: p?.displayName ?? undefined,
     age,
-    city: p?.city ?? undefined,
-    country: p?.country ?? undefined,
+    city: visiting ? visiting.city : (p?.city ?? undefined),
+    country: visiting ? undefined : (p?.country ?? undefined),
     bio: p?.bio ?? undefined,
     interests,
     profilePhotoUrl: u.photos[0]?.url ?? p?.profilePhoto ?? undefined,
@@ -286,7 +359,9 @@ export function toMemberResult(u: SelectedUser, caller: CallerContext, promptLim
     prompts: parsePrompts(p?.prompts).slice(0, promptLimit),
     isCouple: !!p?.isCouple,
     ...(p?.isCouple ? coupleExtras(p) : p?.pronouns ? { pronouns: p.pronouns } : {}),
-    ...(km !== undefined ? { distance: formatDistance(km) ?? undefined, distanceKm: Math.round(km) } : {}),
+    ...(km !== undefined && !visiting ? { distance: formatDistance(km) ?? undefined, distanceKm: Math.round(km) } : {}),
+    ...(status ? { status } : {}),
+    ...(visiting ? { visiting } : {}),
   }
 }
 
@@ -307,6 +382,39 @@ export interface SearchParamsInput {
   show?: string | null
   /** Couple-type sub-filter when COUPLE is shown: comma list of MF, FF, MM, MX */
   coupleType?: string | null
+  /** Gold+: "1" = every city (ignores the default travel destination). */
+  anyCity?: string | null
+  /** Search radius in km (10/25/50/100/250) or "any" (Anywhere, Gold+). Default 50. */
+  radius?: string | null
+  // ── Advanced filters (Gold+; ignored for plans without advancedFilters) ──
+  heightMin?: string | null
+  heightMax?: string | null
+  /** comma list of BODY_TYPE_OPTIONS values */
+  bodyType?: string | null
+  /** comma list of INTENTION_OPTIONS values */
+  intentions?: string | null
+  /** comma list of languages */
+  languages?: string | null
+  /** "1" = verified members only */
+  verified?: string | null
+  /** "1" = only members with a public photo */
+  photos?: string | null
+  /** "1" = active in the last 7 days */
+  active?: string | null
+}
+
+export const ADVANCED_FILTER_KEYS = ['heightMin', 'heightMax', 'bodyType', 'intentions', 'languages', 'verified', 'photos', 'active'] as const
+
+/** Advanced filter params the caller asked for (non-empty values). */
+export function requestedAdvancedFilters(params: SearchParamsInput): string[] {
+  return ADVANCED_FILTER_KEYS.filter((k) => {
+    const v = params[k]
+    return typeof v === 'string' && v.trim() !== '' && v !== '0'
+  })
+}
+
+function csv(v: string | null | undefined, max = 12): string[] {
+  return (v ?? '').split(',').map((x) => x.trim()).filter(Boolean).slice(0, max).map((x) => x.slice(0, 40))
 }
 
 export interface SearchResult {
@@ -316,28 +424,99 @@ export interface SearchResult {
   limit: number
   callerHasLocation: boolean
   effectiveCity: string | null
+  /** Radius actually applied in km; null = Anywhere (or no location to measure from). */
+  radiusKm: number | null
+  /** Sort actually applied. */
+  sort: SortKey
+  /** How many results (at the end of the list) have no location, shown as "Distance unknown". */
+  unknownDistance: number
+  /** Advanced filters that were requested but not applied because the plan doesn't include them. */
+  ignoredFilters: string[]
 }
 
-// Upper bound on candidates evaluated in memory for distance search / sort.
-const DISTANCE_CANDIDATE_CAP = 2000
-// Max boosted profiles surfaced at the top of page 1.
-const BOOSTED_CAP = 8
+export type SortKey = 'nearest' | 'active' | 'new' | 'match'
+export const RADIUS_OPTIONS = [10, 25, 50, 100, 250] as const
+export const DEFAULT_RADIUS_KM = 50
 
+/**
+ * Resolve the requested radius against the plan. "any" (or a missing value
+ * with sort-only callers) means Anywhere, which only plans with
+ * maxSearchRadiusKm === null get; others are capped at their maximum.
+ */
+export function resolveRadius(raw: string | null | undefined, ent: Entitlements): number | null {
+  const max = ent.maxSearchRadiusKm
+  if (raw === 'any') return max
+  const km = raw ? parseFloat(raw) : DEFAULT_RADIUS_KM
+  const v = Number.isFinite(km) && km > 0 ? km : DEFAULT_RADIUS_KM
+  return max === null ? Math.min(v, 20000) : Math.min(v, max)
+}
+
+function sortKeyOf(raw: string | null | undefined, hasLocation: boolean): SortKey {
+  switch (raw) {
+    case 'nearest': case 'distance': return hasLocation ? 'nearest' : 'active'
+    case 'active': case 'online': case 'verified': return 'active'
+    case 'new': return 'new'
+    case 'match': return 'match'
+    default: return hasLocation ? 'nearest' : 'active'
+  }
+}
+
+// Upper bound on candidates evaluated in memory (the community is small;
+// candidates are the most recently active first).
+const CANDIDATE_CAP = 1500
+
+/**
+ * Location-first member search.
+ *  - With a location (home coordinates, or travel destination coordinates),
+ *    members within the radius come first; members without coordinates are
+ *    never dropped — they follow in a "Distance unknown" group.
+ *  - Without a location (or a radius of Anywhere) everyone matching the
+ *    filters is listed, most recently active first.
+ *  - Travel mode without coordinates browses the destination city by name.
+ *  - The city text filter is part of "Anywhere" (Gold+).
+ */
 export async function searchMembers(caller: CallerContext, params: SearchParamsInput): Promise<SearchResult> {
   const now = new Date()
   const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1)
   const limit = Math.min(Math.max(parseInt(params.limit ?? '20', 10) || 20, 1), 100)
-  const sortBy = params.sort ?? 'online'
   const callerHasLocation = caller.latitude != null && caller.longitude != null
-  const rawKm = params.maxKm ? parseFloat(params.maxKm) : NaN
-  const maxKm = callerHasLocation && rawKm > 0 ? Math.min(rawKm, 20000) : null
-  const sortByDistance = sortBy === 'distance' && callerHasLocation
+  const sort = sortKeyOf(params.sort, callerHasLocation)
+  // Legacy maxKm param still works as a radius
+  const radiusParam = params.radius ?? params.maxKm ?? null
+  const radiusKm = callerHasLocation ? resolveRadius(radiusParam, caller.ent) : null
 
-  // FREE users are locked to their own city regardless of query param
-  const effectiveCity = caller.paid ? (params.city || null) : caller.city
+  // City: an explicit city filter (Gold+), or the travel destination when the
+  // traveller has no destination coordinates.
+  const effectiveCity = caller.ent.searchAnyCity && params.city
+    ? params.city
+    : caller.travel && !callerHasLocation && params.anyCity !== '1'
+      ? caller.travel.city
+      : null
 
   const profileWhere: Prisma.ProfileWhereInput = { AND: [notSnoozed(now), ...mutualInterestWhere(caller)] }
   const and = profileWhere.AND as Prisma.ProfileWhereInput[]
+  const userAnd: Prisma.UserWhereInput[] = []
+
+  // Advanced filters (Gold+). Never filters on ethnicity.
+  const wantedAdvanced = requestedAdvancedFilters(params)
+  const ignoredFilters = caller.ent.advancedFilters ? [] : wantedAdvanced
+  if (caller.ent.advancedFilters && wantedAdvanced.length) {
+    const hMin = parseInt(params.heightMin ?? '', 10)
+    const hMax = parseInt(params.heightMax ?? '', 10)
+    if (hMin >= 100 && hMin <= 250) and.push({ heightCm: { gte: hMin } })
+    if (hMax >= 100 && hMax <= 250) and.push({ heightCm: { lte: hMax } })
+    const bodyTypes = csv(params.bodyType)
+    if (bodyTypes.length) and.push({ bodyType: { in: bodyTypes } })
+    const intentions = csv(params.intentions)
+    if (intentions.length) and.push({ intentions: { hasSome: intentions } })
+    const languages = csv(params.languages)
+    if (languages.length) and.push({ languages: { hasSome: languages } })
+    if (params.verified === '1') userAnd.push({ isVerified: true })
+    if (params.photos === '1') {
+      userAnd.push({ OR: [{ profile: { profilePhoto: { not: null } } }, { photos: { some: { isPrivate: false } } }] })
+    }
+    if (params.active === '1') and.push({ lastSeen: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } })
+  }
 
   // "Show me" filter (new) — falls back to the legacy single `gender` param.
   const VALID_CATS: Category[] = ['WOMAN', 'MAN', 'NON_BINARY', 'COUPLE']
@@ -348,30 +527,34 @@ export async function searchMembers(caller: CallerContext, params: SearchParamsI
   if (show.length) {
     and.push({ OR: Array.from(new Set(show)).map((c) => categoryWhere(c, c === 'COUPLE' ? coupleTypes : undefined)) })
   }
-  if (effectiveCity) and.push({ city: { contains: effectiveCity, mode: 'insensitive' } })
+  if (effectiveCity) and.push(cityWhere(effectiveCity, now))
   if (params.tier === 'FREE' || params.tier === 'GOLD' || params.tier === 'PLATINUM') {
     and.push({ membershipTier: params.tier })
   }
   if (params.lookingFor) and.push({ lookingFor: { has: params.lookingFor } })
   if (params.online === '1') and.push({ isOnline: true })
-  if (params.ageMax) {
+  const ageMax = parseInt(params.ageMax ?? '', 10)
+  const ageMin = parseInt(params.ageMin ?? '', 10)
+  if (ageMax > 0) {
     const oldestDob = new Date(now)
-    oldestDob.setFullYear(oldestDob.getFullYear() - parseInt(params.ageMax, 10))
-    and.push({ dateOfBirth: { lte: oldestDob } })
+    oldestDob.setFullYear(oldestDob.getFullYear() - ageMax - 1)
+    and.push({ dateOfBirth: { gt: oldestDob } })
   }
-  if (params.ageMin) {
+  if (ageMin > 0) {
     const youngestDob = new Date(now)
-    youngestDob.setFullYear(youngestDob.getFullYear() - parseInt(params.ageMin, 10))
-    and.push({ dateOfBirth: { gte: youngestDob } })
+    youngestDob.setFullYear(youngestDob.getFullYear() - ageMin)
+    and.push({ dateOfBirth: { lte: youngestDob } })
   }
-  if (maxKm !== null) {
-    const box = boundingBox(caller.latitude!, caller.longitude!, maxKm)
+  if (radiusKm !== null) {
+    // Within the bounding box, or no coordinates at all ("Distance unknown")
+    const box = boundingBox(caller.latitude!, caller.longitude!, radiusKm)
     and.push({
-      latitude: { gte: box.minLat, lte: box.maxLat },
-      longitude: { gte: box.minLng, lte: box.maxLng },
+      OR: [
+        { latitude: { gte: box.minLat, lte: box.maxLat }, longitude: { gte: box.minLng, lte: box.maxLng } },
+        { latitude: null },
+        { longitude: null },
+      ],
     })
-  } else if (sortByDistance) {
-    and.push({ latitude: { not: null }, longitude: { not: null } })
   }
 
   const excludedIds = await getBlockedIds(caller.userId)
@@ -396,114 +579,146 @@ export async function searchMembers(caller: CallerContext, params: SearchParamsI
     id: { not: caller.userId, notIn: excludedIds },
     isActive: true,
     profile: profileWhere,
+    ...(userAnd.length ? { AND: userAnd } : {}),
   }
 
-  // ── Path A: distance radius or distance sort ─────────────────────────────
-  // Exact radius filtering can't be expressed in Prisma, so we pull the
-  // (bounding-box-limited) candidates' coordinates, filter/sort in memory,
-  // paginate, then load full card data for just the requested page.
-  if (maxKm !== null || sortByDistance) {
-    const candidates = await db.user.findMany({
-      where: userWhere,
-      select: {
-        id: true,
-        createdAt: true,
-        isVerified: true,
-        profile: {
-          select: {
-            latitude: true, longitude: true, boostedUntil: true,
-            membershipTier: true, isOnline: true, lastSeen: true,
-          },
-        },
-      },
-      orderBy: [{ profile: { lastSeen: 'desc' } }, { id: 'asc' }],
-      take: DISTANCE_CANDIDATE_CAP,
-    })
+  const rows = await db.user.findMany({
+    where: userWhere,
+    select: memberSelect,
+    orderBy: [{ profile: { lastSeen: 'desc' } }, { id: 'asc' }],
+    take: CANDIDATE_CAP,
+  })
 
-    const TIER_RANK = { PLATINUM: 2, GOLD: 1, FREE: 0 } as const
-    const scored = candidates
-      .map((c) => {
-        const p = c.profile
-        const km = p?.latitude != null && p?.longitude != null
-          ? distanceKm(caller.latitude!, caller.longitude!, p.latitude, p.longitude)
-          : Infinity
-        return { c, km }
-      })
-      .filter(({ km }) => maxKm === null || km <= maxKm)
+  const results = rows.map((r) => {
+    const member = toMemberResult(r, caller, 1, effectiveCity ?? caller.city)
+    const km = member.distanceKm
+    return { r, member, km }
+  })
+  const inRange = results.filter((x) => x.km === undefined || radiusKm === null || x.km <= radiusKm + 0.5)
 
-    scored.sort((x, y) => {
-      if (sortByDistance) return x.km - y.km
-      if (sortBy === 'new') return y.c.createdAt.getTime() - x.c.createdAt.getTime()
-      if (sortBy === 'verified' && x.c.isVerified !== y.c.isVerified) return x.c.isVerified ? -1 : 1
-      if (sortBy !== 'verified') {
-        // Default priority: boosted → paid tier → online → recently seen
-        const bx = isBoosted(x.c.profile?.boostedUntil) ? 1 : 0
-        const by = isBoosted(y.c.profile?.boostedUntil) ? 1 : 0
-        if (bx !== by) return by - bx
-        const tx = TIER_RANK[x.c.profile?.membershipTier ?? 'FREE']
-        const ty = TIER_RANK[y.c.profile?.membershipTier ?? 'FREE']
-        if (tx !== ty) return ty - tx
-        const ox = x.c.profile?.isOnline ? 1 : 0
-        const oy = y.c.profile?.isOnline ? 1 : 0
-        if (ox !== oy) return oy - ox
+  // Priority within a sort: boosted first, then plans with priorityInSearch.
+  const TIER_RANK: Record<PlanTier, number> = {
+    PLATINUM: entitlements('PLATINUM').priorityInSearch ? 2 : 0,
+    GOLD: entitlements('GOLD').priorityInSearch ? 1 : 0,
+    FREE: entitlements('FREE').priorityInSearch ? 1 : 0,
+  }
+  const createdById = new Map<string, number>()
+  if (sort === 'new') {
+    const created = await db.user.findMany({ where: { id: { in: inRange.map((x) => x.r.id) } }, select: { id: true, createdAt: true } })
+    for (const c of created) createdById.set(c.id, c.createdAt.getTime())
+  }
+  type Row = (typeof inRange)[number]
+  const lastSeen = (x: Row) => x.r.profile?.lastSeen?.getTime() ?? 0
+  const priority = (x: Row) => (x.member.isBoosted ? 10 : 0) + TIER_RANK[x.member.membershipTier ?? 'FREE']
+  const known = (x: Row) => (x.km === undefined ? 0 : 1)
+
+  inRange.sort((x, y) => {
+    // Members with a distance always come before "Distance unknown" when a radius applies
+    if ((radiusKm !== null || sort === 'nearest') && known(x) !== known(y)) return known(y) - known(x)
+    switch (sort) {
+      case 'nearest':
+        if (x.member.isBoosted !== y.member.isBoosted) return x.member.isBoosted ? -1 : 1
+        if (x.km !== undefined && y.km !== undefined && Math.round(x.km) !== Math.round(y.km)) return x.km - y.km
+        break
+      case 'new':
+        return (createdById.get(y.r.id) ?? 0) - (createdById.get(x.r.id) ?? 0)
+      case 'match':
+        if (x.member.compatibility !== y.member.compatibility) return y.member.compatibility - x.member.compatibility
+        break
+      case 'active': {
+        const p = priority(y) - priority(x)
+        if (p) return p
+        const o = Number(!!y.member.isOnline) - Number(!!x.member.isOnline)
+        if (o) return o
+        break
       }
-      return (y.c.profile?.lastSeen?.getTime() ?? 0) - (x.c.profile?.lastSeen?.getTime() ?? 0)
+    }
+    return lastSeen(y) - lastSeen(x)
+  })
+
+  const members = inRange.slice((page - 1) * limit, page * limit).map((x) => x.member)
+  const unknownDistance = radiusKm !== null ? inRange.filter((x) => x.km === undefined).length : 0
+  return {
+    members, total: inRange.length, page, limit, callerHasLocation, effectiveCity,
+    radiusKm, sort, unknownDistance, ignoredFilters,
+  }
+}
+
+/** Small deterministic string hash (FNV-1a) for stable rotations. */
+export function hashString(str: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return h >>> 0
+}
+
+const SPOTLIGHT_POOL = 60
+const SPOTLIGHT_ACTIVE_DAYS = 14
+
+/**
+ * Spotlight: a few active Platinum members (plan entitlement `spotlight`)
+ * shown at the top of discover and /members. Respects mutual interest,
+ * blocks, snooze and deactivation; never includes the viewer, and never
+ * spotlights incognito members. The selection rotates every hour.
+ *
+ * `excludeActed` drops members the viewer already liked / recently passed
+ * (used by discover so a spotlight card isn't one they've swiped on).
+ */
+export async function getSpotlight(
+  caller: CallerContext,
+  opts: { limit?: number; excludeActed?: boolean; excludeIds?: string[] } = {},
+): Promise<MemberResult[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 3, 1), 12)
+  const now = new Date()
+  const spotlightTiers = (['FREE', 'GOLD', 'PLATINUM'] as const).filter((t) => entitlements(t).spotlight)
+  if (!spotlightTiers.length) return []
+
+  const excluded = [...(opts.excludeIds ?? []), ...(await getBlockedIds(caller.userId))]
+  if (opts.excludeActed) {
+    const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)
+    const acted = await db.like.findMany({
+      where: { fromUserId: caller.userId, OR: [{ type: { not: 'PASS' } }, { type: 'PASS', createdAt: { gte: fiveDaysAgo } }] },
+      select: { toUserId: true },
     })
-
-    const pageIds = scored.slice((page - 1) * limit, page * limit).map(({ c }) => c.id)
-    const rows = pageIds.length
-      ? await db.user.findMany({ where: { id: { in: pageIds } }, select: memberSelect })
-      : []
-    const byId = new Map(rows.map((r) => [r.id, r]))
-    const members = pageIds
-      .map((id) => byId.get(id))
-      .filter((r): r is SelectedUser => !!r)
-      .map((r) => toMemberResult(r, caller))
-
-    return { members, total: scored.length, page, limit, callerHasLocation, effectiveCity }
+    excluded.push(...acted.map((a) => a.toUserId))
   }
 
-  // ── Path B: plain DB pagination ──────────────────────────────────────────
-  // Priority for the default sort: boosted profiles are fetched separately and
-  // excluded from the main query on every page, then prepended on page 1.
-  // The main query orders by membershipTier desc (enum order FREE<GOLD<PLATINUM,
-  // so desc = PLATINUM, GOLD, FREE), then online, then lastSeen.
-  const isDefaultSort = sortBy !== 'new' && sortBy !== 'verified'
-  let boosted: SelectedUser[] = []
-  if (isDefaultSort) {
-    boosted = await db.user.findMany({
-      where: { ...userWhere, profile: { AND: [profileWhere, { boostedUntil: { gt: now } }] } },
-      select: memberSelect,
-      orderBy: [{ profile: { boostedUntil: 'desc' } }],
-      take: BOOSTED_CAP,
-    })
+  const pool = await db.user.findMany({
+    where: {
+      id: { not: caller.userId, notIn: excluded },
+      isActive: true,
+      profile: {
+        AND: [
+          notSnoozed(now),
+          ...mutualInterestWhere(caller),
+          { membershipTier: { in: [...spotlightTiers] } },
+          { incognito: false },
+          { lastSeen: { gte: new Date(now.getTime() - SPOTLIGHT_ACTIVE_DAYS * 24 * 60 * 60 * 1000) } },
+        ],
+      },
+    },
+    select: memberSelect,
+    orderBy: [{ profile: { lastSeen: 'desc' } }, { id: 'asc' }],
+    take: SPOTLIGHT_POOL,
+  })
+
+  const hourBucket = Math.floor(now.getTime() / (60 * 60 * 1000))
+  return pool
+    .map((u) => ({ u, k: hashString(`${caller.userId}:${u.id}:${hourBucket}`) }))
+    .sort(localFirst(caller))
+    .slice(0, limit)
+    .map(({ u }) => ({ ...toMemberResult(u, caller), isSpotlight: true }))
+}
+
+/** Members in the caller's (home or travel) city rotate in first. */
+function localFirst<T extends { u: SelectedUser; k: number }>(caller: CallerContext) {
+  const city = caller.city?.toLowerCase() ?? null
+  const local = (x: T) => {
+    const p = x.u.profile
+    if (!city || !p) return 0
+    return (p.city?.toLowerCase() === city || (p.travelCity?.toLowerCase() === city && !!p.travelUntil && p.travelUntil.getTime() > Date.now())) ? 1 : 0
   }
-  const boostedIds = boosted.map((b) => b.id)
-  const mainWhere: Prisma.UserWhereInput = boostedIds.length
-    ? { ...userWhere, id: { not: caller.userId, notIn: [...excludedIds, ...boostedIds] } }
-    : userWhere
-
-  const [rows, total] = await Promise.all([
-    db.user.findMany({
-      where: mainWhere,
-      select: memberSelect,
-      skip: (page - 1) * limit,
-      take: limit,
-      orderBy: sortBy === 'new'
-        ? [{ createdAt: 'desc' }, { id: 'asc' }]
-        : sortBy === 'verified'
-          ? [{ isVerified: 'desc' }, { profile: { lastSeen: 'desc' } }, { id: 'asc' }]
-          : [
-              { profile: { membershipTier: 'desc' } },
-              { profile: { isOnline: 'desc' } },
-              { profile: { lastSeen: 'desc' } },
-              { id: 'asc' },
-            ],
-    }),
-    db.user.count({ where: userWhere }),
-  ])
-
-  const combined = page === 1 ? [...boosted, ...rows] : rows
-  const members = combined.map((r) => toMemberResult(r, caller))
-  return { members, total, page, limit, callerHasLocation, effectiveCity }
+  return (a: T, b: T) => local(b) - local(a) || a.k - b.k
 }

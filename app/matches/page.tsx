@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import EmptyState from '@/components/EmptyState';
-import { Heart, MessageCircle, MapPin, User, ChevronDown, Users } from 'lucide-react';
+import { Heart, MessageCircle, MapPin, User, ChevronDown, Users, Star, Sparkles } from 'lucide-react';
+import BlurredPeople from '@/components/plans/BlurredPeople';
 import ExpiryCountdown from '@/components/chat/ExpiryCountdown';
 
 interface Match {
@@ -27,6 +28,31 @@ interface Match {
   couple?: { label: string; kind: 'linked' | 'shared' } | null;
   /** Who on my side matched (me, or my linked partner) */
   matchedVia?: { id: string; name: string; isMe: boolean };
+}
+
+interface LikedYou {
+  id: string;
+  type: 'LIKE' | 'WINK' | 'SUPERLIKE';
+  createdAt: string;
+  member: {
+    id: string;
+    username: string;
+    displayName?: string;
+    age?: number;
+    ages?: number[];
+    isCouple?: boolean;
+    city?: string;
+    profilePhotoUrl?: string;
+    compatibility?: number;
+    isOnline?: boolean;
+  };
+}
+
+interface LikesResponse {
+  locked: boolean;
+  count: number;
+  superCount: number;
+  likes: LikedYou[];
 }
 
 function timeAgo(dateStr: string) {
@@ -55,18 +81,124 @@ export default function MatchesPage() {
   const [showExpired, setShowExpired] = useState(false);
   const [inCouple, setInCouple] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
+  const [likedYou, setLikedYou] = useState<LikesResponse | null>(null);
+  const [likingBack, setLikingBack] = useState<string | null>(null);
 
   const isExpired = (m: Match) => !!m.expired || (!!m.expiresAt && new Date(m.expiresAt).getTime() < Date.now());
   const activeMatches = matches.filter(m => !isExpired(m));
   const expiredMatches = matches.filter(isExpired);
 
-  useEffect(() => {
-    fetch('/api/matches')
+  function loadMatches() {
+    return fetch('/api/matches')
       .then(r => r.json())
       .then(d => { setMatches(d.matches || []); setInCouple(!!d.inCouple); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    loadMatches().finally(() => setLoading(false));
+    fetch('/api/likes')
+      .then(r => (r.ok ? r.json() : null))
+      .then((d: LikesResponse | null) => { if (d) setLikedYou(d); })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function likeBack(l: LikedYou, type: 'LIKE' | 'PASS') {
+    setLikingBack(l.member.id);
+    try {
+      const res = await fetch('/api/likes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toUserId: l.member.id, type }),
+      });
+      if (res.ok) {
+        setLikedYou(prev => prev ? { ...prev, count: Math.max(0, prev.count - 1), likes: prev.likes.filter(x => x.id !== l.id) } : prev);
+        const d = await res.json().catch(() => ({})) as { matched?: boolean };
+        if (d.matched) await loadMatches();
+      }
+    } catch { /* ignore */ }
+    setLikingBack(null);
+  }
+
+  function renderLikedYou() {
+    if (!likedYou || likedYou.count === 0) return null;
+    if (likedYou.locked) {
+      return (
+        <section aria-labelledby="liked-you-title" className="mb-10">
+          <h2 id="liked-you-title" className="flex items-center gap-2 text-white font-semibold mb-3">
+            <Heart size={16} className="text-[#FF4D6D] fill-[#FF4D6D]" aria-hidden="true" /> Liked you
+            <span className="text-white/55 font-normal text-sm">· {likedYou.count}</span>
+          </h2>
+          <BlurredPeople
+            count={likedYou.count}
+            headline={`${likedYou.count} ${likedYou.count === 1 ? 'person has' : 'people have'} already liked you`}
+            body={`${likedYou.superCount > 0 ? `Including ${likedYou.superCount} super like${likedYou.superCount === 1 ? '' : 's'}. ` : ''}With Gold you'll see exactly who — like them back and it's an instant match. Or keep swiping in Discover: when you like each other, they'll appear here.`}
+          />
+        </section>
+      );
+    }
+    return (
+      <section aria-labelledby="liked-you-title" className="mb-10">
+        <h2 id="liked-you-title" className="flex items-center gap-2 text-white font-semibold mb-1">
+          <Heart size={16} className="text-[#FF4D6D] fill-[#FF4D6D]" aria-hidden="true" /> Liked you
+          <span className="text-white/55 font-normal text-sm">· {likedYou.count}</span>
+        </h2>
+        <p className="text-white/55 text-sm mb-4">Like them back for an instant match.</p>
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+          {likedYou.likes.map((l) => {
+            const m = l.member;
+            const name = m.displayName || m.username;
+            const age = m.isCouple && m.ages?.length ? m.ages.join(' & ') : m.age;
+            return (
+              <div key={l.id} className={`shrink-0 w-40 glass rounded-2xl overflow-hidden ${l.type === 'SUPERLIKE' ? 'ring-1 ring-[#D4AF37]/50' : ''}`}>
+                <Link href={`/members/${m.username}`} className="block aspect-[3/4] relative bg-gradient-to-br from-rose-950 to-[#0A0A0F]">
+                  {m.profilePhotoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.profilePhotoUrl} alt={name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="absolute inset-0 flex items-center justify-center text-white/55 text-3xl font-bold font-serif">{name.slice(0, 2).toUpperCase()}</span>
+                  )}
+                  {l.type === 'SUPERLIKE' && (
+                    <span className="absolute top-2 left-2 flex items-center gap-1 bg-[#D4AF37] text-[#0A0A0F] text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+                      <Star size={9} className="fill-[#0A0A0F]" aria-hidden="true" /> SUPER
+                    </span>
+                  )}
+                  {l.type === 'WINK' && <span className="absolute top-2 left-2 glass text-[11px] px-1.5 py-0.5 rounded-md" title="Winked at you">👋</span>}
+                  {typeof m.compatibility === 'number' && m.compatibility > 0 && (
+                    <span className="absolute bottom-2 left-2 flex items-center gap-0.5 glass text-[10px] font-bold px-1.5 py-0.5 rounded-md text-[#D4AF37]">
+                      <Sparkles size={9} aria-hidden="true" /> {m.compatibility}%
+                    </span>
+                  )}
+                </Link>
+                <div className="p-2.5">
+                  <p className="text-white text-sm font-semibold truncate">{name}{age ? <span className="text-white/60 font-normal">, {age}</span> : null}</p>
+                  <p className="text-white/50 text-[11px] truncate">{m.city ?? ''}{m.city ? ' · ' : ''}{timeAgo(l.createdAt)}</p>
+                  <div className="flex gap-1.5 mt-2">
+                    <button
+                      onClick={() => likeBack(l, 'LIKE')}
+                      disabled={likingBack === m.id}
+                      className="flex-1 flex items-center justify-center gap-1 bg-[#DC143C] hover:bg-[#FF1744] text-white text-xs font-semibold py-1.5 rounded-lg disabled:opacity-60"
+                    >
+                      <Heart size={11} className="fill-white" aria-hidden="true" /> Like back
+                    </button>
+                    <button
+                      onClick={() => likeBack(l, 'PASS')}
+                      disabled={likingBack === m.id}
+                      className="px-2 glass text-white/60 hover:text-white text-xs rounded-lg disabled:opacity-60"
+                      aria-label={`Pass on ${name}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    );
+  }
 
   // Opens (or creates) the shared conversation — both partners of a couple are in it
   async function startConversation(username: string) {
@@ -190,6 +322,7 @@ export default function MatchesPage() {
         </div>
 
         <div className="max-w-5xl mx-auto px-4 py-8">
+          {!loading && renderLikedYou()}
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" aria-busy="true" aria-label="Loading matches">
               {Array.from({ length: 6 }).map((_, i) => (

@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Home, Compass, MessageCircle, CalendarDays, User } from 'lucide-react';
+import { Home, Compass, MessageCircle, Sparkles, User } from 'lucide-react';
+import { useSparkToday } from './spark/useSparkToday';
 
-const TABS = [
+// Events lives in the top menu; the daily Spark earns the tab-bar slot.
+const TABS: { href: string; label: string; icon: typeof Home; showBadge?: boolean; sparkDot?: boolean }[] = [
   { href: '/members', label: 'Home', icon: Home },
   { href: '/discover', label: 'Discover', icon: Compass },
+  { href: '/spark', label: 'Spark', icon: Sparkles, sparkDot: true },
   { href: '/messages', label: 'Messages', icon: MessageCircle, showBadge: true },
-  { href: '/events', label: 'Events', icon: CalendarDays },
   { href: '/profile', label: 'Profile', icon: User },
 ];
 
@@ -20,6 +22,8 @@ export default function MobileNav() {
   const pathname = usePathname();
   const { status } = useSession();
   const [unread, setUnread] = useState(0);
+  const spark = useSparkToday();
+  const sparkPending = !!spark && !spark.answered;
 
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -52,14 +56,14 @@ export default function MobileNav() {
       aria-label="Primary"
     >
       <div className="flex items-stretch h-16">
-        {TABS.map(({ href, label, icon: Icon, showBadge }) => {
+        {TABS.map(({ href, label, icon: Icon, showBadge, sparkDot }) => {
           const isActive = pathname.startsWith(href);
           return (
             <Link
               key={href}
               href={href}
               className="flex-1 flex flex-col items-center justify-center gap-0.5 relative"
-              aria-label={showBadge && unread > 0 ? `${label} (${unread} unread)` : label}
+              aria-label={showBadge && unread > 0 ? `${label} (${unread} unread)` : sparkDot && sparkPending ? `${label} (new question)` : label}
               aria-current={isActive ? 'page' : undefined}
             >
               <div className="relative">
@@ -68,6 +72,9 @@ export default function MobileNav() {
                   className={`transition-colors ${isActive ? 'text-[#DC143C]' : 'text-white/60'}`}
                   aria-hidden="true"
                 />
+                {sparkDot && sparkPending && (
+                  <span aria-hidden="true" className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-[#D4AF37] border border-[#0A0A0F]" />
+                )}
                 {showBadge && unread > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 bg-[#DC143C] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1">
                     {unread > 9 ? '9+' : unread}

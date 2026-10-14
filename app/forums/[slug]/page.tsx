@@ -2,7 +2,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { isPaid } from '@/lib/premium';
+import { entitlements } from '@/lib/plans';
 import ForumSlugClient from './ForumSlugClient';
 
 interface Thread {
@@ -97,7 +97,7 @@ export default async function ForumSlugPage({ params, searchParams }: PageProps)
       where: { id: session.user.id },
       select: { role: true, profile: { select: { membershipTier: true } } },
     });
-    canPost = isPaid(u?.profile?.membershipTier, u?.role);
+    canPost = entitlements(u?.profile?.membershipTier, u?.role).forumPosting;
   }
 
   return (

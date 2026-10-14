@@ -5,22 +5,26 @@ import Logo from './Logo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Menu, X, ChevronDown, LogOut, User, Crown, MessageCircle, Eye, Shield, CreditCard, ShieldCheck } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, Crown, MessageCircle, Eye, Shield, CreditCard, ShieldCheck, BarChart3, CalendarDays, MessagesSquare } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import ProfileCompletionBanner from './ProfileCompletionBanner';
+import { useSparkToday } from './spark/useSparkToday';
 
 interface NavConversationCount {
   unreadCount: number;
 }
 
-const NAV_LINKS = [
+// `wide`: only shown in the desktop bar from xl up (they move into the account menu below that).
+const NAV_LINKS: { href: string; label: string; showBadge?: boolean; sparkDot?: boolean; wide?: boolean }[] = [
   { href: '/members', label: 'Members' },
   { href: '/discover', label: 'Discover' },
+  { href: '/spark', label: 'Spark', sparkDot: true },
   { href: '/matches', label: 'Matches' },
   { href: '/messages', label: 'Messages', showBadge: true },
+  { href: '/gallery/explore', label: 'Explore' },
   { href: '/gallery', label: 'Gallery' },
-  { href: '/events', label: 'Events' },
-  { href: '/forums', label: 'Forums' },
+  { href: '/events', label: 'Events', wide: true },
+  { href: '/forums', label: 'Forums', wide: true },
 ];
 
 export default function Navbar() {
@@ -29,8 +33,13 @@ export default function Navbar() {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const pathname = usePathname();
   const { data: session, status } = useSession();
+  const spark = useSparkToday();
+  const sparkPending = !!spark && !spark.answered;
 
-  const isActive = (href: string) => pathname.startsWith(href);
+  const isActive = (href: string) =>
+    href === '/gallery'
+      ? pathname.startsWith('/gallery') && !pathname.startsWith('/gallery/explore')
+      : pathname.startsWith(href);
 
   const username = (session?.user as { username?: string })?.username ?? session?.user?.email ?? '';
   const initials = username.slice(0, 2).toUpperCase() || 'U';
@@ -64,16 +73,20 @@ export default function Navbar() {
           <Logo />
 
           {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map(({ href, label, showBadge }) => (
+          <div className="hidden lg:flex items-center gap-1">
+            {NAV_LINKS.map(({ href, label, showBadge, sparkDot, wide }) => (
               <Link
                 key={href}
                 href={href}
-                className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                aria-label={sparkDot && sparkPending ? `${label} (today's question is waiting)` : undefined}
+                className={`relative ${wide ? 'hidden xl:inline-flex' : 'inline-flex'} px-2.5 xl:px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   isActive(href) ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'
                 }`}
               >
                 {label}
+                {sparkDot && sparkPending && (
+                  <span aria-hidden="true" className="absolute top-1.5 right-1 w-1.5 h-1.5 rounded-full bg-[#D4AF37] shadow-[0_0_6px_rgba(212,175,55,0.8)]" />
+                )}
                 {showBadge && unreadMessages > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 bg-[#DC143C] rounded-full text-white text-xs font-bold flex items-center justify-center px-1">
                     {unreadMessages > 9 ? '9+' : unreadMessages}
@@ -84,7 +97,7 @@ export default function Navbar() {
           </div>
 
           {/* Right Side */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-3 ml-auto mr-2 lg:mr-0">
             {status === 'loading' ? (
               <div className="flex items-center gap-3">
                 <div className="w-20 h-8 rounded-lg bg-white/5 animate-pulse" />
@@ -147,6 +160,27 @@ export default function Navbar() {
                         <CreditCard size={14} />Subscription
                       </Link>
                       <Link
+                        href="/insights"
+                        className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <BarChart3 size={14} />Profile insights
+                      </Link>
+                      <Link
+                        href="/events"
+                        className="flex xl:hidden items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <CalendarDays size={14} />Events
+                      </Link>
+                      <Link
+                        href="/forums"
+                        className="flex xl:hidden items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <MessagesSquare size={14} />Forums
+                      </Link>
+                      <Link
                         href="/views"
                         className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
                         onClick={() => setUserMenuOpen(false)}
@@ -200,7 +234,7 @@ export default function Navbar() {
 
           {/* Mobile Toggle */}
           <button
-            className="md:hidden text-white/80 hover:text-white w-10 h-10 -mr-2 flex items-center justify-center rounded-lg"
+            className="lg:hidden text-white/80 hover:text-white w-10 h-10 -mr-2 flex items-center justify-center rounded-lg"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle navigation menu"
             aria-expanded={mobileOpen}
@@ -212,8 +246,8 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="md:hidden glass-dark border-t border-white/5 px-4 py-4 space-y-1">
-          {NAV_LINKS.map(({ href, label, showBadge }) => (
+        <div className="lg:hidden glass-dark border-t border-white/5 px-4 py-4 space-y-1">
+          {NAV_LINKS.map(({ href, label, showBadge, sparkDot }) => (
             <Link
               key={href}
               href={href}
@@ -223,6 +257,9 @@ export default function Navbar() {
               onClick={() => setMobileOpen(false)}
             >
               {label}
+              {sparkDot && sparkPending && (
+                <span className="ml-2 text-[10px] font-semibold text-[#D4AF37]">New question</span>
+              )}
               {showBadge && unreadMessages > 0 && (
                 <span className="ml-2 min-w-5 h-5 bg-[#DC143C] rounded-full text-white text-xs font-bold flex items-center justify-center px-1">
                   {unreadMessages}

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { MessageSquare, Eye, Clock, ChevronLeft, ChevronRight, Plus, X, Lock, Pin } from 'lucide-react';
+import { MessageSquare, Eye, Clock, ChevronLeft, ChevronRight, Plus, X, Pin } from 'lucide-react';
 
 interface Thread {
   id: string;
@@ -121,11 +121,11 @@ export default function ForumSlugClient({ slug, category, threads, total, curren
             </button>
           ) : (
             <Link
-              href="/upgrade"
-              className="flex items-center gap-2 glass border border-[#D4AF37]/30 px-4 py-2 rounded-xl text-[#D4AF37] hover:bg-[#D4AF37]/10 text-sm transition-colors"
+              href={`/auth/signin?callbackUrl=/forums/${slug}`}
+              className="flex items-center gap-2 glass border border-white/15 px-4 py-2 rounded-xl text-white/80 hover:bg-white/5 text-sm transition-colors"
             >
-              <Lock size={14} />
-              <span>Upgrade to Gold to post</span>
+              <Plus size={14} />
+              <span>Sign in to post</span>
             </Link>
           )}
         </div>

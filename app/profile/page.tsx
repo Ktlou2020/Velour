@@ -4,7 +4,12 @@ import { db } from '@/lib/db';
 import ProfileClient from './ProfileClient';
 import { isPaid, isPlatinum } from '@/lib/premium';
 import { parsePrompts } from './prompts';
-import { effectiveInterestedIn, parseCoupleMembers, personFromProfile } from '@/lib/identity';
+import { completenessOf, effectiveInterestedIn, parseCoupleMembers, personFromProfile } from '@/lib/identity';
+import { activeStatus } from '@/components/status/status';
+import { loadBadges } from '@/lib/badges';
+import { loadSparkAnswers } from '@/app/api/spark/data';
+import { todaySpark } from '@/lib/spark';
+import type { StrengthFacts } from './strength';
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -29,6 +34,13 @@ export default async function ProfilePage() {
 
   if (!user) redirect('/auth/signin');
 
+  const today = todaySpark();
+  const [badges, sparkAnswers] = await Promise.all([
+    loadBadges(user.id),
+    loadSparkAnswers(user.id, 4),
+  ]);
+  const sparkAnsweredToday = sparkAnswers.some((a) => a.key === today.key);
+
   const profile = user.profile;
   const members = parseCoupleMembers(profile?.coupleMembers);
   const me = profile ? personFromProfile(profile) : { showGender: true, showOrientation: true };
@@ -40,6 +52,17 @@ export default async function ProfilePage() {
   const person = profile?.isCouple && !linkedPartner && members[0]
     ? { ...me, ...members[0], dateOfBirth: me.dateOfBirth }
     : me;
+
+  const hasMainPhoto = user.photos.some((p) => p.isProfile) || !!profile?.profilePhoto;
+  const strength: StrengthFacts = {
+    missing: completenessOf(profile, hasMainPhoto).missing,
+    publicPhotos: user.photos.filter((p) => !p.isPrivate).length,
+    prompts: parsePrompts(profile?.prompts).length,
+    hasIntentions: (profile?.intentions?.length ?? 0) > 0,
+    isCouple: !!profile?.isCouple,
+    hasPersonalTouch: profile?.isCouple ? (!!linkedPartner || !!members[1]) : !!profile?.pronouns,
+    sparkAnsweredToday,
+  };
 
   const initialProfile = {
     id: user.id,
@@ -73,6 +96,10 @@ export default async function ProfilePage() {
     hasLocation: profile?.latitude != null && profile?.longitude != null,
     isPaid: isPaid(profile?.membershipTier, user.role),
     isPlatinum: isPlatinum(profile?.membershipTier, user.role),
+    status: activeStatus(profile),
+    badges,
+    strength,
+    sparkAnswers: sparkAnswers.slice(0, 3),
     photos: user.photos.map(p => ({
       id: p.id,
       url: p.url,

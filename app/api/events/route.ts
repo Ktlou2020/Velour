@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
+import { entitlements } from '@/lib/plans'
 
 export async function GET(req: NextRequest) {
   try {
@@ -40,15 +41,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Admin OR paying members can create events
+    // Hosting events is a Gold+ entitlement (admins get everything)
     const user = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true, profile: { select: { membershipTier: true } } },
     })
 
-    const isPaying = user?.profile?.membershipTier === 'GOLD' || user?.profile?.membershipTier === 'PLATINUM'
-    if (!user || (user.role !== 'ADMIN' && !isPaying)) {
-      return NextResponse.json({ error: 'Upgrade to Gold or Platinum to create events' }, { status: 403 })
+    if (!user || !entitlements(user.profile?.membershipTier, user.role).createEvents) {
+      return NextResponse.json(
+        { error: 'Hosting events is part of Gold and Platinum. You can still browse and RSVP to every event.', upgrade: true },
+        { status: 403 }
+      )
     }
 
     const body = await req.json()
