@@ -113,7 +113,7 @@ export default async function ForumsPage() {
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
               <h1 className="font-serif text-4xl font-bold text-white mb-2">Community Forums</h1>
-              <p className="text-white/50">Connect, share, and engage with the Velour community</p>
+              <p className="text-white/50">Connect, share, and engage with the Hush community</p>
             </div>
             {canPost ? (
               categories.length > 0 && (

@@ -17,7 +17,7 @@ export default function Loading() {
         />
         {/* Logo */}
         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center shadow-lg shadow-[#DC143C]/30">
-          <span className="text-white font-bold text-2xl font-serif select-none">V</span>
+          <span className="text-white font-bold text-2xl font-serif select-none">H</span>
         </div>
       </div>
     </div>

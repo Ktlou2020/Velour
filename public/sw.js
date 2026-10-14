@@ -1,4 +1,4 @@
-const CACHE_NAME = 'velour-v2';
+const CACHE_NAME = 'hush-v1';
 const PRECACHE_URLS = ['/', '/members', '/discover', '/messages', '/offline'];
 
 // ── Install ──────────────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ self.addEventListener('push', (event) => {
     data = event.data ? event.data.json() : {};
   } catch { /* ignore */ }
 
-  const title = data.title || 'Velour';
+  const title = data.title || 'Hush';
   const options = {
     body: data.body || 'You have a new notification',
     icon: data.icon || '/icon-192.png',

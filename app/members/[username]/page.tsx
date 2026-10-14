@@ -99,7 +99,7 @@ export default async function MemberProfilePage({ params }: PageProps) {
       });
       await sendPushToUser(user.id, {
         title: 'Someone viewed your profile',
-        body: 'A member just visited your Velour profile',
+        body: 'A member just visited your Hush profile',
         url: '/views',
         tag: `view-${viewerId}`,
       });

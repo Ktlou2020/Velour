@@ -7,8 +7,8 @@ import Footer from '@/components/Footer'
 import ShareDateClient from './ShareDateClient'
 
 export const metadata = {
-  title: 'Safety Centre — Velour',
-  description: 'Practical tips for meeting Velour members in person, emergency numbers for South Africa, and Share My Date.',
+  title: 'Safety Centre — Hush',
+  description: 'Practical tips for meeting Hush members in person, emergency numbers for South Africa, and Share My Date.',
 }
 
 const TIPS = [
@@ -71,13 +71,13 @@ export default async function SafetyPage() {
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href={isLoggedIn ? '/members' : '/'} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm">Back to Velour</span>
+            <span className="text-sm">Back to Hush</span>
           </Link>
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center">
               <span className="text-white font-serif font-bold text-sm">V</span>
             </div>
-            <span className="font-serif font-bold tracking-wide text-white">VELOUR</span>
+            <span className="font-serif font-bold tracking-wide text-white">HUSH</span>
           </div>
         </div>
       </div>
@@ -146,7 +146,7 @@ export default async function SafetyPage() {
             <span className="w-8 h-8 rounded-lg bg-[#DC143C]/15 flex items-center justify-center text-[#DC143C] flex-shrink-0">
               <Flag className="w-4 h-4" />
             </span>
-            Reporting &amp; blocking on Velour
+            Reporting &amp; blocking on Hush
           </h2>
           <div className="space-y-3 text-gray-300 leading-relaxed pl-11">
             <p>
@@ -162,7 +162,7 @@ export default async function SafetyPage() {
             </p>
             <p>
               If something happened offline, please also report it to SAPS. You can contact our team at{' '}
-              <a href="mailto:support@velour.dating" className="text-[#DC143C] hover:underline">support@velour.dating</a>.
+              <a href="mailto:support@hush.dating" className="text-[#DC143C] hover:underline">support@hush.dating</a>.
             </p>
           </div>
         </section>

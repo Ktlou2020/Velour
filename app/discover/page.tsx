@@ -33,7 +33,7 @@ type AnimDir = 'left' | 'right' | 'up' | null;
 
 export default function DiscoverPage() {
   const { data: session } = useSession();
-  const watermark = (session?.user as { username?: string })?.username ?? session?.user?.email ?? 'velour';
+  const watermark = (session?.user as { username?: string })?.username ?? session?.user?.email ?? 'hush';
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);

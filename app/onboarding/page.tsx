@@ -200,7 +200,7 @@ export default function OnboardingPage() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center shadow-lg shadow-[#DC143C]/25">
               <span className="text-white font-bold text-xl font-serif">V</span>
             </div>
-            <span className="text-white font-bold text-2xl tracking-widest font-serif">VELOUR</span>
+            <span className="text-white font-bold text-2xl tracking-widest font-serif">HUSH</span>
           </div>
           <p className="text-white/40 text-sm">Complete your profile to get started</p>
         </div>

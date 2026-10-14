@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     })
 
     const amount = PRICES[tier][billing].toFixed(2)
-    const itemName = tier === 'GOLD' ? 'Velour Gold' : 'Velour Platinum'
+    const itemName = tier === 'GOLD' ? 'Hush Gold' : 'Hush Platinum'
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
     const today = new Date().toISOString().split('T')[0]
     // frequency: 3 = monthly, 6 = annual

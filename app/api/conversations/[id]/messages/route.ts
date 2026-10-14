@@ -215,7 +215,7 @@ export async function POST(
         },
       })
       sendPushToUser(participant.userId, {
-        title: 'New Message — Velour',
+        title: 'New Message — Hush',
         body: preview,
         url: `/messages`,
         tag: `message-${conversationId}`,

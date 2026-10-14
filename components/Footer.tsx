@@ -6,11 +6,11 @@ export default function Footer() {
       <div className="max-w-6xl mx-auto">
         <div className="grid md:grid-cols-4 gap-10 mb-12">
           <div className="md:col-span-2">
-            <Link href="/" className="flex items-center gap-2 mb-4" aria-label="Velour home">
+            <Link href="/" className="flex items-center gap-2 mb-4" aria-label="Hush home">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-crimson-500 to-crimson-700 flex items-center justify-center">
                 <span className="text-white font-bold text-lg font-serif">V</span>
               </div>
-              <span className="text-white font-bold text-xl tracking-widest">VELOUR</span>
+              <span className="text-white font-bold text-xl tracking-widest">HUSH</span>
             </Link>
             <p className="text-white/40 text-sm leading-relaxed max-w-xs">
               Where Connections Become Extraordinary. The world&apos;s most refined lifestyle dating community for discerning adults.
@@ -60,7 +60,7 @@ export default function Footer() {
         <div className="section-divider mb-6" />
 
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-white/30 text-sm">© 2025 Velour. All rights reserved. 18+ only.</p>
+          <p className="text-white/30 text-sm">© 2025 Hush. All rights reserved. 18+ only.</p>
           <p className="text-white/20 text-xs text-center md:text-right">This site is intended for adults aged 18 and over. By using this site you agree to our Terms of Service.</p>
         </div>
       </div>

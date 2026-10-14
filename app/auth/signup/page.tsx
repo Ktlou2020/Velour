@@ -65,9 +65,9 @@ export default function SignupPage() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center">
-              <span className="text-white font-serif font-bold text-xl">V</span>
+              <span className="text-white font-serif font-bold text-xl">H</span>
             </div>
-            <span className="text-2xl font-serif font-bold tracking-wide text-white">VELOUR</span>
+            <span className="text-2xl font-serif font-bold tracking-wide text-white">HUSH</span>
           </Link>
           <p className="mt-2 text-gray-400 text-sm">Create your account — it only takes a moment</p>
         </div>

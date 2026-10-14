@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
 export const metadata = {
-  title: 'Privacy Policy — Velour',
-  description: 'Privacy Policy for Velour, compliant with POPIA (South Africa).',
+  title: 'Privacy Policy — Hush',
+  description: 'Privacy Policy for Hush, compliant with POPIA (South Africa).',
 }
 
 export default function PrivacyPage() {
@@ -16,13 +16,13 @@ export default function PrivacyPage() {
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm">Back to Velour</span>
+            <span className="text-sm">Back to Hush</span>
           </Link>
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center">
               <span className="text-white font-serif font-bold text-sm">V</span>
             </div>
-            <span className="font-serif font-bold tracking-wide text-white">VELOUR</span>
+            <span className="font-serif font-bold tracking-wide text-white">HUSH</span>
           </div>
         </div>
       </div>
@@ -43,10 +43,10 @@ export default function PrivacyPage() {
           {/* Intro */}
           <div className="glass rounded-2xl p-6">
             <p className="text-gray-300 leading-relaxed">
-              Velour (Pty) Ltd (&quot;Velour&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) is committed to protecting your personal information. This Privacy Policy explains how we collect, use, store, share, and protect your personal information in accordance with the <strong className="text-white">Protection of Personal Information Act 4 of 2013</strong> (POPIA) and other applicable South African laws.
+              Hush (Pty) Ltd (&quot;Hush&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) is committed to protecting your personal information. This Privacy Policy explains how we collect, use, store, share, and protect your personal information in accordance with the <strong className="text-white">Protection of Personal Information Act 4 of 2013</strong> (POPIA) and other applicable South African laws.
             </p>
             <p className="text-gray-300 leading-relaxed mt-3">
-              By using the Velour platform, you consent to the processing of your personal information as described in this policy. If you do not agree, please do not use the Service.
+              By using the Hush platform, you consent to the processing of your personal information as described in this policy. If you do not agree, please do not use the Service.
             </p>
           </div>
 
@@ -81,7 +81,7 @@ export default function PrivacyPage() {
               <div>
                 <h3 className="text-white font-semibold mb-2">1.3 Special categories of personal information</h3>
                 <p>
-                  Velour processes special categories of personal information under POPIA, specifically information relating to sexual orientation and relationship preferences. We process this information because you have explicitly provided it for the purpose of using a lifestyle dating platform, and we rely on your explicit consent as the lawful basis for this processing.
+                  Hush processes special categories of personal information under POPIA, specifically information relating to sexual orientation and relationship preferences. We process this information because you have explicitly provided it for the purpose of using a lifestyle dating platform, and we rely on your explicit consent as the lawful basis for this processing.
                 </p>
               </div>
             </div>
@@ -121,7 +121,7 @@ export default function PrivacyPage() {
               <ul className="list-disc list-inside space-y-1.5 pl-4">
                 <li><strong className="text-white">Service providers:</strong> Third-party companies that help us operate the Service (hosting, email delivery, payment processing, analytics). These providers are bound by contractual obligations to protect your information and may only use it as instructed by us.</li>
                 <li><strong className="text-white">Other members:</strong> Profile information you make public (photos, bio, interests, online status) is visible to other registered members.</li>
-                <li><strong className="text-white">Legal authorities:</strong> Where required by law, court order, or to protect the rights, property, or safety of Velour, our members, or the public.</li>
+                <li><strong className="text-white">Legal authorities:</strong> Where required by law, court order, or to protect the rights, property, or safety of Hush, our members, or the public.</li>
                 <li><strong className="text-white">Business transfers:</strong> In the event of a merger, acquisition, or sale of all or part of our business, your information may be transferred to the acquiring entity subject to equivalent privacy protections.</li>
               </ul>
               <p className="mt-2">Where we transfer personal information outside South Africa, we take appropriate safeguards to ensure adequate protection as required by POPIA.</p>
@@ -164,7 +164,7 @@ export default function PrivacyPage() {
               </ul>
               <p className="mt-2">
                 To exercise any of these rights, contact our Information Officer at{' '}
-                <a href="mailto:privacy@velour.dating" className="text-[#DC143C] hover:underline">privacy@velour.dating</a>.
+                <a href="mailto:privacy@hush.dating" className="text-[#DC143C] hover:underline">privacy@hush.dating</a>.
                 We will respond within 30 days.
               </p>
             </div>
@@ -197,7 +197,7 @@ export default function PrivacyPage() {
             </h2>
             <div className="space-y-3 text-gray-300 leading-relaxed pl-11">
               <p>The Service is strictly for adults aged 18 and over. We do not knowingly collect personal information from persons under 18. If we become aware that we have inadvertently collected personal information from a minor, we will take immediate steps to delete it and terminate the associated account.</p>
-              <p>If you believe a minor has created an account on Velour, please contact us at <a href="mailto:support@velour.dating" className="text-[#DC143C] hover:underline">support@velour.dating</a> immediately.</p>
+              <p>If you believe a minor has created an account on Hush, please contact us at <a href="mailto:support@hush.dating" className="text-[#DC143C] hover:underline">support@hush.dating</a> immediately.</p>
             </div>
           </section>
 
@@ -236,9 +236,9 @@ export default function PrivacyPage() {
               Our Information Officer is responsible for ensuring compliance with POPIA and handling privacy-related enquiries and complaints.
             </p>
             <div className="space-y-2 text-gray-300 text-sm">
-              <p><span className="text-gray-500">Company:</span> <span className="text-white">Velour (Pty) Ltd</span></p>
-              <p><span className="text-gray-500">Information Officer email:</span> <a href="mailto:privacy@velour.dating" className="text-[#DC143C] hover:underline">privacy@velour.dating</a></p>
-              <p><span className="text-gray-500">General support:</span> <a href="mailto:support@velour.dating" className="text-[#DC143C] hover:underline">support@velour.dating</a></p>
+              <p><span className="text-gray-500">Company:</span> <span className="text-white">Hush (Pty) Ltd</span></p>
+              <p><span className="text-gray-500">Information Officer email:</span> <a href="mailto:privacy@hush.dating" className="text-[#DC143C] hover:underline">privacy@hush.dating</a></p>
+              <p><span className="text-gray-500">General support:</span> <a href="mailto:support@hush.dating" className="text-[#DC143C] hover:underline">support@hush.dating</a></p>
               <p><span className="text-gray-500">Country:</span> <span className="text-white">South Africa</span></p>
             </div>
             <div className="mt-4 pt-4 border-t border-white/5">

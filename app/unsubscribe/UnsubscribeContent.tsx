@@ -43,7 +43,7 @@ export default function UnsubscribeContent() {
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center shadow-lg shadow-[#DC143C]/25">
             <span className="text-white font-bold text-xl font-serif">V</span>
           </div>
-          <span className="text-white font-bold text-2xl tracking-widest font-serif">VELOUR</span>
+          <span className="text-white font-bold text-2xl tracking-widest font-serif">HUSH</span>
         </div>
 
         <div className="glass rounded-2xl p-8">
@@ -86,7 +86,7 @@ export default function UnsubscribeContent() {
               )}
 
               <p className="text-white/50 text-sm leading-relaxed mb-6">
-                Click below to unsubscribe from all Velour marketing and notification emails.
+                Click below to unsubscribe from all Hush marketing and notification emails.
                 You&apos;ll still receive essential account emails such as password resets.
               </p>
 

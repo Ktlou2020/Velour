@@ -59,11 +59,11 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2" aria-label="Velour home">
+          <Link href="/" className="flex items-center gap-2" aria-label="Hush home">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center shadow-lg shadow-[#DC143C]/25">
               <span className="text-white font-bold text-lg font-serif">V</span>
             </div>
-            <span className="text-white font-bold text-xl tracking-widest font-serif">VELOUR</span>
+            <span className="text-white font-bold text-xl tracking-widest font-serif">HUSH</span>
           </Link>
 
           {/* Desktop Nav */}

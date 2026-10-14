@@ -11,14 +11,14 @@ import CookieBanner from "@/components/CookieBanner";
 import OnlineTracker from "@/components/OnlineTracker";
 
 export const metadata: Metadata = {
-  title: "Velour — Where Connections Become Extraordinary",
+  title: "Hush — Where Connections Become Extraordinary",
   description:
-    "Velour is the world's most refined lifestyle dating community. Discover genuine connections with like-minded individuals in a luxurious, discreet environment. Join 52,000+ extraordinary members today.",
+    "Hush is the world's most refined lifestyle dating community. Discover genuine connections with like-minded individuals in a luxurious, discreet environment. Join 52,000+ extraordinary members today.",
   keywords:
-    "dating, lifestyle, connections, premium dating, luxury dating community, relationships, velour",
-  authors: [{ name: "Velour" }],
-  creator: "Velour",
-  publisher: "Velour",
+    "dating, lifestyle, connections, premium dating, luxury dating community, relationships, hush",
+  authors: [{ name: "Hush" }],
+  creator: "Hush",
+  publisher: "Hush",
   robots: {
     index: true,
     follow: true,
@@ -33,9 +33,9 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_GB",
-    url: "https://velour.dating",
-    siteName: "Velour",
-    title: "Velour — Where Connections Become Extraordinary",
+    url: "https://hush.dating",
+    siteName: "Hush",
+    title: "Hush — Where Connections Become Extraordinary",
     description:
       "Join the world's most refined lifestyle dating community. 52,000+ extraordinary members. 120+ countries. Premium matching technology.",
     images: [
@@ -43,16 +43,16 @@ export const metadata: Metadata = {
         url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "Velour — Where Connections Become Extraordinary",
+        alt: "Hush — Where Connections Become Extraordinary",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Velour — Where Connections Become Extraordinary",
+    title: "Hush — Where Connections Become Extraordinary",
     description:
       "Join the world's most refined lifestyle dating community. Premium, discreet, extraordinary.",
-    creator: "@velour_dating",
+    creator: "@hush_dating",
     images: ["/og-image.jpg"],
   },
   viewport: {

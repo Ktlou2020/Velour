@@ -27,11 +27,11 @@ export default function Error({ error, reset }: Props) {
 
       <div className="relative z-10 text-center max-w-lg mx-auto">
         {/* Logo */}
-        <Link href="/" className="inline-flex items-center gap-2 mb-12" aria-label="Velour home">
+        <Link href="/" className="inline-flex items-center gap-2 mb-12" aria-label="Hush home">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center shadow-lg shadow-[#DC143C]/25">
-            <span className="text-white font-bold text-xl font-serif">V</span>
+            <span className="text-white font-bold text-xl font-serif">H</span>
           </div>
-          <span className="text-white font-bold text-2xl tracking-widest font-serif">VELOUR</span>
+          <span className="text-white font-bold text-2xl tracking-widest font-serif">HUSH</span>
         </Link>
 
         {/* 500 */}

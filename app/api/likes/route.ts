@@ -113,8 +113,8 @@ export async function POST(req: NextRequest) {
         })
 
         // Push to both users on new match
-        sendPushToUser(session.user.id, { title: "It's a Match! 🎉", body: "You have a new match on Velour!", url: '/messages', tag: `match-${user1Id}-${user2Id}` }).catch(() => {})
-        sendPushToUser(toUserId, { title: "It's a Match! 🎉", body: "You have a new match on Velour!", url: '/messages', tag: `match-${user1Id}-${user2Id}` }).catch(() => {})
+        sendPushToUser(session.user.id, { title: "It's a Match! 🎉", body: "You have a new match on Hush!", url: '/messages', tag: `match-${user1Id}-${user2Id}` }).catch(() => {})
+        sendPushToUser(toUserId, { title: "It's a Match! 🎉", body: "You have a new match on Hush!", url: '/messages', tag: `match-${user1Id}-${user2Id}` }).catch(() => {})
         matched = true
       } else {
         matched = true
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
     if (!matched) {
       const labels: Record<string, string> = { LIKE: 'liked', SUPERLIKE: 'super liked', WINK: 'winked at' }
       sendPushToUser(toUserId, {
-        title: 'New Activity — Velour',
+        title: 'New Activity — Hush',
         body: `Someone ${labels[type] ?? 'liked'} you!`,
         url: '/members',
         tag: `like-${session.user.id}`,

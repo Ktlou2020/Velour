@@ -51,7 +51,7 @@ export default function AgeGate() {
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center shadow-2xl shadow-[#DC143C]/30">
             <span className="text-white font-serif font-bold text-3xl">V</span>
           </div>
-          <span className="text-4xl font-serif font-bold tracking-widest text-white">VELOUR</span>
+          <span className="text-4xl font-serif font-bold tracking-widest text-white">HUSH</span>
         </div>
 
         {/* Gold divider */}
@@ -77,7 +77,7 @@ export default function AgeGate() {
             Age Verification Required
           </h1>
           <p className="text-gray-400 text-base leading-relaxed mb-6">
-            Velour is an exclusive lifestyle and dating community for adults. You must be{' '}
+            Hush is an exclusive lifestyle and dating community for adults. You must be{' '}
             <span className="text-white font-semibold">18 years of age or older</span> to enter.
           </p>
 

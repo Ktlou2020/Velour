@@ -40,9 +40,9 @@ export default function ForgotPasswordPage() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-4">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center shadow-lg shadow-[#DC143C]/25">
-              <span className="text-white font-serif font-bold text-2xl">V</span>
+              <span className="text-white font-serif font-bold text-2xl">H</span>
             </div>
-            <span className="text-3xl font-serif font-bold tracking-wide text-white">VELOUR</span>
+            <span className="text-3xl font-serif font-bold tracking-wide text-white">HUSH</span>
           </Link>
           <h1 className="text-2xl font-serif font-bold text-white mb-2">Forgot Password?</h1>
           <p className="text-gray-400">Enter your email and we&apos;ll send you a reset link</p>

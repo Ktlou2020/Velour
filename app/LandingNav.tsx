@@ -13,9 +13,9 @@ export default function LandingNav() {
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center shadow-lg shadow-[#DC143C]/20">
-              <span className="text-white font-bold text-lg font-serif">V</span>
+              <span className="text-white font-bold text-lg font-serif">H</span>
             </div>
-            <span className="text-white font-bold text-xl tracking-widest font-serif">VELOUR</span>
+            <span className="text-white font-bold text-xl tracking-widest font-serif">HUSH</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-6">

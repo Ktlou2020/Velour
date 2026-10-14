@@ -115,7 +115,7 @@ export async function GET(
             },
           })
           sendPushToUser(user.id, {
-            title: 'Profile View — Velour',
+            title: 'Profile View — Hush',
             body: `@${viewerUser.username} viewed your profile`,
             url: '/views',
             tag: `view-${session.user.id}`,

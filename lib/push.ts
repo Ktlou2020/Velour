@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
-    'mailto:hello@velour.dating',
+    'mailto:hello@hush.dating',
     process.env.VAPID_PUBLIC_KEY,
     process.env.VAPID_PRIVATE_KEY
   )

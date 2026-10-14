@@ -25,9 +25,9 @@ const STEPS = [
 ];
 
 const TESTIMONIALS = [
-  { text: 'The most elegant and respectful dating community I\'ve ever been part of. Velour genuinely stands apart in every way.', author: 'Sofia M.', location: 'London', stars: 5 },
-  { text: 'Velour connected me with someone truly compatible. The matching algorithm is exceptional — it understood what I really wanted.', author: 'James K.', location: 'New York', stars: 5 },
-  { text: 'As a professional, I needed discretion and quality. Velour delivers both flawlessly. I found my partner here last year.', author: 'Anonymous', location: 'Paris', stars: 5 },
+  { text: 'The most elegant and respectful dating community I\'ve ever been part of. Hush genuinely stands apart in every way.', author: 'Sofia M.', location: 'London', stars: 5 },
+  { text: 'Hush connected me with someone truly compatible. The matching algorithm is exceptional — it understood what I really wanted.', author: 'James K.', location: 'New York', stars: 5 },
+  { text: 'As a professional, I needed discretion and quality. Hush delivers both flawlessly. I found my partner here last year.', author: 'Anonymous', location: 'Paris', stars: 5 },
 ];
 
 const TIERS = [
@@ -209,7 +209,7 @@ export default function LandingPage() {
           <div className="text-center mb-16">
             <p className="text-[#DC143C] text-sm font-semibold tracking-widest uppercase mb-3">Choose Your Journey</p>
             <h2 className="font-serif text-4xl md:text-5xl font-bold text-white mb-4">Membership Tiers</h2>
-            <p className="text-white/50 text-lg max-w-xl mx-auto">Start free, upgrade when you&apos;re ready for the full Velour experience.</p>
+            <p className="text-white/50 text-lg max-w-xl mx-auto">Start free, upgrade when you&apos;re ready for the full Hush experience.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {TIERS.map((tier) => (
@@ -257,15 +257,15 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto">
           <div className="relative rounded-3xl overflow-hidden p-12 text-center" style={{ background: 'linear-gradient(135deg, #DC143C 0%, #9D0208 50%, #6A040F 100%)' }}>
             <div className="absolute inset-0 shimmer pointer-events-none" />
-            <div className="absolute top-4 right-8 text-white/10 font-serif text-9xl font-bold select-none">V</div>
+            <div className="absolute top-4 right-8 text-white/10 font-serif text-9xl font-bold select-none">H</div>
             <h2 className="font-serif text-4xl md:text-5xl font-bold text-white mb-4 relative z-10">
               Ready to Meet Someone Extraordinary?
             </h2>
             <p className="text-white/80 text-lg mb-8 max-w-xl mx-auto relative z-10">
-              Join over 52,000 members who&apos;ve found genuine connections through Velour. Your story starts today.
+              Join over 52,000 members who&apos;ve found genuine connections through Hush. Your story starts today.
             </p>
             <Link href="/auth/signup" className="relative z-10 inline-flex items-center gap-2 bg-white text-[#DC143C] font-bold px-8 py-4 rounded-xl hover:bg-white/90 transition-all text-lg">
-              Join Velour Free <ArrowRight size={20} />
+              Join Hush Free <ArrowRight size={20} />
             </Link>
           </div>
         </div>
@@ -278,9 +278,9 @@ export default function LandingPage() {
             <div className="md:col-span-2">
               <Link href="/" className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center">
-                  <span className="text-white font-bold text-lg font-serif">V</span>
+                  <span className="text-white font-bold text-lg font-serif">H</span>
                 </div>
-                <span className="text-white font-bold text-xl tracking-widest font-serif">VELOUR</span>
+                <span className="text-white font-bold text-xl tracking-widest font-serif">HUSH</span>
               </Link>
               <p className="text-white/40 text-sm leading-relaxed max-w-xs">
                 Where Connections Become Extraordinary. The world&apos;s most refined lifestyle dating community for discerning adults.
@@ -318,7 +318,7 @@ export default function LandingPage() {
           </div>
 
           <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-white/30 text-sm">© 2025 Velour. All rights reserved. 18+ only.</p>
+            <p className="text-white/30 text-sm">© 2025 Hush. All rights reserved. 18+ only.</p>
             <p className="text-white/20 text-xs">This site is intended for adults aged 18 and over. By using this site you agree to our Terms of Service.</p>
           </div>
         </div>

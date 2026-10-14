@@ -81,7 +81,7 @@ export default async function SubscriptionPage() {
         </Link>
 
         <h1 className="font-serif text-3xl font-bold text-white mb-2">Subscription</h1>
-        <p className="text-white/50 text-sm mb-10">Manage your Velour membership</p>
+        <p className="text-white/50 text-sm mb-10">Manage your Hush membership</p>
 
         {/* Current Plan Card */}
         <div className={`glass rounded-2xl p-6 mb-6 border ${
@@ -138,7 +138,7 @@ export default async function SubscriptionPage() {
             )}
             {isPaid && (
               <a
-                href="mailto:support@velour.dating?subject=Cancel%20Subscription"
+                href="mailto:support@hush.dating?subject=Cancel%20Subscription"
                 className="glass border border-white/20 hover:border-red-500/30 hover:text-red-400 text-white/50 px-5 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2"
               >
                 <Mail size={14} />
@@ -160,10 +160,10 @@ export default async function SubscriptionPage() {
           <p className="text-white/50 text-sm leading-relaxed">
             Billing history is available via PayFast — contact{' '}
             <a
-              href="mailto:support@velour.dating"
+              href="mailto:support@hush.dating"
               className="text-[#DC143C] hover:underline"
             >
-              support@velour.dating
+              support@hush.dating
             </a>{' '}
             for invoices or billing queries.
           </p>

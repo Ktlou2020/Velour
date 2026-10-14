@@ -123,7 +123,7 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
         <div className="bg-gradient-to-b from-[#0F0A1E] to-[#0A0A0F] py-12 px-4 border-b border-white/5">
           <div className="max-w-6xl mx-auto">
             <h1 className="font-serif text-4xl font-bold text-white mb-2">Events</h1>
-            <p className="text-white/50">Exclusive gatherings, experiences and adventures for Velour members</p>
+            <p className="text-white/50">Exclusive gatherings, experiences and adventures for Hush members</p>
           </div>
         </div>
         <EventsClient

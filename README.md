@@ -1,4 +1,4 @@
-# Velour — Where Connections Become Extraordinary
+# Hush — Where Connections Become Extraordinary
 
 A world-class premium lifestyle and dating platform built with Next.js 15, TypeScript, Tailwind CSS, and Prisma.
 
@@ -57,4 +57,4 @@ reminded once (`EventAttendee.reminderSentAt`), so running it more often is safe
      exits when done.
    - **Anything else:** cron-job.org, GitHub Actions `schedule:`, or a server crontab can hit the same URL
      with the `Authorization` header.
-# Velour — built 2026-06-03T16:54:21Z
+# Hush — built 2026-06-03T16:54:21Z

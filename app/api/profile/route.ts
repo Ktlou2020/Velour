@@ -122,7 +122,7 @@ export async function PUT(req: NextRequest) {
         if (!platinum) return bad('Video profiles are a Platinum feature', 403)
         const cloudName = process.env.CLOUDINARY_CLOUD_NAME
         const prefix = `https://res.cloudinary.com/${cloudName}/video/upload/`
-        if (!cloudName || !body.videoUrl.startsWith(prefix)) return bad('Video must be uploaded through Velour')
+        if (!cloudName || !body.videoUrl.startsWith(prefix)) return bad('Video must be uploaded through Hush')
         updateData.videoUrl = body.videoUrl
       }
     }

@@ -66,7 +66,7 @@ export default async function AdminDashboard() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-white text-2xl font-bold font-serif">Dashboard</h1>
-        <p className="text-white/40 text-sm mt-1">Overview of Velour platform activity</p>
+        <p className="text-white/40 text-sm mt-1">Overview of Hush platform activity</p>
       </div>
 
       {/* Stats Grid */}

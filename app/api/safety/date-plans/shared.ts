@@ -51,7 +51,7 @@ export function validateDatePlan(body: unknown): { data: DatePlanInput } | { err
   const dateRaw = str(b.dateTime)
 
   if (!matchName || matchName.length > 80) return { error: 'Please enter who you are meeting (max 80 characters).' }
-  if (matchUsername && !USERNAME_RE.test(matchUsername)) return { error: 'That Velour username doesn’t look right.' }
+  if (matchUsername && !USERNAME_RE.test(matchUsername)) return { error: 'That Hush username doesn’t look right.' }
   if (!location || location.length > 200) return { error: 'Please enter where you are meeting (max 200 characters).' }
   if (!friendName || friendName.length > 80) return { error: 'Please enter your friend’s name (max 80 characters).' }
   if (!friendEmail || friendEmail.length > 254 || !EMAIL_RE.test(friendEmail)) return { error: 'Please enter a valid email address for your friend.' }
@@ -84,16 +84,16 @@ export function datePlanEmail(senderName: string, plan: DatePlanInput, appUrl: s
   const e = escapeHtml
   return `
     <h2 style="color:#ffffff; font-family:'Georgia',serif; font-size:22px; margin:0 0 16px;">Hi ${e(plan.friendName)},</h2>
-    ${p(`<strong style="color:#ffffff;">${e(senderName)}</strong> is going on a date and has asked Velour to share the details with you, just in case. You don’t need to do anything right now.`)}
+    ${p(`<strong style="color:#ffffff;">${e(senderName)}</strong> is going on a date and has asked Hush to share the details with you, just in case. You don’t need to do anything right now.`)}
     <table cellpadding="0" cellspacing="0" style="margin:16px 0 20px; width:100%; background:#0A0A0F; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px;">
-      ${row('Meeting', e(plan.matchName) + (plan.matchUsername ? ` <span style="color:#888899;">(@${e(plan.matchUsername)} on Velour)</span>` : ''))}
+      ${row('Meeting', e(plan.matchName) + (plan.matchUsername ? ` <span style="color:#888899;">(@${e(plan.matchUsername)} on Hush)</span>` : ''))}
       ${row('Where', e(plan.location))}
       ${row('When', e(formatWhen(plan.dateTime)))}
       ${plan.notes ? row('Notes', e(plan.notes).replace(/\n/g, '<br />')) : ''}
     </table>
     ${p(`We’ll email you again when ${e(senderName)} checks in to say they’re safe. If you haven’t heard from them when you’d expect to, try calling or messaging them directly.`)}
     ${p(`<strong style="color:#ffffff;">If you believe they are in danger, call SAPS on 10111 or 112 from any mobile phone.</strong> The GBV Command Centre is available 24/7 on 0800 428 428.`)}
-    <p style="color:#666677; font-size:12px; line-height:1.6; margin:20px 0 0;">You received this because ${e(senderName)} entered your email address in Velour’s “Share my date” feature. We won’t email you for anything else. <a href="${appUrl}/safety" style="color:#DC143C; text-decoration:none;">Velour safety centre</a></p>
+    <p style="color:#666677; font-size:12px; line-height:1.6; margin:20px 0 0;">You received this because ${e(senderName)} entered your email address in Hush’s “Share my date” feature. We won’t email you for anything else. <a href="${appUrl}/safety" style="color:#DC143C; text-decoration:none;">Hush safety centre</a></p>
   `
 }
 
@@ -101,7 +101,7 @@ export function checkInEmail(senderName: string, friendName: string, appUrl: str
   const e = escapeHtml
   return `
     <h2 style="color:#ffffff; font-family:'Georgia',serif; font-size:22px; margin:0 0 16px;">Good news, ${e(friendName)}</h2>
-    ${p(`<strong style="color:#ffffff;">${e(senderName)}</strong> has checked in on Velour to let you know they’re safe. Thanks for looking out for them.`)}
-    <p style="color:#666677; font-size:12px; line-height:1.6; margin:20px 0 0;"><a href="${appUrl}/safety" style="color:#DC143C; text-decoration:none;">Velour safety centre</a></p>
+    ${p(`<strong style="color:#ffffff;">${e(senderName)}</strong> has checked in on Hush to let you know they’re safe. Thanks for looking out for them.`)}
+    <p style="color:#666677; font-size:12px; line-height:1.6; margin:20px 0 0;"><a href="${appUrl}/safety" style="color:#DC143C; text-decoration:none;">Hush safety centre</a></p>
   `
 }

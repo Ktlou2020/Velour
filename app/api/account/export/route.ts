@@ -87,7 +87,7 @@ export async function GET() {
     return new Response(JSON.stringify(exportData, null, 2), {
       headers: {
         'Content-Type': 'application/json',
-        'Content-Disposition': `attachment; filename="velour-data-${userId}-${Date.now()}.json"`,
+        'Content-Disposition': `attachment; filename="hush-data-${userId}-${Date.now()}.json"`,
       },
     })
   } catch (error) {

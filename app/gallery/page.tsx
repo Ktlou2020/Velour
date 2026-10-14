@@ -24,7 +24,7 @@ interface GalleryPhoto {
 
 export default function GalleryPage() {
   const { data: session } = useSession();
-  const watermark = (session?.user as { username?: string })?.username ?? session?.user?.email ?? 'velour';
+  const watermark = (session?.user as { username?: string })?.username ?? session?.user?.email ?? 'hush';
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);

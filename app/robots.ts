@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/members/', '/messages/', '/profile/', '/admin/', '/api/'],
       },
     ],
-    sitemap: 'https://velour.dating/sitemap.xml',
+    sitemap: 'https://hush.dating/sitemap.xml',
   }
 }

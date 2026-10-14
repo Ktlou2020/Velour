@@ -120,7 +120,7 @@ export default function PWAInstall() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center">
               <span className="text-white font-serif font-bold text-sm">V</span>
             </div>
-            <p className="text-white text-sm font-semibold">Install Velour</p>
+            <p className="text-white text-sm font-semibold">Install Hush</p>
           </div>
           <button onClick={dismiss} className="text-white/40 hover:text-white transition-colors"><X size={16} /></button>
         </div>
@@ -149,7 +149,7 @@ export default function PWAInstall() {
           <span className="text-white font-serif font-bold text-base">V</span>
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-white text-sm font-medium">Install Velour</p>
+          <p className="text-white text-sm font-medium">Install Hush</p>
           <p className="text-white/50 text-xs">Add to your home screen</p>
         </div>
         <button onClick={install} className="flex items-center gap-1.5 bg-[#DC143C] hover:bg-[#FF1744] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0">
