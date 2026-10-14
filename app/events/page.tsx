@@ -1,65 +1,120 @@
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import EventsClient from './EventsClient';
+import EventsClient, { type EventItem } from './EventsClient';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
+import { isPaid } from '@/lib/premium';
 
-interface Event {
+const TZ = 'Africa/Johannesburg';
+
+function titleCase(s: string) {
+  return s.charAt(0) + s.slice(1).toLowerCase();
+}
+
+type EventRow = {
   id: string;
   title: string;
-  description?: string;
-  date: string;
-  time?: string;
-  location?: string;
-  category?: string;
-  attendeeCount?: number;
-  maxAttendees?: number;
-  isFeatured?: boolean;
-  isPrivate?: boolean;
-  imageUrl?: string;
-  gradient?: string;
+  description: string;
+  date: Date;
+  endDate: Date | null;
+  location: string;
+  category: string;
+  maxAttendees: number | null;
+  isFeatured: boolean;
+  isPrivate: boolean;
+  imageUrl: string | null;
+  _count: { attendees: number };
+};
+
+function toItem(e: EventRow, attending: Set<string>): EventItem {
+  return {
+    id: e.id,
+    title: e.title,
+    description: e.description,
+    date: e.date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric', timeZone: TZ }),
+    time: e.date.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', timeZone: TZ }),
+    location: e.location,
+    category: titleCase(e.category),
+    attendeeCount: e._count.attendees,
+    maxAttendees: e.maxAttendees ?? undefined,
+    isFeatured: e.isFeatured,
+    isPrivate: e.isPrivate,
+    imageUrl: e.imageUrl ?? undefined,
+    attending: attending.has(e.id),
+  };
 }
 
-async function getEvents(category?: string) {
-  try {
-    const qs = category && category !== 'All' ? `?category=${encodeURIComponent(category)}` : '';
-    const res = await fetch(
-      `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/events${qs}`,
-      { cache: 'no-store' }
-    );
-    if (!res.ok) return { events: [], featured: null };
-    const data = await res.json();
-    const events: Event[] = data.events || data || [];
-    const featured = events.find((e) => e.isFeatured) || events[0] || null;
-    return { events, featured };
-  } catch {
-    return { events: [], featured: null };
-  }
-}
+const VALID_CATEGORIES = ['PARTY', 'MEETUP', 'WORKSHOP', 'TRAVEL', 'OTHER'];
 
 interface SearchParams { category?: string }
 
 export default async function EventsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
-  const [{ events, featured }, session] = await Promise.all([
-    getEvents(params.category),
-    auth(),
+  const session = await auth();
+  const userId = session?.user?.id;
+  const userRole = (session?.user as { role?: string } | undefined)?.role;
+
+  const cat = params.category?.toUpperCase();
+  const categoryFilter = cat && VALID_CATEGORIES.includes(cat) ? { category: cat as never } : {};
+  const now = new Date();
+  const countGoing = { _count: { select: { attendees: { where: { status: 'GOING' } } } } } as const;
+
+  // Query the DB directly (a server-side fetch to /api/events carries no session
+  // cookie and would 401). Same visibility rule as GET /api/events: public only.
+  const [upcomingRows, recentPastRows, myRsvps, profile] = await Promise.all([
+    db.event.findMany({
+      where: { date: { gte: now }, isPrivate: false, ...categoryFilter },
+      include: countGoing,
+      orderBy: { date: 'asc' },
+    }).catch(() => []),
+    db.event.findMany({
+      where: {
+        date: { lt: now },
+        OR: [{ endDate: null }, { endDate: { lt: now } }],
+        isPrivate: false,
+      },
+      include: countGoing,
+      orderBy: { date: 'desc' },
+      take: 9,
+    }).catch(() => []),
+    userId
+      ? db.eventAttendee.findMany({
+          where: { userId, status: 'GOING' },
+          select: { eventId: true },
+        }).catch(() => [])
+      : Promise.resolve([] as { eventId: string }[]),
+    userId
+      ? db.profile.findUnique({ where: { userId }, select: { membershipTier: true } }).catch(() => null)
+      : Promise.resolve(null),
   ]);
 
-  let canCreate = false;
-  const userId = (session?.user as { id?: string })?.id;
-  const userRole = (session?.user as { role?: string })?.role;
-  if (userId) {
-    if (userRole === 'ADMIN') {
-      canCreate = true;
-    } else {
-      const profile = await db.profile.findUnique({
-        where: { userId },
-        select: { membershipTier: true },
-      });
-      canCreate = profile?.membershipTier === 'GOLD' || profile?.membershipTier === 'PLATINUM';
-    }
-  }
+  const attending = new Set(myRsvps.map((r) => r.eventId));
+
+  // Past events the user attended (including private ones they were invited to)
+  const attendedPastRows = attending.size
+    ? await db.event.findMany({
+        where: {
+          id: { in: [...attending] },
+          date: { lt: now },
+          OR: [{ endDate: null }, { endDate: { lt: now } }],
+        },
+        include: countGoing,
+        orderBy: { date: 'desc' },
+        take: 12,
+      }).catch(() => [])
+    : [];
+
+  const pastMap = new Map<string, EventRow>();
+  for (const e of [...attendedPastRows, ...recentPastRows]) pastMap.set(e.id, e as EventRow);
+  const pastEvents = [...pastMap.values()]
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .slice(0, 12)
+    .map((e) => toItem(e, attending));
+
+  const events = (upcomingRows as EventRow[]).map((e) => toItem(e, attending));
+  const featured = events.find((e) => e.isFeatured) || events[0] || null;
+
+  const canCreate = userRole === 'ADMIN' || isPaid(profile?.membershipTier, userRole);
 
   return (
     <div className="min-h-screen bg-[#0A0A0F]">
@@ -71,7 +126,13 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
             <p className="text-white/50">Exclusive gatherings, experiences and adventures for Velour members</p>
           </div>
         </div>
-        <EventsClient events={events} featured={featured} activeCategory={params.category || 'All'} canCreate={canCreate} />
+        <EventsClient
+          events={events}
+          featured={featured}
+          pastEvents={pastEvents}
+          activeCategory={params.category ? titleCase(params.category) : 'All'}
+          canCreate={canCreate}
+        />
       </main>
       <Footer />
     </div>

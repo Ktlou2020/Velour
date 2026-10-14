@@ -28,6 +28,58 @@ interface Thread {
   createdAt?: string;
 }
 
+interface ApiAuthor {
+  username: string;
+  profile?: { displayName?: string | null; profilePhoto?: string | null } | null;
+}
+
+interface ApiPost {
+  id: string;
+  content: string;
+  createdAt: string;
+  authorId?: string;
+  author: ApiAuthor;
+}
+
+interface ApiThread {
+  id: string;
+  title: string;
+  views: number;
+  createdAt: string;
+  authorId?: string;
+  author: ApiAuthor;
+  category?: { slug: string; name: string } | null;
+  posts: ApiPost[];
+}
+
+function authorLabel(a: ApiAuthor) {
+  return a.profile?.displayName || a.username;
+}
+
+function mapPost(p: ApiPost): Post {
+  return {
+    id: p.id,
+    content: p.content,
+    authorName: authorLabel(p.author),
+    authorAvatar: p.author.profile?.profilePhoto ?? undefined,
+    createdAt: p.createdAt,
+  };
+}
+
+function mapThread(t: ApiThread): Thread {
+  return {
+    id: t.id,
+    title: t.title,
+    forumSlug: t.category?.slug,
+    forumName: t.category?.name,
+    posts: t.posts.map(mapPost),
+    replyCount: Math.max(0, t.posts.length - 1),
+    views: t.views,
+    authorName: authorLabel(t.author),
+    createdAt: t.createdAt,
+  };
+}
+
 function formatTime(dateStr?: string) {
   if (!dateStr) return '';
   return new Date(dateStr).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -45,7 +97,7 @@ function AuthorAvatar({ name, size = 10 }: { name?: string; size?: number }) {
 }
 
 export default function ThreadPage({ params }: { params: Promise<{ id: string }> }) {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [threadId, setThreadId] = useState<string | null>(null);
   const [thread, setThread] = useState<Thread | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,8 +106,8 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
   const [error, setError] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const userTier = (session?.user as { membershipTier?: string } | undefined)?.membershipTier || 'FREE';
-  const canReply = status === 'authenticated' && (userTier === 'GOLD' || userTier === 'PLATINUM');
+  const [viewerCanPost, setViewerCanPost] = useState(false);
+  const canReply = status === 'authenticated' && viewerCanPost;
 
   useEffect(() => {
     params.then(({ id }) => setThreadId(id));
@@ -66,7 +118,10 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
     setLoading(true);
     fetch(`/api/forums/threads/${threadId}`)
       .then((r) => r.ok ? r.json() : null)
-      .then((data) => setThread(data))
+      .then((data: { thread?: ApiThread; viewerCanPost?: boolean } | null) => {
+        setViewerCanPost(!!data?.viewerCanPost);
+        setThread(data?.thread ? mapThread(data.thread) : null);
+      })
       .finally(() => setLoading(false));
   }, [threadId]);
 
@@ -81,8 +136,9 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
         body: JSON.stringify({ content: reply }),
       });
       if (res.ok) {
-        const newPost = await res.json();
-        setThread((t) => t ? { ...t, posts: [...(t.posts || []), newPost] } : t);
+        const data: { post: ApiPost } = await res.json();
+        const newPost = mapPost(data.post);
+        setThread((t) => t ? { ...t, posts: [...(t.posts || []), newPost], replyCount: (t.replyCount ?? 0) + 1 } : t);
         setReply('');
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
       } else {

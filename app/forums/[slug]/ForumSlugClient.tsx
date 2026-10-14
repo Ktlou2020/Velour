@@ -80,7 +80,8 @@ export default function ForumSlugClient({ slug, category, threads, total, curren
         setShowNewThread(false);
         setThreadTitle('');
         setThreadContent('');
-        if (data.id) router.push(`/forums/threads/${data.id}`);
+        const newId = data.thread?.id ?? data.id;
+        if (newId) router.push(`/forums/threads/${newId}`);
         else router.refresh();
       } else {
         const d = await res.json();
@@ -119,10 +120,13 @@ export default function ForumSlugClient({ slug, category, threads, total, curren
               New Thread
             </button>
           ) : (
-            <div className="flex items-center gap-2 glass px-4 py-2 rounded-xl text-[#D4AF37] text-sm">
+            <Link
+              href="/upgrade"
+              className="flex items-center gap-2 glass border border-[#D4AF37]/30 px-4 py-2 rounded-xl text-[#D4AF37] hover:bg-[#D4AF37]/10 text-sm transition-colors"
+            >
               <Lock size={14} />
-              <span>Gold+ required to post</span>
-            </div>
+              <span>Upgrade to Gold to post</span>
+            </Link>
           )}
         </div>
 

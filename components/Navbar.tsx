@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Menu, X, ChevronDown, LogOut, User, Crown, MessageCircle, Eye, Shield, CreditCard } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, Crown, MessageCircle, Eye, Shield, CreditCard, ShieldCheck } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import ProfileCompletionBanner from './ProfileCompletionBanner';
 
@@ -155,6 +155,13 @@ export default function Navbar() {
                       >
                         <Eye size={14} />Who Viewed Me
                       </Link>
+                      <Link
+                        href="/safety"
+                        className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <ShieldCheck size={14} />Safety Centre
+                      </Link>
                       {userRole === 'ADMIN' && (
                         <Link
                           href="/admin"
@@ -255,6 +262,13 @@ export default function Navbar() {
                   onClick={() => setMobileOpen(false)}
                 >
                   <Eye size={14} />Who Viewed Me
+                </Link>
+                <Link
+                  href="/safety"
+                  className="flex items-center gap-2 px-4 py-2 glass border border-white/10 rounded-lg text-white/70 text-sm"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <ShieldCheck size={14} />Safety Centre
                 </Link>
                 {userRole === 'ADMIN' && (
                   <Link

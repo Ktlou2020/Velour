@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Calendar, MapPin, Users, Clock, ArrowRight, Lock, Plus } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, ArrowRight, Lock, Plus, History, X } from 'lucide-react';
+import { getAvatarUrl } from '@/lib/avatar';
 import CreateEventModal from './CreateEventModal';
 
-interface Event {
+export interface EventItem {
   id: string;
   title: string;
   description?: string;
@@ -19,11 +21,20 @@ interface Event {
   isPrivate?: boolean;
   imageUrl?: string;
   gradient?: string;
+  /** current user has RSVP'd GOING */
+  attending?: boolean;
+}
+
+interface Attendee {
+  username: string;
+  displayName: string | null;
+  profilePhoto: string | null;
 }
 
 interface Props {
-  events: Event[];
-  featured: Event | null;
+  events: EventItem[];
+  featured: EventItem | null;
+  pastEvents?: EventItem[];
   activeCategory: string;
   canCreate?: boolean;
 }
@@ -49,12 +60,30 @@ const DEFAULT_GRADIENTS = [
   'from-blue-900 to-cyan-800',
 ];
 
-export default function EventsClient({ events, featured, activeCategory, canCreate }: Props) {
+export default function EventsClient({ events, featured, pastEvents = [], activeCategory, canCreate }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [rsvpLoading, setRsvpLoading] = useState<string | null>(null);
-  const [rsvpDone, setRsvpDone] = useState<Set<string>>(new Set());
+  const [rsvpDone, setRsvpDone] = useState<Set<string>>(
+    () => new Set(events.filter((e) => e.attending).map((e) => e.id))
+  );
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [whoWent, setWhoWent] = useState<{ event: EventItem; attendees: Attendee[] | null; error?: string } | null>(null);
+
+  async function openWhoWent(event: EventItem) {
+    setWhoWent({ event, attendees: null });
+    try {
+      const res = await fetch(`/api/events/${event.id}/attendees`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setWhoWent({ event, attendees: [], error: data.error || 'Could not load attendees' });
+        return;
+      }
+      setWhoWent({ event, attendees: data.attendees ?? [] });
+    } catch {
+      setWhoWent({ event, attendees: [], error: 'Could not load attendees' });
+    }
+  }
 
   function setCategory(cat: string) {
     const params = new URLSearchParams();
@@ -66,8 +95,8 @@ export default function EventsClient({ events, featured, activeCategory, canCrea
     if (isPrivate) return; // Locked for free users
     setRsvpLoading(eventId);
     try {
-      await fetch(`/api/events/${eventId}/attend`, { method: 'POST' });
-      setRsvpDone((prev) => new Set(prev).add(eventId));
+      const res = await fetch(`/api/events/${eventId}/attend`, { method: 'POST' });
+      if (res.ok) setRsvpDone((prev) => new Set(prev).add(eventId));
     } finally {
       setRsvpLoading(null);
     }
@@ -277,6 +306,105 @@ export default function EventsClient({ events, featured, activeCategory, canCrea
           })}
         </div>
       )}
+      {/* Past Events */}
+      {pastEvents.length > 0 && (
+        <section className="mt-16" aria-labelledby="past-events-heading">
+          <div className="flex items-center gap-2 mb-6">
+            <History size={18} className="text-[#D4AF37]" />
+            <h2 id="past-events-heading" className="font-serif text-2xl font-bold text-white">Past events</h2>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {pastEvents.map((event) => (
+              <div key={event.id} className="glass rounded-2xl p-5 flex flex-col">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  {event.category && (
+                    <span className={`${CATEGORY_COLORS[event.category] || 'bg-white/10 text-white/60 border-white/10'} border px-2 py-0.5 rounded-full text-[11px] font-semibold`}>
+                      {event.category}
+                    </span>
+                  )}
+                  <span className="text-white/40 text-xs">{event.date}</span>
+                </div>
+                <h3 className="text-white/90 font-semibold text-sm mb-2 leading-snug">{event.title}</h3>
+                {event.location && (
+                  <div className="flex items-center gap-2 text-white/40 text-xs mb-3">
+                    <MapPin size={12} />{event.location}
+                  </div>
+                )}
+                <div className="mt-auto flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-white/40 text-xs">
+                    <Users size={12} />{event.attendeeCount ?? 0} went
+                  </span>
+                  {event.attending ? (
+                    <button
+                      onClick={() => openWhoWent(event)}
+                      className="text-xs px-3 py-1.5 rounded-lg font-semibold border border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10 transition-colors"
+                    >
+                      See who went
+                    </button>
+                  ) : (
+                    <span className="text-white/25 text-xs">Ended</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Who went modal */}
+      {whoWent && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Who went to ${whoWent.event.title}`}
+          onClick={() => setWhoWent(null)}
+        >
+          <div className="glass rounded-2xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <p className="text-[#D4AF37] text-xs uppercase tracking-widest mb-1">Who went</p>
+                <h3 className="text-white font-bold text-lg leading-snug">{whoWent.event.title}</h3>
+              </div>
+              <button onClick={() => setWhoWent(null)} className="text-white/40 hover:text-white transition-colors" aria-label="Close">
+                <X size={20} />
+              </button>
+            </div>
+            {whoWent.attendees === null ? (
+              <div className="flex justify-center py-8">
+                <div className="w-6 h-6 border-2 border-[#DC143C] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : whoWent.error ? (
+              <p className="text-red-400 text-sm">{whoWent.error}</p>
+            ) : whoWent.attendees.length === 0 ? (
+              <p className="text-white/40 text-sm">No other members to show for this event.</p>
+            ) : (
+              <ul className="space-y-2">
+                {whoWent.attendees.map((a) => (
+                  <li key={a.username}>
+                    <Link
+                      href={`/members/${a.username}`}
+                      className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={getAvatarUrl(a.username, a.profilePhoto)}
+                        alt=""
+                        className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-white text-sm font-medium truncate">{a.displayName || a.username}</p>
+                        <p className="text-white/40 text-xs truncate">@{a.username}</p>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
       {showCreateModal && (
         <CreateEventModal
           onClose={() => setShowCreateModal(false)}

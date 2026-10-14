@@ -1,7 +1,10 @@
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
-import { MessageSquare, Users, TrendingUp, Clock, Eye, Flame, Plus } from 'lucide-react';
+import { MessageSquare, Users, TrendingUp, Clock, Eye, Flame, Plus, Crown } from 'lucide-react';
+import { auth } from '@/auth';
+import { db } from '@/lib/db';
+import { isPaid } from '@/lib/premium';
 
 interface ForumCategory {
   id: string;
@@ -15,15 +18,60 @@ interface ForumCategory {
   color?: string;
 }
 
-async function getForums() {
+async function getForums(): Promise<ForumCategory[]> {
   try {
-    const res = await fetch(
-      `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/forums`,
-      { cache: 'no-store' }
+    // Query the DB directly: a server-side fetch to our own API carries no
+    // session cookie, so the auth-protected route would always 401.
+    const rows = await db.forumCategory.findMany({
+      include: {
+        _count: { select: { threads: true } },
+        threads: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            title: true,
+            createdAt: true,
+            author: { select: { username: true, profile: { select: { displayName: true } } } },
+          },
+        },
+      },
+      orderBy: { order: 'asc' },
+    });
+    const postCounts = await db.forumPost.groupBy({
+      by: ['threadId'],
+      _count: { _all: true },
+      where: { thread: { categoryId: { in: rows.map((r) => r.id) } } },
+    });
+    const threadCategory = new Map(
+      (await db.forumThread.findMany({
+        where: { categoryId: { in: rows.map((r) => r.id) } },
+        select: { id: true, categoryId: true },
+      })).map((t) => [t.id, t.categoryId])
     );
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.categories || data || [];
+    const postsByCategory = new Map<string, number>();
+    for (const pc of postCounts) {
+      const cat = threadCategory.get(pc.threadId);
+      if (cat) postsByCategory.set(cat, (postsByCategory.get(cat) ?? 0) + pc._count._all);
+    }
+    return rows.map((r) => {
+      const latest = r.threads[0];
+      return {
+        id: r.id,
+        slug: r.slug,
+        name: r.name,
+        description: r.description ?? undefined,
+        icon: r.icon ?? undefined,
+        threadCount: r._count.threads,
+        postCount: postsByCategory.get(r.id) ?? 0,
+        latestThread: latest
+          ? {
+              title: latest.title,
+              authorName: latest.author.profile?.displayName || latest.author.username,
+              createdAt: latest.createdAt.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' }),
+            }
+          : undefined,
+      };
+    });
   } catch {
     return [];
   }
@@ -45,7 +93,16 @@ const COLOR_MAP: Record<string, { text: string; bg: string }> = {
 };
 
 export default async function ForumsPage() {
-  const categories: ForumCategory[] = await getForums();
+  const [categories, session] = await Promise.all([getForums(), auth()]);
+  const userId = session?.user?.id;
+  let canPost = false;
+  if (userId) {
+    const u = await db.user.findUnique({
+      where: { id: userId },
+      select: { role: true, profile: { select: { membershipTier: true } } },
+    });
+    canPost = isPaid(u?.profile?.membershipTier, u?.role);
+  }
 
   return (
     <div className="min-h-screen bg-[#0A0A0F]">
@@ -58,13 +115,25 @@ export default async function ForumsPage() {
               <h1 className="font-serif text-4xl font-bold text-white mb-2">Community Forums</h1>
               <p className="text-white/50">Connect, share, and engage with the Velour community</p>
             </div>
-            <Link
-              href="/forums/new"
-              className="bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 text-sm transition-all"
-            >
-              <Plus size={16} />
-              Start Discussion
-            </Link>
+            {canPost ? (
+              categories.length > 0 && (
+                <Link
+                  href={`/forums/${categories[0].slug}`}
+                  className="bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 text-sm transition-all"
+                >
+                  <Plus size={16} />
+                  Start Discussion
+                </Link>
+              )
+            ) : (
+              <Link
+                href="/upgrade"
+                className="bg-gradient-to-r from-[#D4AF37] to-[#B8960C] text-[#0A0A0F] px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 text-sm transition-all"
+              >
+                <Crown size={16} />
+                Upgrade to post
+              </Link>
+            )}
           </div>
         </div>
 

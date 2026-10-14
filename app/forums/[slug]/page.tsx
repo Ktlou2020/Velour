@@ -1,6 +1,8 @@
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { auth } from '@/auth';
+import { db } from '@/lib/db';
+import { isPaid } from '@/lib/premium';
 import ForumSlugClient from './ForumSlugClient';
 
 interface Thread {
@@ -31,16 +33,45 @@ interface PageData {
 
 async function getForumData(slug: string, page: number): Promise<PageData> {
   try {
-    const res = await fetch(
-      `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/forums/${slug}?page=${page}&limit=20`,
-      { cache: 'no-store' }
-    );
-    if (!res.ok) return { category: null, threads: [], total: 0 };
-    const data = await res.json();
+    // Query the DB directly: a server-side fetch to our own API carries no
+    // session cookie, so the auth-protected route would always 401.
+    const category = await db.forumCategory.findUnique({ where: { slug } });
+    if (!category) return { category: null, threads: [], total: 0 };
+    const limit = 20;
+    const [rows, total] = await Promise.all([
+      db.forumThread.findMany({
+        where: { categoryId: category.id },
+        include: {
+          author: { select: { username: true, profile: { select: { displayName: true, profilePhoto: true } } } },
+          _count: { select: { posts: true } },
+        },
+        orderBy: [{ isPinned: 'desc' }, { updatedAt: 'desc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      db.forumThread.count({ where: { categoryId: category.id } }),
+    ]);
     return {
-      category: data.category || null,
-      threads: data.threads || [],
-      total: data.total || 0,
+      category: {
+        id: category.id,
+        slug: category.slug,
+        name: category.name,
+        description: category.description ?? undefined,
+        threadCount: total,
+      },
+      threads: rows.map((t) => ({
+        id: t.id,
+        title: t.title,
+        authorName: t.author.profile?.displayName || t.author.username,
+        authorAvatar: t.author.profile?.profilePhoto ?? undefined,
+        // first post is the opening post
+        replyCount: Math.max(0, t._count.posts - 1),
+        views: t.views,
+        lastReplyAt: t.updatedAt.toISOString(),
+        createdAt: t.createdAt.toISOString(),
+        isPinned: t.isPinned,
+      })),
+      total,
     };
   } catch {
     return { category: null, threads: [], total: 0 };
@@ -55,12 +86,19 @@ interface PageProps {
 export default async function ForumSlugPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const { page: pageStr } = await searchParams;
-  const page = parseInt(pageStr || '1', 10);
+  const page = Math.max(1, parseInt(pageStr || '1', 10) || 1);
   const session = await auth();
   const { category, threads, total } = await getForumData(slug, page);
 
-  const userTier = (session?.user as { membershipTier?: string } | undefined)?.membershipTier || 'FREE';
-  const canPost = userTier === 'GOLD' || userTier === 'PLATINUM';
+  // membershipTier is not stored in the JWT session, so read it from the DB.
+  let canPost = false;
+  if (session?.user?.id) {
+    const u = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true, profile: { select: { membershipTier: true } } },
+    });
+    canPost = isPaid(u?.profile?.membershipTier, u?.role);
+  }
 
   return (
     <div className="min-h-screen bg-[#0A0A0F]">

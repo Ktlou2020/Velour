@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
+import { isPaid } from '@/lib/premium'
 
 export async function GET(
   req: NextRequest,
@@ -67,13 +68,13 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // GOLD/PLATINUM only
-    const profile = await db.profile.findUnique({
-      where: { userId: session.user.id },
-      select: { membershipTier: true },
+    // GOLD/PLATINUM (or admin) only
+    const poster = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true, profile: { select: { membershipTier: true } } },
     })
 
-    if (!profile || profile.membershipTier === 'FREE') {
+    if (!isPaid(poster?.profile?.membershipTier, poster?.role)) {
       return NextResponse.json(
         { error: 'Upgrade to Gold or Platinum to post in forums' },
         { status: 403 }

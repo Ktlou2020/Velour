@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
+import { isPaid } from '@/lib/premium'
 
 export async function GET(
   _req: NextRequest,
@@ -50,7 +51,15 @@ export async function GET(
       data: { views: { increment: 1 } },
     })
 
-    return NextResponse.json({ thread })
+    // membershipTier isn't in the JWT session — tell the client whether the
+    // viewer may reply so free members see an upgrade prompt, not a failing box.
+    const viewer = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true, profile: { select: { membershipTier: true } } },
+    })
+    const viewerCanPost = isPaid(viewer?.profile?.membershipTier, viewer?.role)
+
+    return NextResponse.json({ thread, viewerCanPost })
   } catch (error) {
     console.error('GET /api/forums/threads/[id] error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -67,13 +76,13 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // GOLD/PLATINUM only
-    const profile = await db.profile.findUnique({
-      where: { userId: session.user.id },
-      select: { membershipTier: true },
+    // GOLD/PLATINUM (or admin) only
+    const poster = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true, profile: { select: { membershipTier: true } } },
     })
 
-    if (!profile || profile.membershipTier === 'FREE') {
+    if (!isPaid(poster?.profile?.membershipTier, poster?.role)) {
       return NextResponse.json(
         { error: 'Upgrade to Gold or Platinum to reply in forums' },
         { status: 403 }

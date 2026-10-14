@@ -7,6 +7,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: 'https://velour.dating/auth/signup', changeFrequency: 'monthly', priority: 0.8 },
     { url: 'https://velour.dating/auth/signin', changeFrequency: 'monthly', priority: 0.7 },
     { url: 'https://velour.dating/terms', changeFrequency: 'monthly', priority: 0.5 },
+    { url: 'https://velour.dating/safety', changeFrequency: 'monthly', priority: 0.6 },
     { url: 'https://velour.dating/privacy', changeFrequency: 'monthly', priority: 0.5 },
   ]
 }
