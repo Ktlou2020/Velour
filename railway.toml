@@ -2,8 +2,13 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "npx prisma db push --skip-generate --accept-data-loss; node scripts/backfill.mjs; node scripts/seed-admin.mjs; HOSTNAME=0.0.0.0 node .next/standalone/server.js"
+# scripts/migrate.mjs applies Prisma migrations (baselining a database that was
+# created by `prisma db push`). It exits non-zero on failure, and `&&` then
+# stops the app from starting: the healthcheck never passes, the deploy is
+# marked failed and Railway keeps the previous deployment serving traffic.
+# backfill / seed-admin stay non-fatal (`;`).
+startCommand = "node scripts/migrate.mjs && { node scripts/backfill.mjs; node scripts/seed-admin.mjs; HOSTNAME=0.0.0.0 exec node .next/standalone/server.js; }"
 healthcheckPath = "/api/health"
-healthcheckTimeout = 60
+healthcheckTimeout = 120
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 5

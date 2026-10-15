@@ -53,10 +53,8 @@ reminded once (`EventAttendee.reminderSentAt`), so running it more often is safe
    curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/event-reminders
    ```
 
-   - **Railway:** add a second service to the project (e.g. a tiny `curlimages/curl` image or this repo
-     with a custom start command) whose start command is the `curl` line above, set its **Cron Schedule**
-     to `0 * * * *`, and give it the same `CRON_SECRET` variable. Railway starts it on schedule and it
-     exits when done.
+   - **Railway:** use the cron runner service described in [Cron runner on Railway](#cron-runner-on-railway)
+     below — one service calls every job.
    - **Anything else:** cron-job.org, GitHub Actions `schedule:`, or a server crontab can hit the same URL
      with the `Authorization` header.
 
@@ -84,6 +82,41 @@ lazily (at most once a minute per instance), so a missed run only delays the rel
 
 ```bash
 curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/store
+```
+
+### Cron runner on Railway
+
+`scripts/cron.mjs` (no dependencies) POSTs to every job with the bearer secret and logs one line each:
+`event-reminders`, `store` and `view-once` on every run; `reviews` and `subscriptions` only on the first run
+of each hour (UTC minute < `CRON_INTERVAL_MINUTES`). All endpoints are idempotent, so overlapping or extra
+runs are harmless. A 404 is logged as "not deployed yet" rather than a failure. It exits 1 only when every
+job failed (wrong URL or secret, web service down), so Railway shows the run as failed.
+
+1. In the Railway project: **New → GitHub Repo →** this repo (a second service next to the web service).
+   Name it e.g. `cron`.
+2. **Settings → Deploy → Custom Start Command:** `node scripts/cron.mjs`
+3. **Settings → Deploy → Cron Schedule:** `*/15 * * * *` (UTC; Railway's minimum is 5 minutes).
+4. **Settings → Build → Custom Build Command:** `echo "no build needed"` (optional, skips the Next.js build;
+   the script only needs Node 22). Leave **Healthcheck Path** empty and **Restart Policy** at *Never*
+   or *On Failure* — the process exits after each run.
+5. **Variables:**
+
+   | Variable | Value |
+   | --- | --- |
+   | `CRON_SECRET` | `${{web.CRON_SECRET}}` (reference the web service's value; `web` = its service name) |
+   | `CRON_TARGET_URL` | `https://www.unboundza.com`, or the private URL `http://${{web.RAILWAY_PRIVATE_DOMAIN}}:${{web.PORT}}` (needs `PORT` set on the web service) |
+   | `CRON_INTERVAL_MINUTES` | optional, default `15` — keep it equal to the schedule's interval |
+   | `CRON_JOBS` | optional subset for manual runs, e.g. `store,view-once` |
+   | `CRON_FORCE` | optional `1` = also run the hourly jobs now |
+
+Railway's **Cron Runs** tab (or `railway cron run`) triggers a run on demand. Example log:
+
+```text
+[cron] event-reminders: ok (412 ms) candidates=3 sent=3 failed=0
+[cron] reviews: not due (runs in the first run of each hour)
+[cron] store: ok (95 ms) released=0
+[cron] view-once: ok (130 ms) checked=0 deleted=0
+[cron] done: 3 ok, 0 failed, 0 not deployed, 2 not due
 ```
 
 ## Notifications & push
@@ -150,6 +183,61 @@ file. Nothing is publicly reachable by guessing a path.
   the member is notified and can leave); members can request access (owner approves/declines).
 - **Legacy:** older Cloudinary URLs keep rendering; set `CLOUDINARY_CLOUD_NAME` so they still validate.
 - **Backups:** back up the volume together with the database — rows without files render as broken images.
+
+### Media storage (S3 / Railway Buckets / R2)
+
+`lib/storage.ts` has two backends behind one async interface — `putObject(key, data)`,
+`getObjectStream(key, range?)` (web `ReadableStream` + `size` / `contentLength` / `contentRange` / `contentType`),
+`readObject(key)` (Buffer, for sharp), `statObject(key)` and `deleteObjects(keys)`; `saveImage` / `saveVideo` /
+`saveAudio`, the media route, view-once serving and the watermarker all go through it.
+
+- **Local disk** (default, `S3_BUCKET` unset): files under `UPLOAD_DIR`, exactly as above.
+- **Bucket** (`S3_BUCKET` set): any S3-compatible store, signed with SigV4 via `aws4fetch` (no AWS SDK).
+  - **writes** (new uploads) go to the bucket only;
+  - **reads / stats** try the bucket first; if the object isn't there (404) — or the bucket errors or is
+    unreachable — they fall back to the same key under `UPLOAD_DIR`. Media uploaded before the switch keeps
+    working until it has been copied, and an outage of the bucket never hides already-local files;
+  - **deletes** (photo delete, view-once burn, account deletion, store products) remove the key from both.
+  - Object keys are the same relative keys as on disk (`2026/10/<hex>.webp`), so no database rows change.
+  - `/api/media` behaves exactly as before: same access checks, cache headers, ETags, `Range` → 206, 404s and
+    watermarking. Videos / voice notes are streamed from the bucket with the `Range` passed through; images are
+    read into memory (≤ 10 MB) for watermarking. The watermark cache (`${UPLOAD_DIR}/.wm-cache`) stays on local
+    disk — it is disposable (without a volume it just re-renders after a deploy).
+
+| Variable | |
+| --- | --- |
+| `S3_BUCKET` | bucket name — setting it switches the bucket on |
+| `S3_ENDPOINT` | e.g. `https://t3.storageapi.dev` (Railway), `https://<account-id>.r2.cloudflarestorage.com` (R2) |
+| `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | bucket credentials |
+| `S3_REGION` | default `auto` (Railway, R2); AWS regions as usual |
+| `S3_FORCE_PATH_STYLE` | `true` = `endpoint/bucket/key` (MinIO); default virtual-hosted `bucket.endpoint/key` (Railway, R2, AWS) |
+| `S3_TIMEOUT_MS` | per-request timeout until response headers, default 20000 |
+
+On Railway, reference the bucket's Credentials tab from the web service:
+`S3_BUCKET=${{<bucket>.BUCKET}}`, `S3_ENDPOINT=${{<bucket>.ENDPOINT}}`, `S3_ACCESS_KEY_ID=${{<bucket>.ACCESS_KEY_ID}}`,
+`S3_SECRET_ACCESS_KEY=${{<bucket>.SECRET_ACCESS_KEY}}`, `S3_REGION=${{<bucket>.REGION}}`.
+
+**Cut-over runbook (zero downtime, no data loss)**
+
+1. **Create the bucket** (Railway: *New → Bucket*; or an R2 bucket + an API token with Object Read & Write).
+   Keep it private — media is only ever served through `/api/media`.
+2. **Set the `S3_*` variables** on the web service and redeploy. Keep the volume attached and `UPLOAD_DIR` set.
+   From now on new uploads land in the bucket; everything older is still served from the volume via the fallback.
+   The log shows `[storage] S3 bucket "…" … reads fall back to /data/uploads` on first use.
+3. **Copy the existing files** once, from a shell on the web service (it needs the volume *and* the S3 vars),
+   e.g. `railway ssh` then:
+   ```bash
+   node scripts/migrate-media-to-s3.mjs --dry-run   # what would be copied
+   node scripts/migrate-media-to-s3.mjs             # copy + verify (HeadObject size), concurrency 4
+   ```
+   It skips keys already in the bucket with the same size, so it is safe to re-run after an interruption
+   (`--concurrency=N` to tune). It ignores `.wm-cache` and temp files and exits non-zero if anything failed.
+4. **Verify**: run it again — the summary should say `uploaded + verified 0` and `failed 0`; spot-check old
+   photos, videos (seeking) and voice notes on the site.
+5. **Optional, later**: free the volume with `node scripts/migrate-media-to-s3.mjs --delete-local` (deletes only
+   files whose bucket copy is verified), then detach the volume. Keep it a while first as a rollback path:
+   unsetting `S3_BUCKET` goes back to local-only, but media uploaded while the bucket was on then lives only in
+   the bucket. Back up the bucket together with the database from then on.
 
 ## Content protection (watermarks, no-save, privacy shield)
 
@@ -276,4 +364,112 @@ email, admin label and PayFast item name follows. Order numbers use `ORDER_NUMBE
 - **Admins** are granted on each deploy by `scripts/seed-admin.mjs` from `ADMIN_EMAILS` (comma-separated).
 - **Headers** (`next.config.js`): CSP, HSTS, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`,
   `Permissions-Policy`. When adding a new external image/font/API host, add it to the CSP or it will be blocked.
+## Database migrations
+
+The schema is managed with **Prisma Migrate** (`prisma/migrations/`). On every deploy the start command
+runs `scripts/migrate.mjs` before the app boots:
+
+- **empty database** → `prisma migrate deploy` creates everything;
+- **database already tracked by Migrate** → `prisma migrate deploy` applies pending migrations (no-op otherwise);
+- **database created by the old `prisma db push`** (tables, but no `_prisma_migrations`) → it is *baselined*
+  first, then deployed. The live schema is compared (`prisma migrate diff --from-url`, read-only, no shadow
+  database) with `prisma/schema.prisma` (→ every migration is marked applied) and with the frozen
+  `prisma/baseline/0_init.prisma` (→ only `0_init` is marked applied, later ones run normally). If it
+  matches neither, the script prints the drift as SQL and **refuses** (exit 1, nothing changed).
+
+Any failure exits non-zero, so the app never starts against a schema it doesn't expect: the deploy fails
+its healthcheck and Railway keeps the previous deployment serving. There is no `--accept-data-loss` anywhere.
+
+**Making a schema change**
+
+1. Point `DATABASE_URL` at a local/dev database (never production) and edit `prisma/schema.prisma`.
+2. `npx prisma migrate dev --name add_subscriptions` — writes `prisma/migrations/<timestamp>_add_subscriptions/migration.sql`,
+   applies it locally and regenerates the client. Read the SQL: renames show up as drop + add (edit the SQL
+   to `ALTER … RENAME` if you need to keep data), and new required columns on existing tables need a default.
+3. Commit the migration folder together with the schema change. The deploy applies it.
+
+Never edit a migration that has been deployed (its checksum is recorded) — add a new one. Don't edit
+`prisma/baseline/0_init.prisma` either; it only exists for the one-time baseline. `npx prisma migrate status`
+shows what a database has applied. If the start log warns that the database "still differs from
+prisma/schema.prisma", a schema change was committed without its migration.
+
+**If the baseline refuses (drift)**: the log shows the SQL that would turn the live database into `0_init`.
+Usually it is a hand-made change (an extra index, a column added in the console). Either undo it in the
+database, or — if the live database is right — keep it by adding it to `schema.prisma` + a migration. As a
+last resort set `MIGRATE_BASELINE_ALLOW_DRIFT=1` on the web service for one deploy: `0_init` is then marked
+applied as-is (remove the variable afterwards).
+
+**A migration failed in production** (`P3018` / `P3009` in the log): the previous deployment is still
+serving. Fix the cause, then mark the failed migration with
+`npx prisma migrate resolve --rolled-back <name>` (if it changed nothing, or after you undid its partial
+changes) or `--applied <name>` (if you completed it by hand), and redeploy.
+
+## Error monitoring (Sentry)
+
+Optional. With no DSN set, nothing Sentry-related is loaded: `next.config.js` isn't wrapped, the browser
+bundle doesn't include the SDK and `instrumentation.ts` returns immediately.
+
+- Files: `instrumentation.ts` (server/edge init + `onRequestError` for server components, route handlers and
+  server actions), `instrumentation-client.ts` (browser, loaded lazily), `sentry.server.config.ts`,
+  `sentry.edge.config.ts`, `sentry.scrub.ts` (shared privacy filters), `app/global-error.tsx`.
+- **Privacy** (adult dating site): `sendDefaultPii: false`; every event and transaction has request bodies,
+  cookies, query strings and the `Authorization` / `Cookie` / IP headers removed, URLs stripped of query
+  strings, e-mail addresses redacted from messages, `user` reduced to an opaque id (nothing sets one by
+  default), console breadcrumbs dropped, no local variables attached. **No session replay.**
+- Performance traces are sampled at 10 % by default.
+
+| Variable | |
+| --- | --- |
+| `SENTRY_DSN` | server-side DSN (runtime). Enables server/edge reporting. |
+| `NEXT_PUBLIC_SENTRY_DSN` | browser DSN — **build-time** (inlined by `next build`; redeploy after changing). Also added to the CSP `connect-src`. Usually the same value as `SENTRY_DSN`. |
+| `SENTRY_TRACES_SAMPLE_RATE` / `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` | 0–1, default `0.1` (server / browser) |
+| `SENTRY_ENVIRONMENT` / `NEXT_PUBLIC_SENTRY_ENVIRONMENT` | default `NODE_ENV` |
+| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | optional, build-time: upload source maps (then deleted from the public output). Without all three the upload is skipped silently. |
+
+Releases are tagged with `RAILWAY_GIT_COMMIT_SHA` on the server (override with `SENTRY_RELEASE`).
+
+## Database backups
+
+`scripts/backup.mjs` takes a nightly `pg_dump` (custom format `-Fc`, compressed, checked with
+`pg_restore --list`), uploads it to an S3-compatible bucket as `backups/unbound-YYYY-MM-DDTHH-mm.dump` (UTC;
+multipart above 64 MiB) and deletes its own backups older than `BACKUP_RETENTION_DAYS` (always keeping the
+newest `BACKUP_MIN_KEEP`). Requests are SigV4-signed with `aws4fetch`. It exits 1 if the dump or upload fails;
+a pruning problem only warns. Restoring: [`scripts/restore.md`](scripts/restore.md).
+
+`pg_dump` comes from `postgresql_17` in `nixpacks.toml` (dumps Postgres 16 and 17; must be ≥ the server's
+major version).
+
+1. **Bucket:** Railway **New → Bucket** (e.g. `backups`, separate from any media bucket), or a Cloudflare R2
+   bucket + API token with Object Read & Write. Keep it private.
+2. **Service:** **New → GitHub Repo →** this repo, named e.g. `db-backup`.
+   - **Settings → Build → Builder:** *Nixpacks* (so `nixpacks.toml` installs `postgresql_17`; with Railpack
+     there is no `pg_dump` and the run fails with "pg_dump not found").
+   - **Settings → Build → Custom Build Command:** `echo "no build needed"` (optional; `npm ci` still runs, which
+     is all the script needs).
+   - **Settings → Deploy → Custom Start Command:** `node scripts/backup.mjs`
+   - **Settings → Deploy → Cron Schedule:** `0 1 * * *` (01:00 UTC = 03:00 SAST). No healthcheck; restart
+     policy *Never*.
+3. **Variables** (Railway references shown; `Postgres` / `backups` = your service and bucket names):
+
+   | Variable | Value |
+   | --- | --- |
+   | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (private network) |
+   | `BACKUP_S3_ENDPOINT` | `${{backups.ENDPOINT}}` · R2: `https://<account-id>.r2.cloudflarestorage.com` |
+   | `BACKUP_S3_BUCKET` | `${{backups.BUCKET}}` |
+   | `BACKUP_S3_ACCESS_KEY_ID` | `${{backups.ACCESS_KEY_ID}}` |
+   | `BACKUP_S3_SECRET_ACCESS_KEY` | `${{backups.SECRET_ACCESS_KEY}}` |
+   | `BACKUP_S3_REGION` | optional, default `auto` |
+   | `BACKUP_S3_URL_STYLE` | optional, `virtual` (default: Railway, R2, AWS) or `path` (MinIO) |
+   | `BACKUP_RETENTION_DAYS` | optional, default `30` (`0` = keep forever) |
+   | `BACKUP_MIN_KEEP` | optional, default `3` |
+   | `BACKUP_PREFIX` | optional, default `backups/` |
+   | `BACKUP_DATABASE_URL` | optional, overrides `DATABASE_URL` |
+
+4. Trigger one run from the **Cron Runs** tab and check the log for `uploaded s3://…`. Then do a test restore
+   (`scripts/restore.md`) — and repeat that every few months.
+
+The dump holds members' personal data: keep the bucket private, limit who has its credentials, and remember
+the retention period when a member asks for deletion (POPIA) — deleted accounts disappear from backups
+after `BACKUP_RETENTION_DAYS`.
+
 # Unbound — built 2026-06-03T16:54:21Z
