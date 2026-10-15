@@ -31,12 +31,11 @@ interface TeamData {
   log: LogRow[];
 }
 
-const ACTION_TEXT: Record<string, string> = {
-  ADMIN_APPOINTED: 'appointed as admin',
-  ADMIN_REMOVED: 'removed as admin',
-  USER_BANNED: 'banned',
-  USER_UNBANNED: 'unbanned',
-  TIER_SET: 'membership set',
+const ACTION_TEXT: Record<string, [string, string]> = {
+  ADMIN_APPOINTED: ['appointed', 'as admin'],
+  ADMIN_REMOVED: ['removed', 'as admin'],
+  USER_BANNED: ['banned', ''],
+  USER_UNBANNED: ['unbanned', ''],
 };
 
 function when(d: string) {
@@ -178,7 +177,7 @@ export default function TeamClient() {
                   <span className="text-white">@{l.actor}</span>{' '}
                   {l.action === 'TIER_SET'
                     ? <>set <span className="text-white">@{l.target}</span> to {l.meta?.tier ?? '—'}</>
-                    : <><span className="text-white">@{l.target}</span> {ACTION_TEXT[l.action] ?? l.action}</>}
+                    : <>{ACTION_TEXT[l.action]?.[0] ?? l.action} <span className="text-white">@{l.target}</span> {ACTION_TEXT[l.action]?.[1]}</>}
                 </span>
                 <span className="text-white/40 text-xs">{when(l.createdAt)}</span>
               </li>

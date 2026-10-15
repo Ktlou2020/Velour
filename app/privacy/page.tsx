@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { LogoMark } from '@/components/Logo'
 import { ArrowLeft } from 'lucide-react'
+import { BUSINESS, OPERATOR_NAME } from '@/lib/business'
+import { BusinessDetails } from '@/components/LegalPage'
 
 export const metadata = {
   title: 'Privacy Policy',
@@ -8,7 +10,8 @@ export const metadata = {
 }
 
 export default function PrivacyPage() {
-  const lastUpdated = '1 June 2025'
+  const lastUpdated = '15 October 2026'
+  const email = BUSINESS.email
 
   return (
     <div className="min-h-screen bg-[#0A0A0F] text-white">
@@ -42,7 +45,7 @@ export default function PrivacyPage() {
           {/* Intro */}
           <div className="glass rounded-2xl p-6">
             <p className="text-gray-300 leading-relaxed">
-              Hush (Pty) Ltd (&quot;Hush&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) is committed to protecting your personal information. This Privacy Policy explains how we collect, use, store, share, and protect your personal information in accordance with the <strong className="text-white">Protection of Personal Information Act 4 of 2013</strong> (POPIA) and other applicable South African laws.
+              {OPERATOR_NAME} (&quot;Hush&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) is committed to protecting your personal information. This Privacy Policy explains how we collect, use, store, share, and protect your personal information in accordance with the <strong className="text-white">Protection of Personal Information Act 4 of 2013</strong> (POPIA) and other applicable South African laws.
             </p>
             <p className="text-gray-300 leading-relaxed mt-3">
               By using the Hush platform, you consent to the processing of your personal information as described in this policy. If you do not agree, please do not use the Service.
@@ -162,8 +165,8 @@ export default function PrivacyPage() {
                 <li><strong className="text-white">Right to complain:</strong> You have the right to lodge a complaint with the Information Regulator of South Africa.</li>
               </ul>
               <p className="mt-2">
-                To exercise any of these rights, contact our Information Officer at{' '}
-                <a href="mailto:privacy@hush.dating" className="text-[#DC143C] hover:underline">privacy@hush.dating</a>.
+                To exercise any of these rights, contact our Information Officer{BUSINESS.informationOfficer ? <> ({BUSINESS.informationOfficer})</> : null} at{' '}
+                <a href={`mailto:${email}?subject=POPIA%20request`} className="text-[#DC143C] hover:underline">{email}</a>.
                 We will respond within 30 days.
               </p>
             </div>
@@ -196,7 +199,7 @@ export default function PrivacyPage() {
             </h2>
             <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
               <p>The Service is strictly for adults aged 18 and over. We do not knowingly collect personal information from persons under 18. If we become aware that we have inadvertently collected personal information from a minor, we will take immediate steps to delete it and terminate the associated account.</p>
-              <p>If you believe a minor has created an account on Hush, please contact us at <a href="mailto:support@hush.dating" className="text-[#DC143C] hover:underline">support@hush.dating</a> immediately.</p>
+              <p>If you believe a minor has created an account on Hush, please contact us at <a href={`mailto:${email}`} className="text-[#DC143C] hover:underline">{email}</a> immediately.</p>
             </div>
           </section>
 
@@ -229,22 +232,18 @@ export default function PrivacyPage() {
           </section>
 
           {/* Contact / Information Officer */}
-          <div className="glass rounded-2xl p-6 mt-8">
-            <h2 className="text-xl font-serif font-bold text-white mb-4">Information Officer &amp; Contact Details</h2>
-            <p className="text-gray-300 leading-relaxed mb-4">
-              Our Information Officer is responsible for ensuring compliance with POPIA and handling privacy-related enquiries and complaints.
-            </p>
-            <div className="space-y-2 text-gray-300 text-sm">
-              <p><span className="text-gray-400">Company:</span> <span className="text-white">Hush (Pty) Ltd</span></p>
-              <p><span className="text-gray-400">Information Officer email:</span> <a href="mailto:privacy@hush.dating" className="text-[#DC143C] hover:underline">privacy@hush.dating</a></p>
-              <p><span className="text-gray-400">General support:</span> <a href="mailto:support@hush.dating" className="text-[#DC143C] hover:underline">support@hush.dating</a></p>
-              <p><span className="text-gray-400">Country:</span> <span className="text-white">South Africa</span></p>
-            </div>
-            <div className="mt-4 pt-4 border-t border-white/5">
+          <div className="mt-8 space-y-4">
+            <BusinessDetails
+              heading="Information Officer & Contact Details"
+              showInfoOfficer
+              blurb={<p>Our Information Officer is responsible for ensuring compliance with POPIA and handling privacy-related enquiries and complaints. Please mark privacy requests &quot;POPIA request&quot;.</p>}
+            />
+            <div className="glass rounded-2xl p-6">
               <p className="text-gray-400 text-sm">
                 <strong className="text-gray-400">Information Regulator (South Africa):</strong><br />
-                JD House, 27 Stiemens Street, Braamfontein, Johannesburg, 2001<br />
-                <a href="https://www.justice.gov.za/inforeg/" className="text-[#DC143C] hover:underline" target="_blank" rel="noopener noreferrer">www.justice.gov.za/inforeg/</a>
+                Woodmead North Office Park, 54 Maxwell Drive, Woodmead, Johannesburg, 2191<br />
+                Complaints: <a href="mailto:POPIAComplaints@inforegulator.org.za" className="text-[#DC143C] hover:underline">POPIAComplaints@inforegulator.org.za</a><br />
+                <a href="https://inforegulator.org.za/" className="text-[#DC143C] hover:underline" target="_blank" rel="noopener noreferrer">inforegulator.org.za</a>
               </p>
             </div>
           </div>

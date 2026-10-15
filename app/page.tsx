@@ -62,17 +62,17 @@ const FEATURES = [
 const TIERS = [
   {
     name: 'Free', price: 'R0', period: 'forever',
-    features: ['Browse & message members', 'Search members in your city', 'Singles or couples profile', 'Photo verification badge', 'Read the community forums'],
+    features: ['Browse members & 5 messages a day', 'Search near you (up to 250 km)', 'Singles or couples profile', 'Photo verification badge', 'Read the community forums'],
     cta: 'Join free', style: 'plain' as const,
   },
   {
     name: 'Gold', price: 'R199', period: 'per month',
-    features: ['Search any city & filter by distance', 'See who liked & viewed you', 'Private photo access', 'Events & meetups access', 'Monthly profile boost', 'Read receipts & undo swipe'],
+    features: ['Unlimited messages & search anywhere', 'See who liked & viewed you', 'Private photo access', 'Events & meetups access', 'Monthly profile boost', 'Read receipts & undo swipe'],
     cta: 'Start with Gold', style: 'gold' as const,
   },
   {
     name: 'Platinum', price: 'R349', period: 'per month',
-    features: ['Everything in Gold', 'Incognito browsing', 'Weekly profile boost', 'Compatibility insights', 'Video profile (30 sec)'],
+    features: ['Everything in Gold', 'Incognito browsing', 'Weekly profile boost', 'Compatibility insights', 'Video profile'],
     cta: 'Start with Platinum', style: 'crimson' as const,
   },
 ];
@@ -216,7 +216,7 @@ export default function LandingPage() {
         {/* ── Membership ───────────────────────────────────────── */}
         <section id="pricing" aria-labelledby="pricing-heading" className="py-20 md:py-28 px-4 bg-gradient-to-b from-[#0F0A1E] to-[#0A0A0F] scroll-mt-16">
           <div className="max-w-5xl mx-auto">
-            <SectionHeading id="pricing-heading" eyebrow="Membership" title="Start free. Upgrade if you love it." sub="Prices in rand, paid securely through PayFast." />
+            <SectionHeading id="pricing-heading" eyebrow="Membership" title="Start free. Upgrade if you love it." sub="Prices in rand, paid securely through our payment provider." />
             <div className="grid md:grid-cols-3 gap-5 md:gap-6 items-start">
               {TIERS.map((tier) => {
                 const gold = tier.style === 'gold';
