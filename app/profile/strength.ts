@@ -14,7 +14,6 @@ export interface StrengthFacts {
   isCouple: boolean;
   /** Singles: pronouns set. Couples: partner 2 details added or accounts linked. */
   hasPersonalTouch: boolean;
-  sparkAnsweredToday: boolean;
 }
 
 export interface StrengthStep {
@@ -77,7 +76,6 @@ export function profileStrength(f: StrengthFacts): { percent: number; steps: Str
       : { id: 'pronouns', label: 'Add your pronouns', gain: PERSONAL, href: '#identity' });
   }
   steps.sort((a, b) => b.gain - a.gain);
-  if (!f.sparkAnsweredToday) steps.push({ id: 'spark', label: 'Answer today’s Spark', gain: 0, href: '/spark' });
 
   const percent = Math.max(0, Math.min(100, Math.round(score)));
   return { percent, steps };

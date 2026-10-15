@@ -108,7 +108,7 @@ const SEND_AS_KEY = 'hush_send_as';
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_DRAFT = 2000;
 
-/** ?draft= from a deep link (e.g. Daily Spark "Reply"): already URL-decoded by URLSearchParams. */
+/** ?draft= from a deep link (e.g. a shared link): already URL-decoded by URLSearchParams. */
 function cleanDraft(raw: string | null): string {
   if (!raw) return '';
   // eslint-disable-next-line no-control-regex

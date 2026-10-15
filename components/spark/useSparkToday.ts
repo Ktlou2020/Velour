@@ -13,7 +13,7 @@ export interface SparkToday {
   count: number;
 }
 
-// One shared fetch per page for every consumer (navbar dot, tab bar, SparkCard).
+// One shared fetch per page for every consumer (navbar dot, tab bar).
 const TTL_MS = 5 * 60 * 1000;
 let cache: { data: SparkToday; at: number } | null = null;
 let inflight: Promise<SparkToday | null> | null = null;

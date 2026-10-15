@@ -3,16 +3,14 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
 import { todaySpark, validateSparkAnswer } from '@/lib/spark'
-import { loadFeed, loadSparkAnswers, loadSparkStreak } from './data'
+import { loadFeed } from './data'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * GET /api/spark — today's question, my answer, answer count, streak and my
- * recent answers. The feed of other members' answers is only returned once
- * I've answered (give-to-get). Query: ?cursor=<id> for the next page,
- * ?filter=same for quick-pick answers matching mine, ?feedOnly=1 to skip
- * history/streak when paginating.
+ * GET /api/spark — today's question, my answer and the answer count. Other
+ * members' answers are only returned once I've answered (give-to-get).
+ * Query: ?cursor=<id> for the next page of answers.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -20,10 +18,7 @@ export async function GET(req: NextRequest) {
     const userId = session?.user?.id
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const sp = req.nextUrl.searchParams
-    const cursor = sp.get('cursor')
-    const same = sp.get('filter') === 'same'
-    const feedOnly = sp.get('feedOnly') === '1'
+    const cursor = req.nextUrl.searchParams.get('cursor')
     const today = todaySpark()
 
     const mine = await db.sparkAnswer.findUnique({
@@ -32,10 +27,8 @@ export async function GET(req: NextRequest) {
     })
     const myAnswer = mine?.answer ?? null
 
-    const [feed, streak, history, count] = await Promise.all([
-      myAnswer ? loadFeed(userId, today.key, today.question, myAnswer, { cursor, same }) : Promise.resolve(null),
-      feedOnly ? Promise.resolve(null) : loadSparkStreak(userId),
-      feedOnly ? Promise.resolve(null) : loadSparkAnswers(userId, 14, { excludeKey: today.key }),
+    const [feed, count] = await Promise.all([
+      myAnswer ? loadFeed(userId, today.key, { cursor }) : Promise.resolve(null),
       db.sparkAnswer.count({ where: { questionId: today.key } }),
     ])
 
@@ -45,12 +38,8 @@ export async function GET(req: NextRequest) {
       closesAt: today.closesAt,
       myAnswer,
       count,
-      ...(streak ? { streak } : {}),
-      ...(history ? { history } : {}),
       feed: feed ? feed.items : null,
       nextCursor: feed?.nextCursor ?? null,
-      feedTotal: feed?.total ?? null,
-      sameCount: feed?.sameCount ?? null,
     })
   } catch (error) {
     console.error('GET /api/spark error:', error)
@@ -78,10 +67,9 @@ export async function POST(req: NextRequest) {
       where: { userId_questionId: { userId, questionId: today.key } },
       create: { userId, questionId: today.key, answer: result.answer },
       update: { answer: result.answer },
-      select: { answer: true, createdAt: true },
+      select: { answer: true },
     })
-    const streak = await loadSparkStreak(userId)
-    return NextResponse.json({ myAnswer: saved.answer, streak })
+    return NextResponse.json({ myAnswer: saved.answer })
   } catch (error) {
     console.error('POST /api/spark error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

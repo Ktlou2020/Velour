@@ -244,9 +244,3 @@ export function sparkStreaks(dateKeys: Iterable<string>, now = new Date()): { cu
   return { current, best: Math.max(best, current), answeredToday }
 }
 
-/** Short reply text to prefill a chat when replying to someone's Spark answer. */
-export function sparkReplyDraft(questionText: string, answer: string): string {
-  const a = answer.length > 80 ? `${answer.slice(0, 77)}…` : answer
-  const q = questionText.length > 70 ? `${questionText.slice(0, 67)}…` : questionText
-  return `Your Spark answer to “${q}” — “${a}” — caught my eye. `
-}

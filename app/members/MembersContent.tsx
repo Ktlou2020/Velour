@@ -10,7 +10,6 @@ import { CITIES_BY_COUNTRY, COUNTRIES } from '@/lib/cities';
 import { BODY_TYPE_OPTIONS, INTENTION_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/identity';
 import PlanChip from '@/components/plans/PlanChip';
 import UpgradeNudge from '@/components/plans/UpgradeNudge';
-import SparkCard from '@/components/spark/SparkCard';
 import LocationPrompt from '@/components/plans/LocationPrompt';
 import type { MemberData } from './page';
 
@@ -464,8 +463,6 @@ export default function MembersContent({
           onDismiss={() => setNudge(null)}
         />
       )}
-
-      <SparkCard className="mb-6" />
 
       {/* Platinum spotlight */}
       {spotlight.length > 0 && (

@@ -175,7 +175,6 @@ export async function loadBadgeFacts(userId: string): Promise<BadgeFacts | null>
       hasIntentions: (p?.intentions?.length ?? 0) > 0,
       isCouple: !!p?.isCouple,
       hasPersonalTouch: p?.isCouple ? (!!p.partnerId || parseCoupleMembers(p.coupleMembers).length > 1) : !!p?.pronouns,
-      sparkAnsweredToday: true,
     }).percent,
   }
 }

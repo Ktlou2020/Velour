@@ -4,7 +4,7 @@ import { loadTodayStatus } from '../data'
 
 export const dynamic = 'force-dynamic'
 
-/** GET /api/spark/today — lightweight: today's question and whether I've answered (nav dot, SparkCard). */
+/** GET /api/spark/today — lightweight: today's question and whether I've answered (nav dot). */
 export async function GET() {
   try {
     const session = await auth()

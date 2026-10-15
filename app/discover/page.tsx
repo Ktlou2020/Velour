@@ -11,7 +11,6 @@ import { X, Heart, Star, MapPin, Zap, Navigation, Sparkles, Undo2, Crown, Lock, 
 import AllowanceMeter, { resetPhrase, type Allowance } from '@/components/plans/AllowanceMeter';
 import UpgradeNudge from '@/components/plans/UpgradeNudge';
 import StatusPill from '@/components/status/StatusPill';
-import SparkCard from '@/components/spark/SparkCard';
 import LocationPrompt from '@/components/plans/LocationPrompt';
 import { RatingChip } from '@/components/reviews/Stars';
 
@@ -438,7 +437,6 @@ export default function DiscoverPage() {
                     You&apos;ve used today&apos;s {allowance?.likes.limit} likes — they refresh at midnight.
                     Meanwhile, here are some lovely ways to keep the spark going.
                   </p>
-                  <SparkCard className="mb-2 text-left" />
                   <div className="grid gap-2 text-left">
                     <Link href="/matches" className="flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/10 hover:border-[#DC143C]/40 px-4 py-3 transition-colors">
                       <MessageCircle size={18} className="text-[#FF4D6D] flex-shrink-0" aria-hidden="true" />

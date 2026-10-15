@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 import {
   ageFrom, categoryOf, effectiveInterestedIn, legacyValuesWanting, LEGACY_WHO_VALUES, type Category,
 } from '@/lib/identity'
-import { parseSparkKey, sparkStreaks, todaySpark, type SparkQuestion } from '@/lib/spark'
+import { parseSparkKey, sparkStreaks, todaySpark } from '@/lib/spark'
 
 export const FEED_PAGE_SIZE = 20
 
@@ -92,11 +92,10 @@ export interface SparkFeedItem {
   photoUrl: string | null
   isCouple: boolean
   answer: string
-  sameAsMe: boolean
   createdAt: string
 }
 
-function toFeedItem(row: { id: string; answer: string; createdAt: Date; user: AuthorRow }, mine: string | null, isPick: boolean): SparkFeedItem {
+function toFeedItem(row: { id: string; answer: string; createdAt: Date; user: AuthorRow }): SparkFeedItem {
   const p = row.user.profile
   const age = ageFrom(p?.dateOfBirth) ?? null
   const partnerAge = p?.isCouple ? ageFrom(p.partner?.dateOfBirth) ?? null : null
@@ -110,40 +109,28 @@ function toFeedItem(row: { id: string; answer: string; createdAt: Date; user: Au
     photoUrl: row.user.photos[0]?.url ?? p?.profilePhoto ?? null,
     isCouple: !!p?.isCouple,
     answer: row.answer,
-    sameAsMe: isPick && mine !== null && row.answer === mine,
     createdAt: row.createdAt.toISOString(),
   }
 }
 
+/** Today's answers from members the viewer could meet, newest first, paginated. */
 export async function loadFeed(
   viewerId: string,
   key: string,
-  question: SparkQuestion,
-  myAnswer: string | null,
-  opts: { cursor?: string | null; same?: boolean },
-): Promise<{ items: SparkFeedItem[]; nextCursor: string | null; total: number; sameCount: number | null }> {
+  opts: { cursor?: string | null },
+): Promise<{ items: SparkFeedItem[]; nextCursor: string | null }> {
   const userWhere = await visibleAuthorsWhere(viewerId)
-  const base: Prisma.SparkAnswerWhereInput = { questionId: key, user: userWhere }
-  const isPick = !!question.options
-  const where: Prisma.SparkAnswerWhereInput = opts.same && isPick && myAnswer ? { ...base, answer: myAnswer } : base
-
-  const [rows, total, sameCount] = await Promise.all([
-    db.sparkAnswer.findMany({
-      where,
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      take: FEED_PAGE_SIZE + 1,
-      ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
-      select: { id: true, answer: true, createdAt: true, user: { select: authorSelect } },
-    }),
-    db.sparkAnswer.count({ where: base }),
-    isPick && myAnswer ? db.sparkAnswer.count({ where: { ...base, answer: myAnswer } }) : Promise.resolve(null),
-  ])
+  const rows = await db.sparkAnswer.findMany({
+    where: { questionId: key, user: userWhere },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: FEED_PAGE_SIZE + 1,
+    ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
+    select: { id: true, answer: true, createdAt: true, user: { select: authorSelect } },
+  })
   const page = rows.slice(0, FEED_PAGE_SIZE)
   return {
-    items: page.map((r) => toFeedItem(r, myAnswer, isPick)),
+    items: page.map(toFeedItem),
     nextCursor: rows.length > FEED_PAGE_SIZE ? page[page.length - 1].id : null,
-    total,
-    sameCount,
   }
 }
 
@@ -157,9 +144,9 @@ export interface SparkHistoryItem {
 }
 
 /** A member's most recent Spark answers (newest first), with question text. */
-export async function loadSparkAnswers(userId: string, take: number, opts: { excludeKey?: string } = {}): Promise<SparkHistoryItem[]> {
+export async function loadSparkAnswers(userId: string, take: number): Promise<SparkHistoryItem[]> {
   const rows = await db.sparkAnswer.findMany({
-    where: { userId, ...(opts.excludeKey ? { NOT: { questionId: opts.excludeKey } } : {}) },
+    where: { userId },
     orderBy: { createdAt: 'desc' },
     take,
     select: { questionId: true, answer: true },
@@ -173,14 +160,14 @@ export async function loadSparkAnswers(userId: string, take: number, opts: { exc
   return out
 }
 
-/** Current & best streak. One cheap query (keys only). */
+/** Current & best streak. One cheap query (keys only). Used by the Spark badges in lib/badges.ts. */
 export async function loadSparkStreak(userId: string) {
   const rows = await db.sparkAnswer.findMany({ where: { userId }, select: { questionId: true } })
   const days = rows.map((r) => parseSparkKey(r.questionId).dateKey).filter((d): d is string => !!d)
   return sparkStreaks(days)
 }
 
-/** Today's question + whether the member has answered (used by nav dot, SparkCard, strength meter). */
+/** Today's question + whether the member has answered (used by the nav dot). */
 export async function loadTodayStatus(userId: string) {
   const today = todaySpark()
   const [mine, count] = await Promise.all([

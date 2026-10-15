@@ -8,7 +8,6 @@ import { completenessOf, effectiveInterestedIn, parseCoupleMembers, personFromPr
 import { activeStatus } from '@/components/status/status';
 import { loadBadges } from '@/lib/badges';
 import { loadSparkAnswers } from '@/app/api/spark/data';
-import { todaySpark } from '@/lib/spark';
 import type { StrengthFacts } from './strength';
 
 export default async function ProfilePage() {
@@ -34,12 +33,10 @@ export default async function ProfilePage() {
 
   if (!user) redirect('/auth/signin');
 
-  const today = todaySpark();
   const [badges, sparkAnswers] = await Promise.all([
     loadBadges(user.id),
-    loadSparkAnswers(user.id, 4),
+    loadSparkAnswers(user.id, 3),
   ]);
-  const sparkAnsweredToday = sparkAnswers.some((a) => a.key === today.key);
 
   const profile = user.profile;
   const members = parseCoupleMembers(profile?.coupleMembers);
@@ -61,7 +58,6 @@ export default async function ProfilePage() {
     hasIntentions: (profile?.intentions?.length ?? 0) > 0,
     isCouple: !!profile?.isCouple,
     hasPersonalTouch: profile?.isCouple ? (!!linkedPartner || !!members[1]) : !!profile?.pronouns,
-    sparkAnsweredToday,
   };
 
   const initialProfile = {
@@ -99,7 +95,7 @@ export default async function ProfilePage() {
     status: activeStatus(profile),
     badges,
     strength,
-    sparkAnswers: sparkAnswers.slice(0, 3),
+    sparkAnswers,
     photos: user.photos.map(p => ({
       id: p.id,
       url: p.url,

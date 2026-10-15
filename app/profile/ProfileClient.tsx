@@ -443,7 +443,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
             className="mb-6"
             title="Your Spark answers"
             answers={profile.sparkAnswers ?? []}
-            emptyText="Answer the Daily Spark and your latest answers show here — an easy conversation starter."
+            emptyText="Answer today’s Spark and your latest answers show here."
             footer={
               <Link href="/spark" className="inline-flex items-center gap-1 mt-4 text-sm font-semibold text-[#FF4D6D] hover:text-[#FF85A1]">
                 Go to today&apos;s Spark →
