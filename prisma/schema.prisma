@@ -82,17 +82,23 @@ model User {
 
   // When the member clicked the link in their sign-up email (separate from
   // isVerified, which is the selfie/photo verification badge).
-  emailVerifiedAt     DateTime?
-  emailVerifyToken    String?
-  emailVerifyExpiry   DateTime?
-  passwordResetToken  String?
-  passwordResetExpiry DateTime?
-  loginStreak         Int       @default(0)
-  lastLoginDate       DateTime?
-  superLikeCredits    Int       @default(1)
-  verificationStatus  String    @default("NONE")
-  verificationPhoto   String?
-  completionMilestone Int       @default(0)
+  emailVerifiedAt      DateTime?
+  // Lifecycle/marketing emails (welcome series, digests, win-back). Transactional
+  // email (password reset, receipts, verification) is always sent.
+  emailMarketingOptOut Boolean   @default(false)
+  // Referrals: this member's invite code, and who invited them.
+  referralCode         String?   @unique
+  referredById         String?
+  emailVerifyToken     String?
+  emailVerifyExpiry    DateTime?
+  passwordResetToken   String?
+  passwordResetExpiry  DateTime?
+  loginStreak          Int       @default(0)
+  lastLoginDate        DateTime?
+  superLikeCredits     Int       @default(1)
+  verificationStatus   String    @default("NONE")
+  verificationPhoto    String?
+  completionMilestone  Int       @default(0)
 
   accounts            Account[]
   sessions            Session[]
@@ -126,6 +132,11 @@ model User {
   pushSubscriptions   PushSubscription[]
   datePlans           DatePlan[]
   verificationRequest VerificationRequest?
+  referredBy          User?                     @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals           User[]                    @relation("Referrals")
+  referralsMade       Referral[]                @relation("ReferralsMade")
+  referralReceived    Referral?                 @relation("ReferralReceived")
+  emailLogs           EmailLog[]
   subscriptions       Subscription[]
   payments            Payment[]
 }
@@ -785,4 +796,35 @@ model Payment {
 
   @@index([userId, createdAt])
   @@index([orderId])
+}
+
+// One row per lifecycle email sent, so each (kind, key) goes out at most once per member.
+model EmailLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // e.g. WELCOME_1, PROFILE_NUDGE, LIKES_DIGEST, WIN_BACK
+  kind      String
+  // De-duplication key within a kind, e.g. a date for digests ("2026-10-15") or "once"
+  key       String   @default("once")
+  createdAt DateTime @default(now())
+
+  @@unique([userId, kind, key])
+  @@index([kind, createdAt])
+}
+
+// Invite-a-friend: rewarded once the invited member has confirmed their email
+// and added a profile photo (lib/referrals.ts).
+model Referral {
+  id         String    @id @default(cuid())
+  referrerId String
+  referrer   User      @relation("ReferralsMade", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredId String    @unique
+  referred   User      @relation("ReferralReceived", fields: [referredId], references: [id], onDelete: Cascade)
+  // PENDING | REWARDED | REJECTED
+  status     String    @default("PENDING")
+  rewardedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([referrerId, status])
 }
