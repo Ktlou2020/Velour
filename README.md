@@ -120,7 +120,7 @@ On Railway, open the web service, go to **Variables**, and add:
 | --- | --- |
 | `VAPID_PUBLIC_KEY` | the generated *Public Key* |
 | `VAPID_PRIVATE_KEY` | the generated *Private Key* (secret) |
-| `VAPID_SUBJECT` | optional, e.g. `mailto:hello@unbound.dating` (the default) |
+| `VAPID_SUBJECT` | optional, e.g. `mailto:hello@unboundza.com` (the default) |
 
 `NEXT_PUBLIC_VAPID_PUBLIC_KEY` is also accepted for the public key, but you don't need it: the browser
 fetches the key from `GET /api/push` at runtime, so you don't have to rebuild. Redeploy after you set

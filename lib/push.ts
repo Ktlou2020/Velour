@@ -23,7 +23,7 @@ export function pushEnabled(): boolean {
     return configured
   }
   try {
-    const subject = (process.env.VAPID_SUBJECT || '').trim() || 'mailto:hello@unbound.dating'
+    const subject = (process.env.VAPID_SUBJECT || '').trim() || 'mailto:hello@unboundza.com'
     webpush.setVapidDetails(subject, pub, priv)
     configured = true
   } catch (e) {

@@ -160,7 +160,7 @@ export default async function SafetyPage() {
             </p>
             <p>
               <strong className="text-white">If your content was shared outside Unbound:</strong> report the member from their profile (flag icon) or from the photo, and choose <em>&ldquo;Shared my photos/videos outside Unbound&rdquo;</em>. If you have the leaked copy, email it to{' '}
-              <a href="mailto:support@unbound.dating" className="text-[#DC143C] hover:underline">support@unbound.dating</a> — the watermark tells us who saved it. Confirmed leaks lead to a permanent ban.
+              <a href="mailto:support@unboundza.com" className="text-[#DC143C] hover:underline">support@unboundza.com</a> — the watermark tells us who saved it. Confirmed leaks lead to a permanent ban.
             </p>
           </div>
         </section>
@@ -187,7 +187,7 @@ export default async function SafetyPage() {
             </p>
             <p>
               If something happened offline, please also report it to SAPS. You can contact our team at{' '}
-              <a href="mailto:support@unbound.dating" className="text-[#DC143C] hover:underline">support@unbound.dating</a>.
+              <a href="mailto:support@unboundza.com" className="text-[#DC143C] hover:underline">support@unboundza.com</a>.
             </p>
           </div>
         </section>

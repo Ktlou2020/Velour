@@ -45,8 +45,8 @@ const FAQS = [
   { q: 'Can I cancel anytime?', a: 'Yes, you can cancel your subscription at any time. Your premium access continues until the end of your billing period.' },
   { q: 'Is my payment information secure?', a: 'Absolutely. We use industry-standard SSL encryption and partner with PayFast for secure payment processing. We never store your card details.' },
   { q: 'What happens to my profile if I downgrade?', a: 'Your profile and all messages are preserved. You simply revert to the free tier feature set.' },
-  { q: 'Do you offer refunds?', a: 'If you are unhappy with your subscription, contact support@unbound.dating and our team will review your request.' },
-  { q: 'Can I upgrade or downgrade mid-cycle?', a: 'Yes. Upgrades take effect as soon as payment is confirmed. For downgrades or billing changes, contact support@unbound.dating.' },
+  { q: 'Do you offer refunds?', a: 'If you are unhappy with your subscription, contact support@unboundza.com and our team will review your request.' },
+  { q: 'Can I upgrade or downgrade mid-cycle?', a: 'Yes. Upgrades take effect as soon as payment is confirmed. For downgrades or billing changes, contact support@unboundza.com.' },
 ]
 
 type Tier = 'GOLD' | 'PLATINUM'

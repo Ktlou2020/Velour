@@ -113,7 +113,7 @@ export default async function SubscriptionPage() {
             )}
             {isPaid && (
               <a
-                href="mailto:support@unbound.dating?subject=Cancel%20Subscription"
+                href="mailto:support@unboundza.com?subject=Cancel%20Subscription"
                 className="glass border border-white/20 hover:border-red-500/30 hover:text-red-400 text-white/60 px-5 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2"
               >
                 <Mail size={14} />
@@ -191,7 +191,7 @@ export default async function SubscriptionPage() {
           </h3>
           <p className="text-white/60 text-sm leading-relaxed">
             Billing history is available via PayFast — contact{' '}
-            <a href="mailto:support@unbound.dating" className="text-[#FF4D6D] hover:underline">support@unbound.dating</a>{' '}
+            <a href="mailto:support@unboundza.com" className="text-[#FF4D6D] hover:underline">support@unboundza.com</a>{' '}
             for invoices or billing queries.
           </p>
         </div>

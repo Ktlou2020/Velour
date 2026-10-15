@@ -32,7 +32,7 @@ export const VAT_RATE_PERCENT = 15
 export const SAMPLE_TAG = 'sample'
 
 export const STORE_TERMS_HREF = '/terms#store-terms'
-export const SUPPORT_EMAIL = 'support@unbound.dating'
+export const SUPPORT_EMAIL = 'support@unboundza.com'
 
 export const SA_PROVINCES = [
   'Eastern Cape',

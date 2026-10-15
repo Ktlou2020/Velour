@@ -15,7 +15,7 @@ function createTransporter() {
 }
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-const fromAddress = process.env.EMAIL_FROM ?? 'Unbound <noreply@unbound.dating>'
+const fromAddress = process.env.EMAIL_FROM ?? 'Unbound <noreply@unboundza.com>'
 
 const baseStyle = `
   font-family: 'Georgia', serif;

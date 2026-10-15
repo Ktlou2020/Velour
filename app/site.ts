@@ -1,6 +1,6 @@
 /** Canonical site URL used for metadata, sitemap and robots. */
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_APP_URL || 'https://velour-production-9ff8.up.railway.app'
+  process.env.NEXT_PUBLIC_APP_URL || 'https://unboundza.com'
 ).replace(/\/+$/, '');
 
 export const SITE_NAME = 'Unbound';
