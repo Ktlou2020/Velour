@@ -218,6 +218,9 @@ model Profile {
   isSnoozed      Boolean   @default(false)
   snoozedUntil   DateTime?
   showChatImages Boolean   @default(false)
+
+  // First-run guided tour: set when the member finishes or skips it
+  tourCompletedAt DateTime?
 }
 
 model Photo {

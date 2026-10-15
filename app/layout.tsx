@@ -11,6 +11,7 @@ import AgeGate from "@/components/AgeGate";
 import CookieBanner from "@/components/CookieBanner";
 import OnlineTracker from "@/components/OnlineTracker";
 import PrivacyShield from "@/components/PrivacyShield";
+import TourMount from "@/components/tour/TourMount";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -119,6 +120,7 @@ export default function RootLayout({
             <ToastContainer />
             <MobileNav />
             <PWAInstall />
+            <TourMount />
           </ToastProvider>
         </SessionProvider>
       </body>

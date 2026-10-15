@@ -9,12 +9,13 @@ import { useUnreadCounts } from './notifications/unread-store';
 
 // Explore (the public photo gallery) earns a tab; Spark and Events live in the
 // menu and on the Members page.
-const TABS: { href: string; label: string; icon: typeof Home; showBadge?: boolean; sparkDot?: boolean }[] = [
-  { href: '/members', label: 'Home', icon: Home },
-  { href: '/discover', label: 'Discover', icon: Compass },
-  { href: '/gallery/explore', label: 'Explore', icon: Images },
-  { href: '/messages', label: 'Messages', icon: MessageCircle, showBadge: true },
-  { href: '/profile', label: 'Profile', icon: User },
+// `tour`: the data-tour anchor the first-run tour spotlights on mobile.
+const TABS: { href: string; label: string; icon: typeof Home; tour: string; showBadge?: boolean; sparkDot?: boolean }[] = [
+  { href: '/members', tour: 'members', label: 'Home', icon: Home },
+  { href: '/discover', tour: 'discover', label: 'Discover', icon: Compass },
+  { href: '/gallery/explore', tour: 'explore', label: 'Explore', icon: Images },
+  { href: '/messages', tour: 'messages', label: 'Messages', icon: MessageCircle, showBadge: true },
+  { href: '/profile', tour: 'profile', label: 'Profile', icon: User },
 ];
 
 const HIDDEN_ON = ['/onboarding', '/auth', '/admin'];
@@ -41,12 +42,13 @@ export default function MobileNav() {
       aria-label="Primary"
     >
       <div className="flex items-stretch h-16">
-        {TABS.map(({ href, label, icon: Icon, showBadge, sparkDot }) => {
+        {TABS.map(({ href, label, icon: Icon, tour, showBadge, sparkDot }) => {
           const isActive = pathname.startsWith(href);
           return (
             <Link
               key={href}
               href={href}
+              data-tour={tour}
               className="flex-1 flex flex-col items-center justify-center gap-0.5 relative"
               aria-label={showBadge && unread > 0 ? `${label} (${unread} unread message${unread === 1 ? '' : 's'})` : sparkDot && sparkPending ? `${label} (new question)` : label}
               aria-current={isActive ? 'page' : undefined}

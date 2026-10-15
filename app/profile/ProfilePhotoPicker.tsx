@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, Upload, X } from 'lucide-react';
 import ProtectedImage from '@/components/ProtectedImage';
 
@@ -37,7 +38,9 @@ export default function ProfilePhotoPicker({
     return () => { window.removeEventListener('keydown', onKey); prev?.focus(); };
   }, [onClose]);
 
-  return (
+  if (typeof document === 'undefined') return null;
+  // Portal to <body> so animated (transformed) ancestors can't trap the fixed overlay.
+  return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/70 p-0 sm:p-4" onClick={onClose}>
       <div
         ref={dialogRef}
@@ -98,6 +101,7 @@ export default function ProfilePhotoPicker({
           <p className="text-white/40 text-xs mt-3">Private photos can&apos;t be used as your profile photo.</p>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

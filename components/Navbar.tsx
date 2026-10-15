@@ -6,20 +6,22 @@ import Logo from './Logo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Menu, X, ChevronDown, LogOut, User, Crown, MessageCircle, Eye, Shield, CreditCard, ShieldCheck, BarChart3, CalendarDays, MessagesSquare, Bell , ShoppingBag } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, Crown, MessageCircle, Eye, Shield, CreditCard, ShieldCheck, BarChart3, CalendarDays, MessagesSquare, Bell , ShoppingBag, Map as MapIcon } from 'lucide-react';
+import { startTour } from './tour/events';
 import NotificationBell from './NotificationBell';
 import { useUnreadCounts } from './notifications/unread-store';
 import ProfileCompletionBanner from './ProfileCompletionBanner';
 import { useSparkToday } from './spark/useSparkToday';
 
 // `wide`: only shown in the desktop bar from xl up (they move into the account menu below that).
-const NAV_LINKS: { href: string; label: string; showBadge?: boolean; sparkDot?: boolean; wide?: boolean }[] = [
-  { href: '/members', label: 'Members' },
-  { href: '/discover', label: 'Discover' },
+// `tour`: the data-tour anchor the first-run tour spotlights (components/tour).
+const NAV_LINKS: { href: string; label: string; showBadge?: boolean; sparkDot?: boolean; wide?: boolean; tour?: string }[] = [
+  { href: '/members', label: 'Members', tour: 'members' },
+  { href: '/discover', label: 'Discover', tour: 'discover' },
   { href: '/spark', label: 'Spark', sparkDot: true },
   { href: '/matches', label: 'Matches' },
-  { href: '/messages', label: 'Messages', showBadge: true },
-  { href: '/gallery/explore', label: 'Explore' },
+  { href: '/messages', label: 'Messages', showBadge: true, tour: 'messages' },
+  { href: '/gallery/explore', label: 'Explore', tour: 'explore' },
   { href: '/gallery', label: 'Gallery' },
   { href: '/events', label: 'Events', wide: true },
   { href: '/forums', label: 'Forums', wide: true },
@@ -58,10 +60,11 @@ export default function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden lg:flex items-center gap-1">
-            {NAV_LINKS.map(({ href, label, showBadge, sparkDot, wide }) => (
+            {NAV_LINKS.map(({ href, label, showBadge, sparkDot, wide, tour }) => (
               <Link
                 key={href}
                 href={href}
+                data-tour={tour}
                 aria-label={sparkDot && sparkPending ? `${label} (today's question is waiting)` : undefined}
                 className={`relative ${wide ? 'hidden xl:inline-flex' : 'inline-flex'} px-2.5 xl:px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   isActive(href) ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'
@@ -89,7 +92,9 @@ export default function Navbar() {
               </div>
             ) : status === 'authenticated' ? (
               <>
-                <NotificationBell />
+                <div data-tour="notifications" className="rounded-lg">
+                  <NotificationBell />
+                </div>
 
                 {/* User Menu */}
                 <div className="relative">
@@ -99,6 +104,7 @@ export default function Navbar() {
                     aria-expanded={userMenuOpen}
                     aria-haspopup="menu"
                     aria-label="Account menu"
+                    data-tour="profile"
                   >
                     <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#8F0D25] to-[#DC143C] flex items-center justify-center text-white text-xs font-bold">
                       {initials}
@@ -185,6 +191,13 @@ export default function Navbar() {
                       >
                         <ShieldCheck size={14} />Safety Centre
                       </Link>
+                      <button
+                        type="button"
+                        className="w-full flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
+                        onClick={() => { setUserMenuOpen(false); startTour(); }}
+                      >
+                        <MapIcon size={14} />Take the tour
+                      </button>
                       {userRole === 'ADMIN' && (
                         <Link
                           href="/admin"
@@ -227,6 +240,7 @@ export default function Navbar() {
           {status === 'authenticated' && (
             <Link
               href="/notifications"
+              data-tour="notifications"
               className="md:hidden relative w-10 h-10 ml-auto flex items-center justify-center rounded-lg text-white/70 hover:text-white"
               aria-label={`Notifications${unreadNotifications > 0 ? ` (${unreadNotifications} unread)` : ''}`}
               aria-current={pathname.startsWith('/notifications') ? 'page' : undefined}
@@ -245,6 +259,7 @@ export default function Navbar() {
             className="lg:hidden text-white/80 hover:text-white w-10 h-10 -mr-2 flex items-center justify-center rounded-lg"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle navigation menu"
+            data-tour="menu"
             aria-expanded={mobileOpen}
           >
             {mobileOpen ? <X size={24} /> : <Menu size={24} />}
@@ -325,6 +340,13 @@ export default function Navbar() {
                 >
                   <ShieldCheck size={14} />Safety Centre
                 </Link>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 px-4 py-2 glass border border-white/10 rounded-lg text-white/70 text-sm text-left"
+                  onClick={() => { setMobileOpen(false); startTour(); }}
+                >
+                  <MapIcon size={14} />Take the tour
+                </button>
                 {userRole === 'ADMIN' && (
                   <Link
                     href="/admin"
