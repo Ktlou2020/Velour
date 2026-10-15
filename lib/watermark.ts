@@ -11,13 +11,14 @@
  * from system fonts. Rendered copies are cached on disk under
  *   ${UPLOAD_DIR}/.wm-cache/<photoId>/<full|thumb>/<sha256>.webp
  * and swept after WM_CACHE_MAX_AGE_MS, or sooner when the cache grows past
- * WM_CACHE_MAX_BYTES.
+ * WM_CACHE_MAX_BYTES. The cache is always local disk, also when the originals
+ * live in an S3 bucket (it is disposable: losing it only costs re-renders).
  */
 import crypto from 'crypto'
 import fsp from 'fs/promises'
 import path from 'path'
 import sharp from 'sharp'
-import { uploadDir } from '@/lib/storage'
+import { readObject, uploadDir } from '@/lib/storage'
 import { GLYPH_ADVANCE, GLYPH_PATH } from '@/lib/watermark-glyphs'
 
 /** Bump when the look changes so cached copies are re-rendered. */
@@ -239,15 +240,18 @@ const DECODE_CACHE_BYTES = Number(process.env.WM_DECODE_CACHE_BYTES) || 96 * 102
 const decoded = new Map<string, { data: Buffer; width: number; height: number; channels: number }>()
 let decodedBytes = 0
 
-async function decode(inputPath: string, fileTag: string) {
-  const key = `${inputPath}|${fileTag}`
+async function decode(inputKey: string, fileTag: string) {
+  const key = `${inputKey}|${fileTag}`
   const hit = decoded.get(key)
   if (hit) {
     decoded.delete(key)
     decoded.set(key, hit) // most recently used
     return { ...hit, data: Buffer.from(hit.data) } // burnIn writes into it
   }
-  const { data, info } = await sharp(inputPath, { limitInputPixels: MAX_INPUT_PIXELS }).raw().toBuffer({ resolveWithObject: true })
+  // Read through lib/storage (bucket or UPLOAD_DIR); images are ≤ 10 MB
+  const input = await readObject(inputKey)
+  if (!input) throw new Error('Stored image is missing')
+  const { data, info } = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS }).raw().toBuffer({ resolveWithObject: true })
   const entry = { data, width: info.width, height: info.height, channels: info.channels }
   if (data.length <= DECODE_CACHE_BYTES / 4) {
     decoded.set(key, { ...entry, data: Buffer.from(data) })
@@ -261,9 +265,9 @@ async function decode(inputPath: string, fileTag: string) {
   return entry
 }
 
-/** Watermark the image file at `inputPath`; returns WebP bytes. */
-export async function renderWatermarked(inputPath: string, spec: WatermarkSpec, date = sastDate(), fileTag = ''): Promise<Buffer> {
-  const { data, width, height, channels } = await decode(inputPath, fileTag)
+/** Watermark the stored image `inputKey` (a lib/storage key); returns WebP bytes. */
+export async function renderWatermarked(inputKey: string, spec: WatermarkSpec, date = sastDate(), fileTag = ''): Promise<Buffer> {
+  const { data, width, height, channels } = await decode(inputKey, fileTag)
   if (!width || !height || (channels !== 3 && channels !== 4)) throw new Error('Unreadable image')
   await burnIn(data, width, height, channels, layoutFor(width, height, spec, date))
   return sharp(data, { raw: { width, height, channels: channels as 3 | 4 } })
@@ -306,7 +310,8 @@ const inflight = new Map<string, Promise<Buffer>>()
 export async function getWatermarked(opts: {
   photoId: string
   variant: 'full' | 'thumb'
-  inputPath: string
+  /** lib/storage key of the source image */
+  inputKey: string
   /** Changes when the stored file changes (e.g. its size + mtime) */
   fileTag: string
   spec: WatermarkSpec
@@ -328,7 +333,7 @@ export async function getWatermarked(opts: {
   let job = inflight.get(file)
   if (!job) {
     job = (async () => {
-      const data = await renderWatermarked(opts.inputPath, opts.spec, opts.date, opts.fileTag)
+      const data = await renderWatermarked(opts.inputKey, opts.spec, opts.date, opts.fileTag)
       // Best effort: a full disk must never break image serving
       try {
         await fsp.mkdir(dir, { recursive: true })

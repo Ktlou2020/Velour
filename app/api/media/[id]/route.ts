@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import type { Readable } from 'stream'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { openStream, statFile, storedFilePath, thumbKey } from '@/lib/storage'
+import { getObjectStream, statObject, thumbKey } from '@/lib/storage'
 import { isStoreMedia, photoVisibility, type Visibility } from '@/lib/media-access'
 import { getWatermarked, sastDate, watermarkHash, type WatermarkSpec } from '@/lib/watermark'
 import { viewOnceGate } from '@/lib/view-once'
@@ -11,47 +10,6 @@ import { serveViewOnce } from '@/lib/view-once-serve'
 export const runtime = 'nodejs'
 
 const ID_RE = /^[a-z0-9]{20,40}$/i
-
-/**
- * Node stream → web stream. `Readable.toWeb` on Node 18 throws "Controller is
- * already closed" when a download ends or is cancelled, so convert by hand and
- * guard every controller call.
- */
-function toWebStream(stream: Readable): ReadableStream<Uint8Array> {
-  let done = false
-  return new ReadableStream<Uint8Array>({
-    start(controller) {
-      stream.on('data', (chunk: Buffer) => {
-        if (done) return
-        try {
-          controller.enqueue(new Uint8Array(chunk))
-        } catch {
-          done = true
-          stream.destroy()
-          return
-        }
-        if ((controller.desiredSize ?? 1) <= 0) stream.pause()
-      })
-      stream.on('end', () => {
-        if (done) return
-        done = true
-        try { controller.close() } catch { /* already closed */ }
-      })
-      stream.on('error', (err) => {
-        if (done) return
-        done = true
-        try { controller.error(err) } catch { /* already closed */ }
-      })
-    },
-    pull() {
-      if (!done) stream.resume()
-    },
-    cancel() {
-      done = true
-      stream.destroy()
-    },
-  })
-}
 
 function notFound() {
   return new NextResponse('Not found', {
@@ -131,7 +89,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const isImage = photo.mimeType.startsWith('image/')
     const wantThumb = isImage && req.nextUrl.searchParams.get('size') === 'thumb'
     const key = wantThumb ? thumbKey(photo.storageKey) : photo.storageKey
-    const st = await statFile(key)
+    const st = await statObject(key)
     if (!st) return notFound()
 
     const isOwner = !!viewer && viewer.id === photo.userId
@@ -142,7 +100,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         ? { kind: 'viewer', viewerId: viewer.id, username: username ?? viewer.id.slice(-8) }
         : { kind: 'anon' }
       return serveWatermarked(req, {
-        id, wantThumb, inputPath: storedFilePath(key), fileTag: `${st.size}-${st.mtime.getTime()}`, spec,
+        id, wantThumb, inputKey: key, fileTag: `${st.size}-${st.mtime.getTime()}`, spec,
         cacheControl: viewer ? 'private, max-age=300' : CACHE.public,
       })
     }
@@ -173,8 +131,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return new NextResponse(null, { status: 200, headers: { ...headers, 'Content-Length': String(st.size) } })
     }
 
-    const stream = openStream(key, range ?? undefined)
-    const body = toWebStream(stream)
+    // Bucket (with local fallback) or UPLOAD_DIR — see lib/storage.ts
+    const obj = await getObjectStream(key, range ?? undefined)
+    if (!obj) return notFound()
+    const body = obj.body
     if (range) {
       return new NextResponse(body, {
         status: 206,
@@ -203,7 +163,7 @@ async function viewerUsername(viewerId: string, user: unknown): Promise<string |
 async function serveWatermarked(req: NextRequest, o: {
   id: string
   wantThumb: boolean
-  inputPath: string
+  inputKey: string
   fileTag: string
   spec: WatermarkSpec
   cacheControl: string
@@ -231,7 +191,7 @@ async function serveWatermarked(req: NextRequest, o: {
   const { data } = await getWatermarked({
     photoId: o.id,
     variant: o.wantThumb ? 'thumb' : 'full',
-    inputPath: o.inputPath,
+    inputKey: o.inputKey,
     fileTag: o.fileTag,
     spec: o.spec,
     date,

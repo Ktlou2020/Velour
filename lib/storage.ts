@@ -1,9 +1,20 @@
 /**
- * Local media storage (server only).
+ * Media storage (server only).
  *
- * Files live under UPLOAD_DIR (in production: a mounted Railway volume, e.g.
- * /data/uploads). Keys are generated here from random bytes — no user input
- * ever reaches a filesystem path — and look like `2026/10/<32 hex>.webp`.
+ * Two backends behind one small async interface (putObject, getObjectStream,
+ * readObject, statObject, deleteObjects — see "Storage drivers" below):
+ *
+ * - local disk (default): files live under UPLOAD_DIR (in production a
+ *   mounted Railway volume, e.g. /data/uploads).
+ * - S3-compatible bucket (Railway Buckets, Cloudflare R2, AWS S3, MinIO ...)
+ *   when S3_BUCKET is set. Writes go to the bucket only; reads and stats try
+ *   the bucket first and fall back to UPLOAD_DIR when the object is not there
+ *   (files uploaded before the cut-over, until scripts/migrate-media-to-s3.mjs
+ *   has copied them); deletes remove the key from both.
+ *
+ * Keys are generated here from random bytes — no user input ever reaches a
+ * filesystem path or object URL — and look like `2026/10/<32 hex>.webp`. They
+ * are identical in both backends, so DB rows never change.
  *
  * Images are re-encoded with sharp: EXIF orientation applied, ALL metadata
  * (GPS, camera, timestamps) stripped, max 2048px long edge, plus a 480px
@@ -14,12 +25,14 @@
  * owner's "hush · @username" burned in, hopping between corners every 4 s.
  * Without ffmpeg they are stored as uploaded.
  */
+import { AwsClient } from 'aws4fetch'
 import { spawn } from 'child_process'
 import crypto from 'crypto'
 import fs from 'fs'
 import fsp from 'fs/promises'
 import os from 'os'
 import path from 'path'
+import type { Readable } from 'stream'
 import sharp from 'sharp'
 
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024
@@ -65,11 +78,7 @@ export function thumbKey(key: string): string {
 }
 
 async function writeFile(key: string, data: Buffer): Promise<void> {
-  const full = resolveKey(key)
-  await fsp.mkdir(path.dirname(full), { recursive: true })
-  const tmp = `${full}.${crypto.randomBytes(4).toString('hex')}.tmp`
-  await fsp.writeFile(tmp, data, { mode: 0o640 })
-  await fsp.rename(tmp, full)
+  await putObject(key, data)
 }
 
 export class MediaError extends Error {
@@ -506,38 +515,396 @@ export function videoDurationSec(buf: Buffer, mimeType: string): number | null {
   }
 }
 
-/** Size of a stored file, or null if it is missing. */
-export async function statFile(key: string): Promise<{ size: number; mtime: Date } | null> {
-  try {
-    const st = await fsp.stat(resolveKey(key))
-    return st.isFile() ? { size: st.size, mtime: st.mtime } : null
-  } catch {
-    return null
-  }
+// ── Storage drivers ────────────────────────────────────────────────────────
+
+/** Inclusive byte range. */
+export interface ByteRange {
+  start: number
+  end: number
 }
 
-/** Absolute path of a stored file (validated key). For sharp / ffmpeg input. */
-export function storedFilePath(key: string): string {
-  return resolveKey(key)
+export interface ObjectInfo {
+  size: number
+  mtime: Date
 }
 
-/** Read stream over a stored file (optionally a byte range, inclusive). */
-export function openStream(key: string, range?: { start: number; end: number }): fs.ReadStream {
-  return fs.createReadStream(resolveKey(key), range ? { start: range.start, end: range.end } : undefined)
+export interface ObjectStream {
+  /** The bytes (the whole object, or just `range`). */
+  body: ReadableStream<Uint8Array>
+  /** Size of the whole object. */
+  size: number
+  /** Bytes in `body`. */
+  contentLength: number
+  /** `bytes a-b/size` when a range was requested. */
+  contentRange?: string
+  contentType: string
 }
 
-/** Best-effort delete of stored files (missing files are ignored). */
-export async function deleteFiles(keys: Array<string | null | undefined>): Promise<void> {
-  await Promise.all(
-    keys.filter((k): k is string => !!k && KEY_RE.test(k)).map(async (k) => {
+interface StorageDriver {
+  readonly name: string
+  putObject(key: string, data: Buffer, contentType: string): Promise<void>
+  /** null when the object does not exist. */
+  getObjectStream(key: string, range?: ByteRange): Promise<ObjectStream | null>
+  /** Whole object in memory (images, ≤ 10 MB). null when missing. */
+  readObject(key: string): Promise<Buffer | null>
+  statObject(key: string): Promise<ObjectInfo | null>
+  /** Missing keys are ignored. */
+  deleteObjects(keys: string[]): Promise<void>
+}
+
+const CONTENT_TYPES: Record<string, string> = {
+  webp: 'image/webp', mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime',
+  m4a: 'audio/mp4', ogg: 'audio/ogg', weba: 'audio/webm',
+}
+
+function contentTypeFor(key: string): string {
+  return CONTENT_TYPES[key.slice(key.lastIndexOf('.') + 1)] ?? 'application/octet-stream'
+}
+
+function validKey(key: string): string {
+  if (!KEY_RE.test(key)) throw new Error('Invalid storage key')
+  return key
+}
+
+/**
+ * Node stream → web stream. `Readable.toWeb` on Node 18 throws "Controller is
+ * already closed" when a download ends or is cancelled, so convert by hand and
+ * guard every controller call.
+ */
+export function nodeToWebStream(stream: Readable): ReadableStream<Uint8Array> {
+  let done = false
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      stream.on('data', (chunk: Buffer) => {
+        if (done) return
+        try {
+          controller.enqueue(new Uint8Array(chunk))
+        } catch {
+          done = true
+          stream.destroy()
+          return
+        }
+        if ((controller.desiredSize ?? 1) <= 0) stream.pause()
+      })
+      stream.on('end', () => {
+        if (done) return
+        done = true
+        try { controller.close() } catch { /* already closed */ }
+      })
+      stream.on('error', (err) => {
+        if (done) return
+        done = true
+        try { controller.error(err) } catch { /* already closed */ }
+      })
+    },
+    pull() {
+      if (!done) stream.resume()
+    },
+    cancel() {
+      done = true
+      stream.destroy()
+    },
+  })
+}
+
+// ── Local disk (UPLOAD_DIR) ──
+
+const localDriver: StorageDriver = {
+  name: 'local',
+
+  async putObject(key, data) {
+    const full = resolveKey(key)
+    await fsp.mkdir(path.dirname(full), { recursive: true })
+    const tmp = `${full}.${crypto.randomBytes(4).toString('hex')}.tmp`
+    await fsp.writeFile(tmp, data, { mode: 0o640 })
+    await fsp.rename(tmp, full)
+  },
+
+  async statObject(key) {
+    try {
+      const st = await fsp.stat(resolveKey(key))
+      return st.isFile() ? { size: st.size, mtime: st.mtime } : null
+    } catch {
+      return null
+    }
+  },
+
+  async getObjectStream(key, range) {
+    const st = await localDriver.statObject(key)
+    if (!st) return null
+    if (range && (range.start > range.end || range.end >= st.size)) throw new Error('Range not satisfiable')
+    const stream = fs.createReadStream(resolveKey(key), range ? { start: range.start, end: range.end } : undefined)
+    return {
+      body: nodeToWebStream(stream),
+      size: st.size,
+      contentLength: range ? range.end - range.start + 1 : st.size,
+      contentRange: range ? `bytes ${range.start}-${range.end}/${st.size}` : undefined,
+      contentType: contentTypeFor(key),
+    }
+  },
+
+  async readObject(key) {
+    try {
+      return await fsp.readFile(resolveKey(key))
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === 'ENOENT' || (e as NodeJS.ErrnoException).code === 'EISDIR') return null
+      throw e
+    }
+  },
+
+  async deleteObjects(keys) {
+    await Promise.all(keys.map(async (k) => {
       try {
         await fsp.unlink(resolveKey(k))
       } catch {
         /* already gone */
       }
-    }),
-  )
+    }))
+  },
 }
+
+// ── S3-compatible bucket (aws4fetch, SigV4) ──
+
+interface S3Config {
+  bucket: string
+  endpoint: URL
+  region: string
+  pathStyle: boolean
+  client: AwsClient
+}
+
+const S3_TIMEOUT_MS = Number(process.env.S3_TIMEOUT_MS) || 20_000
+
+class S3Error extends Error {
+  constructor(message: string, public status: number) {
+    super(message)
+  }
+}
+
+let s3Cached: { sig: string; cfg: S3Config | null } | null = null
+
+/** Bucket settings from the environment, or null when S3_BUCKET is unset (local disk only). */
+function s3Config(): S3Config | null {
+  const env = process.env
+  const bucket = env.S3_BUCKET?.trim() ?? ''
+  const sig = [bucket, env.S3_ENDPOINT, env.S3_ACCESS_KEY_ID, env.S3_SECRET_ACCESS_KEY, env.S3_REGION, env.S3_FORCE_PATH_STYLE].join('|')
+  if (s3Cached?.sig === sig) return s3Cached.cfg
+  let cfg: S3Config | null = null
+  if (bucket) {
+    const endpoint = env.S3_ENDPOINT?.trim()
+    const accessKeyId = env.S3_ACCESS_KEY_ID?.trim()
+    const secretAccessKey = env.S3_SECRET_ACCESS_KEY?.trim()
+    if (!endpoint || !accessKeyId || !secretAccessKey) {
+      throw new Error('[storage] S3_BUCKET is set but S3_ENDPOINT, S3_ACCESS_KEY_ID or S3_SECRET_ACCESS_KEY is missing')
+    }
+    const region = env.S3_REGION?.trim() || 'auto'
+    const url = new URL(endpoint.replace(/\/+$/, ''))
+    const pathStyle = /^(1|true|yes)$/i.test(env.S3_FORCE_PATH_STYLE?.trim() ?? '')
+    cfg = {
+      bucket,
+      endpoint: url,
+      region,
+      pathStyle,
+      // aws4fetch retries 5xx / 429 with backoff; keep it short on the request path
+      client: new AwsClient({ accessKeyId, secretAccessKey, service: 's3', region, retries: 2, initRetryMs: 100 }),
+    }
+    console.info(`[storage] S3 bucket "${bucket}" at ${url.host} (${pathStyle ? 'path-style' : 'virtual-hosted'}) — new media goes to the bucket, reads fall back to ${uploadDir()}`)
+  }
+  s3Cached = { sig, cfg }
+  return cfg
+}
+
+function objectUrl(cfg: S3Config, key: string): string {
+  const base = cfg.endpoint.pathname.replace(/\/+$/, '')
+  // Keys are KEY_RE-validated: [0-9a-f/._] only, nothing to escape.
+  return cfg.pathStyle
+    ? `${cfg.endpoint.protocol}//${cfg.endpoint.host}${base}/${encodeURIComponent(cfg.bucket)}/${key}`
+    : `${cfg.endpoint.protocol}//${cfg.bucket}.${cfg.endpoint.host}${base}/${key}`
+}
+
+/** Signed request; the timeout covers connecting and the response headers, not a long body download. */
+async function s3Fetch(cfg: S3Config, method: string, key: string, init: { headers?: Record<string, string>; body?: Buffer } = {}): Promise<Response> {
+  const ac = new AbortController()
+  const timer = setTimeout(() => ac.abort(new Error(`S3 ${method} timed out`)), S3_TIMEOUT_MS)
+  try {
+    return await cfg.client.fetch(objectUrl(cfg, key), {
+      method,
+      headers: init.headers,
+      body: init.body ? (new Uint8Array(init.body.buffer, init.body.byteOffset, init.body.length) as unknown as BodyInit) : undefined,
+      signal: ac.signal,
+    })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function s3Fail(res: Response, what: string): Promise<never> {
+  const text = await res.text().catch(() => '')
+  const code = /<Code>([^<]+)<\/Code>/.exec(text)?.[1]
+  throw new S3Error(`S3 ${what} failed: ${res.status}${code ? ` ${code}` : ''}`, res.status)
+}
+
+function s3Driver(cfg: S3Config): StorageDriver {
+  return {
+    name: 's3',
+
+    async putObject(key, data, contentType) {
+      const res = await s3Fetch(cfg, 'PUT', key, {
+        headers: { 'Content-Type': contentType },
+        body: data,
+      })
+      if (!res.ok) await s3Fail(res, `PUT ${key}`)
+      await res.body?.cancel().catch(() => {})
+    },
+
+    async statObject(key) {
+      const res = await s3Fetch(cfg, 'HEAD', key)
+      if (res.status === 404) return null
+      if (!res.ok) throw new S3Error(`S3 HEAD ${key} failed: ${res.status}`, res.status)
+      const size = Number(res.headers.get('content-length'))
+      const lm = res.headers.get('last-modified')
+      return { size: Number.isFinite(size) ? size : 0, mtime: lm ? new Date(lm) : new Date(0) }
+    },
+
+    async getObjectStream(key, range) {
+      const res = await s3Fetch(cfg, 'GET', key, range ? { headers: { Range: `bytes=${range.start}-${range.end}` } } : {})
+      if (res.status === 404) {
+        await res.body?.cancel().catch(() => {})
+        return null
+      }
+      if (!res.ok || !res.body) await s3Fail(res, `GET ${key}`)
+      const contentLength = Number(res.headers.get('content-length'))
+      if (range) {
+        const cr = res.headers.get('content-range') ?? ''
+        const m = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(cr)
+        if (res.status !== 206 || !m || Number(m[1]) !== range.start || Number(m[2]) !== range.end) {
+          await res.body!.cancel().catch(() => {})
+          throw new S3Error(`S3 GET ${key}: range not honoured (${res.status} ${cr})`, 502)
+        }
+        return { body: res.body!, size: Number(m[3]), contentLength: range.end - range.start + 1, contentRange: cr, contentType: contentTypeFor(key) }
+      }
+      return { body: res.body!, size: contentLength, contentLength, contentType: contentTypeFor(key) }
+    },
+
+    async readObject(key) {
+      const res = await s3Fetch(cfg, 'GET', key)
+      if (res.status === 404) {
+        await res.body?.cancel().catch(() => {})
+        return null
+      }
+      if (!res.ok) await s3Fail(res, `GET ${key}`)
+      return Buffer.from(await res.arrayBuffer())
+    },
+
+    async deleteObjects(keys) {
+      // Plain DeleteObject per key (DeleteObjects needs Content-MD5 and isn't on every provider)
+      const queue = [...keys]
+      const worker = async () => {
+        for (let k = queue.shift(); k; k = queue.shift()) {
+          const res = await s3Fetch(cfg, 'DELETE', k)
+          await res.body?.cancel().catch(() => {})
+          if (!res.ok && res.status !== 404) throw new S3Error(`S3 DELETE ${k} failed: ${res.status}`, res.status)
+        }
+      }
+      await Promise.all(Array.from({ length: Math.min(4, queue.length) }, worker))
+    },
+  }
+}
+
+let lastS3Warn = 0
+function warnS3(op: string, key: string, e: unknown) {
+  if (Date.now() - lastS3Warn < 60_000) return
+  lastS3Warn = Date.now()
+  console.warn(`[storage] S3 ${op} ${key} failed, falling back to local disk:`, e instanceof Error ? e.message : e)
+}
+
+/**
+ * Bucket first, then UPLOAD_DIR. "Not in the bucket" (404) and bucket errors
+ * (network, 5xx, 403) both fall back to the local copy, so media that hasn't
+ * been migrated keeps working and a bucket outage only affects new uploads.
+ */
+async function readThrough<T>(op: string, key: string, s3: () => Promise<T | null>, local: () => Promise<T | null>): Promise<T | null> {
+  try {
+    const hit = await s3()
+    if (hit !== null) return hit
+  } catch (e) {
+    warnS3(op, key, e)
+  }
+  return local()
+}
+
+function fallbackDriver(s3: StorageDriver): StorageDriver {
+  return {
+    name: 's3+local',
+    putObject: (key, data, ct) => s3.putObject(key, data, ct),
+    statObject: (key) => readThrough('HEAD', key, () => s3.statObject(key), () => localDriver.statObject(key)),
+    readObject: (key) => readThrough('GET', key, () => s3.readObject(key), () => localDriver.readObject(key)),
+    getObjectStream: (key, range) => readThrough('GET', key, () => s3.getObjectStream(key, range), () => localDriver.getObjectStream(key, range)),
+    async deleteObjects(keys) {
+      const [a, b] = await Promise.allSettled([s3.deleteObjects(keys), localDriver.deleteObjects(keys)])
+      if (a.status === 'rejected') throw a.reason
+      if (b.status === 'rejected') throw b.reason
+    },
+  }
+}
+
+let driverCache: { cfg: S3Config | null; driver: StorageDriver } | null = null
+
+/** The active backend: S3 (+ local read fallback) when S3_BUCKET is set, else local disk. */
+function driver(): StorageDriver {
+  const cfg = s3Config()
+  if (driverCache?.cfg !== cfg) driverCache = { cfg, driver: cfg ? fallbackDriver(s3Driver(cfg)) : localDriver }
+  return driverCache.driver
+}
+
+/** 'local' or 's3+local' — for logs / health output. */
+export function storageBackend(): string {
+  return driver().name
+}
+
+/** Store bytes under `key` (bucket when S3 is configured, else UPLOAD_DIR). */
+export async function putObject(key: string, data: Buffer, contentType = contentTypeFor(key)): Promise<void> {
+  await driver().putObject(validKey(key), data, contentType)
+}
+
+/**
+ * Stream a stored object, optionally an inclusive byte range that the caller
+ * has already checked against statObject().size. null when missing.
+ */
+export async function getObjectStream(key: string, range?: ByteRange): Promise<ObjectStream | null> {
+  return driver().getObjectStream(validKey(key), range)
+}
+
+/** Whole stored object as a Buffer (images for sharp), or null when missing. */
+export async function readObject(key: string): Promise<Buffer | null> {
+  return driver().readObject(validKey(key))
+}
+
+/** Size + modified time of a stored object, or null if it is missing. */
+export async function statObject(key: string): Promise<ObjectInfo | null> {
+  if (!KEY_RE.test(key)) return null
+  return driver().statObject(key)
+}
+
+/** @deprecated alias of statObject */
+export const statFile = statObject
+
+/**
+ * Best-effort delete of stored objects (from the bucket AND UPLOAD_DIR when S3
+ * is configured; invalid keys and missing objects are ignored). Never throws.
+ */
+export async function deleteObjects(keys: Array<string | null | undefined>): Promise<void> {
+  const valid = [...new Set(keys.filter((k): k is string => !!k && KEY_RE.test(k)))]
+  if (!valid.length) return
+  try {
+    await driver().deleteObjects(valid)
+  } catch (e) {
+    console.warn('[storage] delete failed:', e instanceof Error ? e.message : e)
+  }
+}
+
+/** Alias of deleteObjects (existing call sites). */
+export const deleteFiles = deleteObjects
 
 /** All files belonging to a Photo row (main + thumbnail for images). */
 export function photoFileKeys(photo: { storageKey: string | null; mimeType: string | null }): string[] {

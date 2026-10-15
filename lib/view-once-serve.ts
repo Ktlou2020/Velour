@@ -9,9 +9,8 @@
  * - videos: byte ranges allowed (the owner mark is burned in at upload)
  */
 import { NextRequest, NextResponse } from 'next/server'
-import type { Readable } from 'stream'
 import { db } from '@/lib/db'
-import { openStream, statFile, storedFilePath } from '@/lib/storage'
+import { getObjectStream, statObject } from '@/lib/storage'
 import { renderWatermarked, sastDate } from '@/lib/watermark'
 
 const BASE_HEADERS = {
@@ -48,23 +47,6 @@ function parseRange(header: string | null, size: number): { start: number; end: 
   return { start, end }
 }
 
-function toWebStream(stream: Readable): ReadableStream<Uint8Array> {
-  let done = false
-  return new ReadableStream<Uint8Array>({
-    start(controller) {
-      stream.on('data', (chunk: Buffer) => {
-        if (done) return
-        try { controller.enqueue(new Uint8Array(chunk)) } catch { done = true; stream.destroy(); return }
-        if ((controller.desiredSize ?? 1) <= 0) stream.pause()
-      })
-      stream.on('end', () => { if (done) return; done = true; try { controller.close() } catch { /* closed */ } })
-      stream.on('error', (err) => { if (done) return; done = true; try { controller.error(err) } catch { /* closed */ } })
-    },
-    pull() { if (!done) stream.resume() },
-    cancel() { done = true; stream.destroy() },
-  })
-}
-
 export async function serveViewOnce(
   req: NextRequest,
   photo: { id: string; storageKey: string | null; mimeType: string | null },
@@ -72,7 +54,7 @@ export async function serveViewOnce(
 ): Promise<NextResponse> {
   if (!photo.storageKey || !photo.mimeType) return notFound()
   if (req.nextUrl.searchParams.get('size') === 'thumb') return notFound()
-  const st = await statFile(photo.storageKey)
+  const st = await statObject(photo.storageKey)
   if (!st) return notFound()
 
   if (photo.mimeType.startsWith('image/')) {
@@ -80,7 +62,7 @@ export async function serveViewOnce(
     const headers = { ...BASE_HEADERS, 'Content-Type': 'image/webp', 'Accept-Ranges': 'none' }
     if (req.method === 'HEAD') return new NextResponse(null, { status: 200, headers })
     const data = await renderWatermarked(
-      storedFilePath(photo.storageKey),
+      photo.storageKey,
       { kind: 'viewer', viewerId: viewer.id, username: u?.username ?? viewer.id.slice(-8) },
       sastDate(),
       `${st.size}-${st.mtime.getTime()}`,
@@ -96,7 +78,9 @@ export async function serveViewOnce(
   if (req.method === 'HEAD') {
     return new NextResponse(null, { status: 200, headers: { ...headers, 'Content-Length': String(st.size) } })
   }
-  const body = toWebStream(openStream(photo.storageKey, range ?? undefined))
+  const obj = await getObjectStream(photo.storageKey, range ?? undefined)
+  if (!obj) return notFound()
+  const body = obj.body
   if (range) {
     return new NextResponse(body, {
       status: 206,
