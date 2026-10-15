@@ -1,5 +1,9 @@
 import nodemailer from 'nodemailer'
 
+/**
+ * Email delivery. Uses Brevo's HTTP API when BREVO_API_KEY is set (preferred),
+ * otherwise SMTP when EMAIL_HOST is set, otherwise logs to the console (dev).
+ */
 function createTransporter() {
   if (!process.env.EMAIL_HOST) return null
 
@@ -12,6 +16,38 @@ function createTransporter() {
       pass: process.env.EMAIL_PASS,
     },
   })
+}
+
+/** "Unbound <noreply@unboundza.com>" → { name, email } */
+function parseFrom(from: string): { name?: string; email: string } {
+  const m = from.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/)
+  return m ? { name: m[1].trim() || undefined, email: m[2].trim() } : { email: from.trim() }
+}
+
+async function sendViaBrevo(apiKey: string, to: string, subject: string, html: string): Promise<void> {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: { 'api-key': apiKey, 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({ sender: parseFrom(fromAddress), to: [{ email: to }], subject, htmlContent: html }),
+    signal: AbortSignal.timeout(15_000),
+  })
+  if (!res.ok) {
+    const detail = (await res.text().catch(() => '')).slice(0, 300)
+    throw new Error(`Brevo send failed (${res.status}): ${detail}`)
+  }
+}
+
+/** Deliver one email. Returns false when no provider is configured (dev: logged instead). */
+async function deliver(to: string, subject: string, html: string): Promise<boolean> {
+  const brevoKey = process.env.BREVO_API_KEY?.trim()
+  if (brevoKey) {
+    await sendViaBrevo(brevoKey, to, subject, html)
+    return true
+  }
+  const transporter = createTransporter()
+  if (!transporter) return false
+  await transporter.sendMail({ from: fromAddress, to, subject, html })
+  return true
 }
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
@@ -96,20 +132,11 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
 
   const html = wrapEmail('Email Verification', body)
 
-  const transporter = createTransporter()
-  if (!transporter) {
+  if (!(await deliver(to, 'Verify your Unbound email address', html))) {
     console.log('[Unbound Email - DEV] Verification email:')
     console.log(`  To: ${to}`)
     console.log(`  Link: ${link}`)
-    return
   }
-
-  await transporter.sendMail({
-    from: fromAddress,
-    to,
-    subject: 'Verify your Unbound email address',
-    html,
-  })
 }
 
 export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
@@ -138,20 +165,11 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
 
   const html = wrapEmail('Password Reset', body)
 
-  const transporter = createTransporter()
-  if (!transporter) {
+  if (!(await deliver(to, 'Reset your Unbound password', html))) {
     console.log('[Unbound Email - DEV] Password reset email:')
     console.log(`  To: ${to}`)
     console.log(`  Link: ${link}`)
-    return
   }
-
-  await transporter.sendMail({
-    from: fromAddress,
-    to,
-    subject: 'Reset your Unbound password',
-    html,
-  })
 }
 
 export function escapeHtml(value: string): string {
@@ -170,12 +188,8 @@ export function escapeHtml(value: string): string {
 export async function sendBrandedEmail(to: string, subject: string, title: string, bodyHtml: string): Promise<void> {
   const html = wrapEmail(title, bodyHtml)
 
-  const transporter = createTransporter()
-  if (!transporter) {
+  if (!(await deliver(to, subject, html))) {
     console.log(`[Unbound Email - DEV] ${subject}`)
     console.log(`  To: ${to}`)
-    return
   }
-
-  await transporter.sendMail({ from: fromAddress, to, subject, html })
 }
