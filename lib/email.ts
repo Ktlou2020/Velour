@@ -35,6 +35,10 @@ async function sendViaBrevo(apiKey: string, to: string, subject: string, html: s
     const detail = (await res.text().catch(() => '')).slice(0, 300)
     throw new Error(`Brevo send failed (${res.status}): ${detail}`)
   }
+  // Log acceptance (masked recipient) so delivery issues can be traced in Brevo's logs.
+  const { messageId } = (await res.json().catch(() => ({}))) as { messageId?: string }
+  const masked = to.replace(/^(.{2}).*(@.*)$/, '$1***$2')
+  console.log(`[email] Brevo accepted "${subject}" for ${masked}${messageId ? ` (messageId ${messageId})` : ''}`)
 }
 
 /** Deliver one email. Returns false when no provider is configured (dev: logged instead). */
