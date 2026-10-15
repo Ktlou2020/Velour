@@ -430,25 +430,22 @@ Releases are tagged with `RAILWAY_GIT_COMMIT_SHA` on the server (override with `
 
 ## Database backups
 
-`scripts/backup.mjs` takes a nightly `pg_dump` (custom format `-Fc`, compressed, checked with
+`ops/backup/backup.mjs` (a self-contained Railway service: its own `package.json`, `nixpacks.toml` and
+`railway.toml`) takes a nightly `pg_dump` (custom format `-Fc`, compressed, checked with
 `pg_restore --list`), uploads it to an S3-compatible bucket as `backups/unbound-YYYY-MM-DDTHH-mm.dump` (UTC;
 multipart above 64 MiB) and deletes its own backups older than `BACKUP_RETENTION_DAYS` (always keeping the
 newest `BACKUP_MIN_KEEP`). Requests are SigV4-signed with `aws4fetch`. It exits 1 if the dump or upload fails;
 a pruning problem only warns. Restoring: [`scripts/restore.md`](scripts/restore.md).
 
-`pg_dump` comes from `postgresql_17` in `nixpacks.toml` (dumps Postgres 16 and 17; must be ≥ the server's
-major version).
+`pg_dump` comes from `postgresql_17` in `ops/backup/nixpacks.toml` (dumps Postgres 16 and 17; must be ≥ the
+server's major version).
 
 1. **Bucket:** Railway **New → Bucket** (e.g. `backups`, separate from any media bucket), or a Cloudflare R2
    bucket + API token with Object Read & Write. Keep it private.
-2. **Service:** **New → GitHub Repo →** this repo, named e.g. `db-backup`.
-   - **Settings → Build → Builder:** *Nixpacks* (so `nixpacks.toml` installs `postgresql_17`; with Railpack
-     there is no `pg_dump` and the run fails with "pg_dump not found").
-   - **Settings → Build → Custom Build Command:** `echo "no build needed"` (optional; `npm ci` still runs, which
-     is all the script needs).
-   - **Settings → Deploy → Custom Start Command:** `node scripts/backup.mjs`
-   - **Settings → Deploy → Cron Schedule:** `0 1 * * *` (01:00 UTC = 03:00 SAST). No healthcheck; restart
-     policy *Never*.
+2. **Service:** **New → GitHub Repo →** this repo, named e.g. `db-backup`, with **Settings → Source → Root
+   Directory:** `/ops/backup`. Its `railway.toml` sets the start command (`node backup.mjs`), the cron
+   schedule (`0 23 * * *` = 01:00 SAST) and restart policy *Never*; only `aws4fetch` is installed and the web
+   app is not built.
 3. **Variables** (Railway references shown; `Postgres` / `backups` = your service and bucket names):
 
    | Variable | Value |

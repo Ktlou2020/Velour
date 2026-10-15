@@ -1,0 +1,8 @@
+{
+  "name": "unbound-db-backup",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": { "start": "node backup.mjs" },
+  "dependencies": { "aws4fetch": "^1.0.20" }
+}

@@ -1,0 +1,4 @@
+# Nightly database backup service (Railway root directory: /ops/backup).
+# pg_dump must be >= the server's major version; 17 dumps Postgres 16 and 17.
+[phases.setup]
+nixPkgs = ["...", "postgresql_17"]

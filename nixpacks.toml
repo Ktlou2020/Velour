@@ -7,9 +7,5 @@
 #    re-encode uploaded videos with the owner's watermark burned in
 #    (lib/storage.ts). If it is ever missing, uploads still work: videos are
 #    stored as uploaded and the server logs "ffmpeg not available".
-#  - postgresql_17: pg_dump / pg_restore / psql for scripts/backup.mjs (the
-#    nightly backup cron service). pg_dump must be at least the server's major
-#    version; 17 dumps Railway Postgres 16 and 17. If the database is ever
-#    upgraded to 18, bump this (and check the Node 22 nixpkgs archive has it).
 [phases.setup]
-nixPkgs = ["...", "ffmpeg", "postgresql_17"]
+nixPkgs = ["...", "ffmpeg"]
