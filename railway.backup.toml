@@ -1,0 +1,12 @@
+# Config for the nightly "db-backup" Railway service (same repo, cron).
+# Set this file as the service's config path (Settings → Config-as-code).
+# It only needs node_modules (aws4fetch) and pg_dump (nixpacks.toml), not the
+# Next.js build. Schedule is UTC: 23:00 UTC = 01:00 SAST.
+[build]
+builder = "nixpacks"
+buildCommand = "echo 'backup service: no app build needed'"
+
+[deploy]
+startCommand = "node scripts/backup.mjs"
+cronSchedule = "0 23 * * *"
+restartPolicyType = "never"

@@ -6,8 +6,10 @@ builder = "nixpacks"
 # created by `prisma db push`). It exits non-zero on failure, and `&&` then
 # stops the app from starting: the healthcheck never passes, the deploy is
 # marked failed and Railway keeps the previous deployment serving traffic.
-# backfill / seed-admin stay non-fatal (`;`).
-startCommand = "node scripts/migrate.mjs && { node scripts/backfill.mjs; node scripts/seed-admin.mjs; HOSTNAME=0.0.0.0 exec node .next/standalone/server.js; }"
+# backfill / seed-admin stay non-fatal (`;`). When S3_BUCKET is set, the media
+# copy (volume -> bucket) runs in the background on every start; it is resumable
+# and skips files already in the bucket, so later runs are quick no-ops.
+startCommand = "node scripts/migrate.mjs && { node scripts/backfill.mjs; node scripts/seed-admin.mjs; if [ -n \"$S3_BUCKET\" ]; then node scripts/migrate-media-to-s3.mjs & fi; HOSTNAME=0.0.0.0 exec node .next/standalone/server.js; }"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 120
 restartPolicyType = "on_failure"
