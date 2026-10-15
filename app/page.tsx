@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import FoundingOffer from '@/components/FoundingOffer';
 import {
   ArrowRight, BadgeCheck, CalendarHeart, Check, ChevronDown, EyeOff, Flag, Heart,
   ImageOff, MessageCircle, MoonStar, ShieldCheck, Sparkles, Star, UserPlus, Users,
@@ -107,6 +108,9 @@ export default function LandingPage() {
           <div aria-hidden="true" className="absolute bottom-1/4 right-1/4 w-64 h-64 md:w-80 md:h-80 bg-purple-500/10 rounded-full blur-3xl float-animation-delayed pointer-events-none" />
 
           <div className="relative z-10 max-w-5xl mx-auto px-4 text-center">
+            <Suspense fallback={null}>
+              <div><FoundingOffer /></div>
+            </Suspense>
             <p className="inline-flex items-center gap-2 glass px-4 py-2 rounded-full text-xs sm:text-sm text-white/80 mb-8">
               <span aria-hidden="true" className="w-1.5 h-1.5 bg-[#D4AF37] rounded-full" />
               Private dating for singles &amp; couples · 18+

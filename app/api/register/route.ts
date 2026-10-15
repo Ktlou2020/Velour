@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { maybeClaimFounding } from '@/lib/founding'
 import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
 import { sendVerificationEmail } from '@/lib/email'
@@ -119,6 +120,10 @@ export async function POST(req: NextRequest) {
         profileCompleteness: 11,
       },
     })
+
+    // Founding offer (women and couples): couples qualify at sign-up; women once
+    // they choose a gender in onboarding.
+    await maybeClaimFounding(user.id)
 
     // Send verification email (non-blocking)
     try {

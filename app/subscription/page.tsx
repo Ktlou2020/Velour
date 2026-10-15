@@ -86,7 +86,7 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
   const tier = allowance.tier;
   const plan = PLAN_META[tier];
   const isPaid = tier !== 'FREE';
-  const profile = await db.profile.findUnique({ where: { userId }, select: { travelCity: true, travelUntil: true } });
+  const profile = await db.profile.findUnique({ where: { userId }, select: { travelCity: true, travelUntil: true, foundingMemberNumber: true } });
   const travelling = allowance.features.travelMode && isTravelling(profile);
   const [sub, payments, me] = await Promise.all([
     currentSubscription(userId),
@@ -120,6 +120,13 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
 
         <h1 className="font-serif text-3xl font-bold text-white mb-2">Subscription</h1>
         <p className="text-white/60 text-sm mb-8">Your Unbound plan and what&apos;s left this period.</p>
+
+        {profile?.foundingMemberNumber != null && (
+          <div className="rounded-2xl p-5 mb-6 border border-[#D4AF37]/30 bg-gradient-to-r from-[#D4AF37]/15 to-[#DC143C]/10">
+            <p className="text-[#F5D77A] font-semibold">👑 Founding member #{profile.foundingMemberNumber}</p>
+            <p className="text-white/75 text-sm mt-1">You were one of the first women &amp; couples to join, so Platinum is yours — free, forever. Nothing to pay, nothing to renew.</p>
+          </div>
+        )}
 
         {banner && (
           <div role="status" className={`rounded-2xl p-4 mb-6 text-sm flex gap-2 border ${banner.tone === 'ok' ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-200' : 'bg-[#D4AF37]/10 border-[#D4AF37]/25 text-[#F5D77A]'}`}>

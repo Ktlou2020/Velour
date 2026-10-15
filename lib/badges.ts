@@ -36,9 +36,11 @@ export interface BadgeFacts {
   prompts: number
   /** Profile strength % (same score as the meter on the profile page). */
   completeness: number
+  /** Founding member number (first 30 sign-ups, Platinum forever), or null. */
+  foundingMemberNumber: number | null
 }
 
-/** Accounts created before this date are founding members (first ~90 days). */
+/** Accounts created before this date are early members (first ~90 days). */
 export const FOUNDING_CUTOFF = new Date('2027-01-15T00:00:00+02:00')
 
 const clampProgress = (current: number, target: number) => ({ current: Math.min(current, target), target })
@@ -63,7 +65,12 @@ export function evaluateBadges(f: BadgeFacts): Badge[] {
       earned: f.completeness >= 100, progress: clampProgress(f.completeness, 100), href: '/profile#strength',
     },
     {
-      id: 'founding', label: 'Founding member', emoji: '🌱',
+      id: 'founding', label: f.foundingMemberNumber ? `Founding member #${f.foundingMemberNumber}` : 'Founding member', emoji: '👑',
+      description: 'One of the first women & couples on Unbound — Platinum, free forever',
+      earned: f.foundingMemberNumber != null,
+    },
+    {
+      id: 'early', label: 'Early member', emoji: '🌱',
       description: 'Joined Unbound in its first months',
       earned: f.createdAt < FOUNDING_CUTOFF,
     },
@@ -132,7 +139,7 @@ export async function loadBadgeFacts(userId: string): Promise<BadgeFacts | null>
             displayName: true, bio: true, dateOfBirth: true, gender: true, orientation: true,
             interestedIn: true, lookingFor: true, city: true, country: true, profilePhoto: true,
             isCouple: true, partnerId: true, prompts: true,
-            intentions: true, pronouns: true, coupleMembers: true,
+            intentions: true, pronouns: true, coupleMembers: true, foundingMemberNumber: true,
           },
         },
       },
@@ -161,6 +168,7 @@ export async function loadBadgeFacts(userId: string): Promise<BadgeFacts | null>
   return {
     isVerified: user.isVerified,
     createdAt: user.createdAt,
+    foundingMemberNumber: p?.foundingMemberNumber ?? null,
     isCouple: !!p?.isCouple,
     coupleLinked: !!p?.partnerId,
     publicPhotos: Number(c.publicPhotos) || 0,

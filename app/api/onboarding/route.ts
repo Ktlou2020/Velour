@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { maybeClaimFounding } from '@/lib/founding'
 import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
@@ -114,6 +115,8 @@ export async function POST(req: NextRequest) {
       select: { id: true, isCouple: true, coupleType: true, profileCompleteness: true },
     })
 
+    // Founding offer: women claim a spot once their gender is set here.
+    await maybeClaimFounding(userId)
     return NextResponse.json({ profile })
   } catch (error) {
     console.error('POST /api/onboarding error:', error)

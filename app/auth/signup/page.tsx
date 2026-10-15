@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
@@ -32,6 +32,10 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [founding, setFounding] = useState<{ limit: number; left: number } | null>(null)
+  useEffect(() => {
+    fetch('/api/founding').then((r) => (r.ok ? r.json() : null)).then(setFounding).catch(() => {})
+  }, [])
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<Field, string>>>({})
   const errorRef = useRef<HTMLDivElement>(null)
 
@@ -127,6 +131,11 @@ export default function SignupPage() {
           </Link>
           <h1 className="text-3xl font-serif font-bold text-white mb-2">Join Unbound</h1>
           <p className="text-gray-400">Free to join. Discreet by design. For singles and couples of every kind.</p>
+          {founding && founding.left > 0 && (
+            <p className="mt-4 inline-block px-3 py-1.5 rounded-full text-xs border border-[#D4AF37]/40 bg-[#D4AF37]/10 text-[#F5D77A]">
+              👑 Founding offer: Platinum free forever for the first {founding.limit} women &amp; couples · {founding.left} {founding.left === 1 ? 'spot' : 'spots'} left
+            </p>
+          )}
         </div>
 
         <div className="glass rounded-2xl p-5 sm:p-8">

@@ -208,6 +208,9 @@ model Profile {
   ratingCount Int    @default(0)
 
   // Premium perks
+  // Founding members: the first N member sign-ups get Platinum free forever (lib/founding.ts).
+  foundingMemberNumber Int? @unique
+
   boostedUntil DateTime?
   lastBoostAt  DateTime?
   incognito    Boolean   @default(false)

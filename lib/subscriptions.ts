@@ -535,7 +535,8 @@ export async function expireDue(now = new Date(), limit = 500): Promise<{ expire
     const other = await db.subscription.findFirst({ where: { userId: row.userId, id: { not: row.id }, status: { in: OPEN_STATUSES }, currentPeriodEnd: { gte: cutoff } }, select: { id: true } })
     if (other) continue
     // Only undo the tier this subscription gave them (an admin may have changed it since).
-    const down = await db.profile.updateMany({ where: { userId: row.userId, membershipTier: row.tier }, data: { membershipTier: 'FREE' } })
+    // Founding members keep Platinum forever, even if a paid subscription lapses.
+    const down = await db.profile.updateMany({ where: { userId: row.userId, membershipTier: row.tier, foundingMemberNumber: null }, data: { membershipTier: 'FREE' } })
     if (down.count !== 1) continue
     downgraded++
     const tier = tierLabel(row.tier)

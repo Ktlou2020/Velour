@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { maybeClaimFounding } from '@/lib/founding'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { isOwnMediaUrl, mediaIdFromUrl } from '@/lib/media'
@@ -178,6 +179,8 @@ export async function PUT(req: NextRequest) {
       },
     })
 
+    // Founding offer: a newly eligible profile (gender set to Woman) claims a spot.
+    await maybeClaimFounding(session.user.id)
     return NextResponse.json({ profile })
   } catch (error) {
     console.error('PUT /api/profile error:', error)

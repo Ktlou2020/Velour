@@ -153,12 +153,13 @@ export default async function AdminAnalyticsPage({ searchParams }: { searchParam
       </Section>
 
       <Section title="Revenue" note="Membership revenue uses the amount PayFast confirmed; older payments without an amount are estimated from the plan price.">
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
           <Kpi label="Membership revenue" value={a.revenue.membershipCents} previous={p.membershipRevenueCents} money />
           <Kpi label="Membership payments" value={t.memberships} previous={p.memberships} />
           <Kpi label={`${STORE_NAME} revenue`} value={a.revenue.storeCents} previous={p.storeRevenueCents} money />
           <Kpi label="Paid store orders" value={t.storeOrders} previous={p.storeOrders} />
           <Kpi label="Paying members" value={a.revenue.payingMembers} />
+          <Kpi label="Founding members (free Platinum)" value={a.revenue.foundingMembers} />
           <div className="glass rounded-2xl p-4">
             <p className="text-white/60 text-xs">Paid conversion</p>
             <p className="text-white text-2xl font-bold tabular-nums mt-1">{a.revenue.conversionPct}%</p>

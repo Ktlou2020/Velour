@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { maybeClaimFounding } from '@/lib/founding'
 import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
@@ -77,6 +78,10 @@ export async function POST(req: NextRequest) {
     await clearPendingInvitesFor([userId, inviter.id])
     const me = await db.user.findUnique({ where: { id: userId }, select: { username: true } })
     await notify(inviter.id, 'Profiles linked', `@${me?.username ?? 'Your partner'} accepted — your profiles are now linked as a couple`, { partnerId: userId })
+
+    // Founding offer: both partners of a newly linked couple are eligible.
+    await maybeClaimFounding(userId)
+    await maybeClaimFounding(inviter.id)
 
     return NextResponse.json({ linked: true, partnerUsername: inviter.username })
   } catch (error) {

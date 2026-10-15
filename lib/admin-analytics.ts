@@ -206,7 +206,7 @@ export async function getAdminAnalytics(days: AnalyticsRange, now = new Date()) 
     db.user.count({ where: { ...cohort, ...notAdmin, profile: { profileCompleteness: { gte: 70 } } } }),
     db.user.count({ where: { ...cohort, ...notAdmin, messagesSent: { some: {} } } }),
     db.user.count({ where: { ...cohort, ...notAdmin, OR: [{ matchesA: { some: {} } }, { matchesB: { some: {} } }] } }),
-    db.user.count({ where: { ...cohort, ...notAdmin, profile: { membershipTier: { in: ['GOLD', 'PLATINUM'] } } } }),
+    db.user.count({ where: { ...cohort, ...notAdmin, profile: { membershipTier: { in: ['GOLD', 'PLATINUM'] }, foundingMemberNumber: null } } }),
 
     retention(from, now, 1, true),
     retention(from, now, 1, false),
@@ -255,7 +255,9 @@ export async function getAdminAnalytics(days: AnalyticsRange, now = new Date()) 
     label: TIER_LABEL[t],
     count: tierRows.find((r) => r.membershipTier === t)?._count._all ?? 0,
   }))
-  const paying = tiers[1].count + tiers[2].count
+  // Founding members have Platinum free, so they aren't paying members.
+  const founders = await db.profile.count({ where: { foundingMemberNumber: { not: null }, user: notAdmin } })
+  const paying = Math.max(0, tiers[1].count + tiers[2].count - founders)
   const ageOrder = ['18–24', '25–34', '35–44', '45–54', '55+']
 
   return {
@@ -313,6 +315,7 @@ export async function getAdminAnalytics(days: AnalyticsRange, now = new Date()) 
       prevTotalCents: prevTotals.membershipRevenueCents + prevTotals.storeRevenueCents,
       avgOrderCents: totals.storeOrders > 0 ? Math.round(totals.storeRevenueCents / totals.storeOrders) : 0,
       payingMembers: paying,
+      foundingMembers: founders,
       conversionPct: totalMembers > 0 ? Math.round((paying / totalMembers) * 1000) / 10 : 0,
       pendingOrders,
       topProducts: topProducts.map((p) => ({

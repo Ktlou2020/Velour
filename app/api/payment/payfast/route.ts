@@ -26,9 +26,12 @@ export async function POST(req: NextRequest) {
 
     const user = await db.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true, email: true, profile: { select: { displayName: true } } },
+      select: { id: true, email: true, profile: { select: { displayName: true, foundingMemberNumber: true } } },
     })
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (user.profile?.foundingMemberNumber != null) {
+      return NextResponse.json({ error: "You're a founding member — Platinum is already yours, free forever." }, { status: 409 })
+    }
 
     const form = payfastMembershipForm({ id: user.id, email: user.email, displayName: user.profile?.displayName ?? null }, body.tier, body.billing)
     if (!form) {

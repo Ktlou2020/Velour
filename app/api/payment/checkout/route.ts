@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
 import { auth } from '@/auth'
 import { CheckoutError, startMembershipCheckout } from '@/lib/membership-checkout'
 import { PAYMENTS_NOT_CONFIGURED } from '@/lib/payments'
@@ -27,6 +28,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: TOO_MANY_REQUESTS_MESSAGE }, { status: 429 })
     }
 
+    const founding = await db.profile.findUnique({ where: { userId }, select: { foundingMemberNumber: true } })
+    if (founding?.foundingMemberNumber != null) {
+      return NextResponse.json({ error: "You're a founding member — Platinum is already yours, free forever." }, { status: 409 })
+    }
     const checkout = await startMembershipCheckout(userId, body.tier, body.billing)
     if (!checkout) return NextResponse.json({ error: PAYMENTS_NOT_CONFIGURED }, { status: 503 })
     return NextResponse.json(checkout)
