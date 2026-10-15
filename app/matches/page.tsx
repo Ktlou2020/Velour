@@ -171,7 +171,7 @@ export default function MatchesPage() {
                       <Star size={9} className="fill-[#0A0A0F]" aria-hidden="true" /> SUPER
                     </span>
                   )}
-                  {l.type === 'WINK' && <span className="absolute top-2 left-2 glass text-[11px] px-1.5 py-0.5 rounded-md" title="Winked at you">👋</span>}
+                  {l.type === 'WINK' && <span className="absolute top-2 left-2 glass text-[11px] px-1.5 py-0.5 rounded-md" title="Winked at you">😉</span>}
                   {typeof m.compatibility === 'number' && m.compatibility > 0 && (
                     <span className="absolute bottom-2 left-2 flex items-center gap-0.5 glass text-[10px] font-bold px-1.5 py-0.5 rounded-md text-[#D4AF37]">
                       <Sparkles size={9} aria-hidden="true" /> {m.compatibility}%

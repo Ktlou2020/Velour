@@ -26,6 +26,7 @@ import SparkAnswers, { type SparkAnswerView } from '@/components/spark/SparkAnsw
 import type { Badge } from '@/lib/badges';
 import Link from 'next/link';
 import MyReviewsPanel from '@/components/reviews/MyReviewsPanel';
+import ProfilePhotoPicker from './ProfilePhotoPicker';
 
 interface Photo {
   id: string;
@@ -82,6 +83,9 @@ const TIER_COLORS = {
 export default function ProfileClient({ session, initialProfile }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const privateFileInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
+  const [photoError, setPhotoError] = useState('');
   const [profile, setProfile] = useState<Profile>(initialProfile || {});
   const [photoTab, setPhotoTab] = useState<'public' | 'private'>('public');
   const [editingBio, setEditingBio] = useState(false);
@@ -138,46 +142,78 @@ export default function ProfileClient({ session, initialProfile }: Props) {
     }
   }
 
-  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>, isPrivate = false) {
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>, isPrivate = false, asProfile = false) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingPhoto(true);
+    setPhotoError('');
     try {
       const formData = new FormData();
       formData.append('file', file);
       const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
-      if (!uploadRes.ok) throw new Error('Upload failed');
+      if (!uploadRes.ok) {
+        const body = await uploadRes.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error || 'Upload failed. Please try a different photo.');
+      }
       const { url } = await uploadRes.json() as { url: string };
 
       const photoRes = await fetch('/api/photos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, isPrivate }),
+        body: JSON.stringify({ url, isPrivate, isProfile: asProfile && !isPrivate }),
       });
-      if (photoRes.ok) {
-        const { photo: newPhoto } = await photoRes.json() as { photo: Photo };
-        setProfile((p) => ({ ...p, photos: [...(p.photos || []), newPhoto] }));
-        setPhotoTab(isPrivate ? 'private' : 'public');
+      if (!photoRes.ok) {
+        const body = await photoRes.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error || 'Could not save your photo. Please try again.');
       }
+      const { photo: newPhoto } = await photoRes.json() as { photo: Photo };
+      setProfile((p) => ({
+        ...p,
+        photos: [
+          ...(p.photos || []).map((ph) => (newPhoto.isProfile ? { ...ph, isProfile: false } : ph)),
+          newPhoto,
+        ],
+      }));
+      setPhotoTab(isPrivate ? 'private' : 'public');
+      if (asProfile) setPhotoPickerOpen(false);
+    } catch (err) {
+      setPhotoError(err instanceof Error ? err.message : 'Upload failed.');
     } finally {
       setUploadingPhoto(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
       if (privateFileInputRef.current) privateFileInputRef.current.value = '';
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
     }
   }
 
-  async function setAsProfile(photoId: string) {
+  async function setAsProfile(photoId: string): Promise<boolean> {
+    setPhotoError('');
     try {
-      await fetch(`/api/photos/${photoId}`, {
+      const res = await fetch(`/api/photos/${photoId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isProfile: true }),
       });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setPhotoError(body.error || 'Could not change your profile photo.');
+        return false;
+      }
       setProfile((p) => ({
         ...p,
         photos: (p.photos || []).map((ph) => ({ ...ph, isProfile: ph.id === photoId })),
       }));
-    } catch { /* ignore */ }
+      return true;
+    } catch {
+      setPhotoError('Could not change your profile photo.');
+      return false;
+    }
+  }
+
+  function openPhotoPicker() {
+    setPhotoError('');
+    if (photos.some((p) => !p.isPrivate)) setPhotoPickerOpen(true);
+    else avatarInputRef.current?.click();
   }
 
   async function togglePrivate(photoId: string, current: boolean) {
@@ -218,24 +254,39 @@ export default function ProfileClient({ session, initialProfile }: Props) {
           <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center sm:items-start gap-6">
             {/* Avatar */}
             <div className="relative">
-              <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-rose-900 to-red-700 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-90 transition-opacity group"
-                onClick={() => fileInputRef.current?.click()}>
+              <button
+                type="button"
+                className="relative w-28 h-28 rounded-2xl bg-gradient-to-br from-rose-900 to-red-700 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-90 transition-opacity group"
+                onClick={openPhotoPicker}
+                aria-label="Change profile photo"
+              >
                 {photos.find((p) => p.isProfile)?.url ? (
                   <ProtectedImage src={photos.find((p) => p.isProfile)!.url} alt="Profile" className="w-full h-full" />
                 ) : (
                   <span className="text-white text-4xl font-bold font-serif">{name.slice(0, 2).toUpperCase()}</span>
                 )}
-                <div className="absolute inset-0 bg-black/60 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Camera size={24} className="text-white" />
-                </div>
-              </div>
+                <span className="absolute inset-0 bg-black/60 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1" aria-hidden="true">
+                  <Camera size={22} className="text-white" />
+                  <span className="text-white text-[11px] font-medium">Change</span>
+                </span>
+                {uploadingPhoto && (
+                  <span className="absolute inset-0 bg-black/60 flex items-center justify-center" aria-hidden="true">
+                    <span className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  </span>
+                )}
+              </button>
               <button
+                type="button"
                 className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#DC143C] rounded-full flex items-center justify-center hover:bg-[#FF1744] transition-colors"
-                onClick={() => fileInputRef.current?.click()}
-                aria-label="Change photo"
+                onClick={openPhotoPicker}
+                aria-label="Change profile photo"
+                title="Change profile photo"
               >
                 <Camera size={14} className="text-white" />
               </button>
+              {photoError && !photoPickerOpen && (
+                <p role="alert" className="absolute top-full mt-3 left-1/2 -translate-x-1/2 w-56 text-center text-xs text-red-300">{photoError}</p>
+              )}
             </div>
 
             <div className="flex-1 text-center sm:text-left">
@@ -493,6 +544,17 @@ export default function ProfileClient({ session, initialProfile }: Props) {
 
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload(e, false)} />
             <input ref={privateFileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload(e, true)} />
+            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload(e, false, true)} />
+            {photoPickerOpen && (
+              <ProfilePhotoPicker
+                photos={photos}
+                busy={uploadingPhoto}
+                error={photoError}
+                onUpload={() => avatarInputRef.current?.click()}
+                onPick={async (id) => { if (await setAsProfile(id)) setPhotoPickerOpen(false); }}
+                onClose={() => setPhotoPickerOpen(false)}
+              />
+            )}
 
             <p className="text-white/55 text-xs mt-3">JPEG, PNG, WEBP accepted. Hover a photo to manage it.</p>
           </div>

@@ -277,7 +277,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
               aria-pressed={winked}
               className={`glass border px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2 transition-all hover:scale-105 active:scale-95 ${winked ? 'border-amber-400/60 bg-amber-500/10 text-amber-400' : 'border-white/20 text-white/70 hover:text-white'}`}
             >
-              <span aria-hidden="true">👋</span> {winked ? 'Winked!' : 'Wink'}
+              <span aria-hidden="true">😉</span> {winked ? 'Winked!' : 'Wink'}
             </button>
             <button
               onClick={handleBlock}
