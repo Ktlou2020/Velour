@@ -42,8 +42,8 @@ const PLATINUM_FEATURES = [
 ]
 
 const FAQS = [
-  { q: 'Can I cancel anytime?', a: 'Yes, you can cancel your subscription at any time. Your premium access continues until the end of your billing period.' },
-  { q: 'Is my payment information secure?', a: 'Absolutely. We use industry-standard SSL encryption and partner with PayFast for secure payment processing. We never store your card details.' },
+  { q: 'Can I cancel anytime?', a: 'Yes — cancel any time from your Subscription page. Your premium access continues until the end of your billing period.' },
+  { q: 'Is my payment information secure?', a: 'Absolutely. We use industry-standard SSL encryption and partner with trusted South African payment providers (Paystack and PayFast) for secure payment processing. We never store your card details.' },
   { q: 'What happens to my profile if I downgrade?', a: 'Your profile and all messages are preserved. You simply revert to the free tier feature set.' },
   { q: 'Do you offer refunds?', a: 'If you are unhappy with your subscription, contact support@unboundza.com and our team will review your request.' },
   { q: 'Can I upgrade or downgrade mid-cycle?', a: 'Yes. Upgrades take effect as soon as payment is confirmed. For downgrades or billing changes, contact support@unboundza.com.' },
@@ -56,6 +56,7 @@ export default function UpgradePage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null)
   const [loadingTier, setLoadingTier] = useState<Tier | null>(null)
   const [current, setCurrent] = useState<PlanTier | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/likes/allowance')
@@ -69,18 +70,33 @@ export default function UpgradePage() {
 
   async function handleUpgrade(tier: Tier) {
     setLoadingTier(tier)
+    setError(null)
     try {
-      const res = await fetch('/api/payment/payfast', {
+      const res = await fetch('/api/payment/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tier, billing: annual ? 'annual' : 'monthly' }),
       })
+      const data = await res.json().catch(() => ({})) as {
+        error?: string
+        redirectUrl?: string
+        paymentData?: Record<string, string>
+        payfastUrl?: string
+      }
+      if (res.status === 401) {
+        window.location.assign('/auth/signin?callbackUrl=/upgrade')
+        return
+      }
+      if (!res.ok) throw new Error(data.error ?? 'We couldn’t start your upgrade — please try again.')
 
-      if (!res.ok) throw new Error('Payment initiation failed')
-
-      const data = await res.json() as { paymentData: Record<string, string>; payfastUrl: string }
+      // Paystack: hosted checkout page
+      if (data.redirectUrl && /^https:\/\//.test(data.redirectUrl)) {
+        window.location.assign(data.redirectUrl)
+        return
+      }
 
       // PayFast requires a form submission to their endpoint
+      if (!data.payfastUrl || !data.paymentData) throw new Error('We couldn’t start your upgrade — please try again.')
       const form = document.createElement('form')
       form.method = 'POST'
       form.action = data.payfastUrl
@@ -96,7 +112,7 @@ export default function UpgradePage() {
       document.body.appendChild(form)
       form.submit()
     } catch (err) {
-      console.error('Payment error:', err)
+      setError(err instanceof Error ? err.message : 'We couldn’t start your upgrade — please try again.')
       setLoadingTier(null)
     }
   }
@@ -144,6 +160,10 @@ export default function UpgradePage() {
             </button>
           </div>
         </div>
+
+        {error && (
+          <p role="alert" className="max-w-xl mx-auto -mt-4 mb-8 text-center text-sm text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
+        )}
 
         {/* Pricing cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
@@ -306,7 +326,7 @@ export default function UpgradePage() {
           <Link href="/discover" className="inline-flex items-center gap-2 bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white px-8 py-3.5 rounded-xl font-semibold transition-all shadow-lg shadow-[#DC143C]/20">
             Keep discovering <Heart className="w-4 h-4" />
           </Link>
-          <p className="text-gray-500 text-xs mt-4">Secure payments by PayFast · Cancel anytime</p>
+          <p className="text-gray-500 text-xs mt-4">Secure payments · Cancel anytime from your Subscription page</p>
         </div>
       </div>
     </div>

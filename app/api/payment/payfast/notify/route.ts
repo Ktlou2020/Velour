@@ -3,7 +3,9 @@ import { db } from '@/lib/db'
 import {
   MEMBERSHIP_PRICES, amountToCents, parseItnBody, payfastConfig, validateWithPayfast, verifyItnSignature,
 } from '@/lib/payfast'
+import { isBillingPeriod } from '@/lib/paystack'
 import { applyStorePayment } from '@/lib/store/orders'
+import { markNotRenewing, recordMembershipPayment, recordStorePayment } from '@/lib/subscriptions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -21,7 +23,9 @@ function text(body: string, status: number) {
  * 4. Confirm with PayFast server-to-server (/eng/query/validate → "VALID");
  *    network trouble → 503 so PayFast retries. (PAYFAST_SKIP_VALIDATE=true skips this for local tests.)
  * 5. Route: m_payment_id matching an Order.paymentRef → store order;
- *    otherwise a membership payment (custom_str1 = userId, item_name "Unbound Gold"/"Unbound Platinum").
+ *    otherwise a membership payment (custom_str1 = userId, item_name "Unbound Gold"/"Unbound Platinum",
+ *    custom_str2 = billing period, `token` = PayFast subscription token) → Subscription + Payment
+ *    (lib/subscriptions.ts). payment_status CANCELLED with a token → the membership stops renewing.
  * Valid-but-ignored notifications get 200 so PayFast stops retrying.
  */
 export async function POST(req: NextRequest) {
@@ -66,16 +70,28 @@ export async function POST(req: NextRequest) {
     if (mPaymentId) {
       const order = await db.order.findUnique({
         where: { paymentRef: mPaymentId },
-        select: { id: true, number: true, status: true, totalCents: true, pfPaymentId: true, adminNotes: true },
+        select: { id: true, number: true, userId: true, status: true, totalCents: true, pfPaymentId: true, adminNotes: true },
       })
       if (order) {
         const outcome = await applyStorePayment(order, { paymentStatus, pfPaymentId, amountGrossCents })
+        if (pfPaymentId && amountGrossCents !== null && (outcome === 'paid' || outcome === 'duplicate' || outcome === 'late_unfulfillable')) {
+          await recordStorePayment({ userId: order.userId, provider: 'PAYFAST', reference: `PF-${pfPaymentId.slice(0, 90)}`, amountCents: amountGrossCents, currency: 'ZAR', orderId: order.id })
+        }
         console.log(`PayFast ITN: store order ${order.number} ${paymentStatus} → ${outcome}`)
         return text('OK', 200)
       }
     }
 
-    // ── Membership (unchanged behaviour, plus amount check + replay guard) ──
+    // ── Membership ──
+    const token = (params.token ?? '').trim()
+
+    // Subscription cancelled at PayFast (by the member, us or PayFast): keep access until the period ends.
+    if (paymentStatus === 'CANCELLED' && token) {
+      const row = await db.subscription.findUnique({ where: { payfastToken: token } })
+      if (row) await markNotRenewing(row, 'payfast ITN CANCELLED')
+      return text('OK', 200)
+    }
+
     if (paymentStatus === 'COMPLETE') {
       const userId = (params.custom_str1 ?? '').trim()
       const itemName = params.item_name ?? ''
@@ -86,8 +102,12 @@ export async function POST(req: NextRequest) {
           tier = 'PLATINUM'
         }
 
-        const allowed = Object.values(MEMBERSHIP_PRICES[tier]).map((r) => Math.round(r * 100))
-        if (amountGrossCents === null || !allowed.some((c) => Math.abs(c - amountGrossCents) <= 1)) {
+        // Period: custom_str2 (newer checkouts) or whichever price the amount matches.
+        const hinted = (params.custom_str2 ?? '').trim()
+        const matches = (Object.keys(MEMBERSHIP_PRICES[tier]) as ('monthly' | 'annual')[])
+          .filter((p) => amountGrossCents !== null && Math.abs(Math.round(MEMBERSHIP_PRICES[tier][p] * 100) - amountGrossCents) <= 1)
+        const period = isBillingPeriod(hinted) && matches.includes(hinted) ? hinted : matches[0]
+        if (!period) {
           console.warn(`PayFast ITN: membership amount ${params.amount_gross} does not match ${tier} pricing — ignored`)
           return text('OK', 200)
         }
@@ -97,30 +117,26 @@ export async function POST(req: NextRequest) {
           console.warn('PayFast ITN: membership payment for unknown user — ignored')
           return text('OK', 200)
         }
-
-        await db.profile.update({
-          where: { userId },
-          data: { membershipTier: tier },
-        })
-
-        // Replays (same pf_payment_id) don't notify twice.
-        const seen = pfPaymentId
-          ? await db.notification.findFirst({
-              where: { userId, type: 'PAYMENT', data: { path: ['pfPaymentId'], equals: pfPaymentId } },
-              select: { id: true },
-            })
-          : null
-        if (!seen) {
-          await db.notification.create({
-            data: {
-              userId,
-              type: 'PAYMENT',
-              title: 'Membership Activated',
-              body: `Your ${tier} membership is now active. Enjoy all the benefits!`,
-              data: { tier, itemName, amountCents: amountGrossCents, url: '/subscription', ...(pfPaymentId ? { pfPaymentId } : {}) },
-            },
-          })
+        if (!pfPaymentId) {
+          console.warn('PayFast ITN: membership payment without pf_payment_id — ignored')
+          return text('OK', 200)
         }
+
+        // Idempotent on pf_payment_id: activates/extends the Subscription, records
+        // the Payment, writes the PAYMENT notification (admin analytics) and emails a receipt.
+        const r = await recordMembershipPayment({
+          userId,
+          provider: 'PAYFAST',
+          reference: `PF-${pfPaymentId.slice(0, 90)}`,
+          amountCents: amountGrossCents ?? Math.round(MEMBERSHIP_PRICES[tier][period] * 100),
+          currency: 'ZAR',
+          tier,
+          period,
+          payfast: { token: /^[A-Za-z0-9-]{8,64}$/.test(token) ? token : null },
+          raw: { pf_payment_id: pfPaymentId, payment_status: paymentStatus, amount_gross: params.amount_gross ?? null, item_name: itemName, billing_date: params.billing_date ?? null },
+          notificationData: { itemName, pfPaymentId },
+        })
+        console.log(`PayFast ITN: membership ${tier} ${period} → ${r.outcome}`)
       }
     }
 

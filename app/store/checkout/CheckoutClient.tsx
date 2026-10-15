@@ -9,7 +9,7 @@ import CartSummary from '@/components/store/CartSummary';
 import { useStore } from '@/components/store/StoreProvider';
 import { useQuote } from '@/components/store/useQuote';
 import { validateDelivery, type DeliveryErrors, type DeliveryInput } from '@/lib/store/address';
-import { cart, cartSubtotal, submitPayfastForm } from '@/lib/store/cart-client';
+import { cart, cartSubtotal, followPaymentHandoff, type PaymentHandoff } from '@/lib/store/cart-client';
 import { SA_PROVINCES, STORE_NAME, STORE_TERMS_HREF } from '@/lib/store/config';
 import type { Quote } from '@/lib/store/orders';
 
@@ -53,9 +53,10 @@ export default function CheckoutClient({ prefill, paymentsEnabled, hasPending }:
           expectedTotalCents: q.totalCents,
         }),
       });
-      const d = await res.json().catch(() => ({})) as { error?: string; code?: string; fields?: DeliveryErrors; quote?: Quote; payfast?: { action: string; fields: [string, string][] } };
-      if (res.ok && d.payfast) {
-        submitPayfastForm(d.payfast); // navigates away; cart is cleared once the order is paid
+      const d = await res.json().catch(() => ({})) as PaymentHandoff & { error?: string; code?: string; fields?: DeliveryErrors; quote?: Quote; order?: { number: string } };
+      if (res.ok && followPaymentHandoff(d)) return; // navigates away; cart is cleared once the order is paid
+      if (d.code === 'PROVIDER_UNAVAILABLE' && d.order?.number) {
+        window.location.assign(`/store/orders/${encodeURIComponent(d.order.number)}`);
         return;
       }
       if (d.fields) setErrors(d.fields);
@@ -145,10 +146,10 @@ export default function CheckoutClient({ prefill, paymentsEnabled, hasPending }:
         <button type="submit" disabled={submitting || !paymentsEnabled}
           className="mt-5 flex items-center justify-center gap-2 w-full bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white rounded-xl h-12 font-semibold shadow-lg shadow-[#DC143C]/20 disabled:opacity-50 disabled:cursor-not-allowed">
           {submitting ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Lock size={15} aria-hidden="true" />}
-          {submitting ? 'Redirecting to PayFast…' : 'Pay securely with PayFast'}
+          {submitting ? 'Redirecting to secure checkout…' : 'Pay securely'}
         </button>
         <p className="text-[11px] text-white/45 mt-3 leading-relaxed">
-          You’ll pay on PayFast’s secure page. Items are reserved for 30 minutes while you pay. By ordering you confirm you’re 18 or older and accept the <Link href={STORE_TERMS_HREF} className="text-[#FF4D6D] hover:underline">store terms</Link>.
+          You’ll pay on our payment provider’s secure page. Items are reserved for 30 minutes while you pay. By ordering you confirm you’re 18 or older and accept the <Link href={STORE_TERMS_HREF} className="text-[#FF4D6D] hover:underline">store terms</Link>.
         </p>
       </aside>
     </form>

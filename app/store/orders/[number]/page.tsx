@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, ExternalLink, Package } from 'lucide-react';
 import { auth } from '@/auth';
 import ProtectedImage from '@/components/ProtectedImage';
@@ -8,7 +8,10 @@ import OrderTimeline from '@/components/store/OrderTimeline';
 import PayNowButton from '@/components/store/PayNowButton';
 import ProductPlaceholder from '@/components/store/ProductPlaceholder';
 import StatusPill from '@/components/store/StatusPill';
-import { payfastConfig } from '@/lib/payfast';
+import { activePaymentProvider } from '@/lib/payments';
+import { isValidReference } from '@/lib/paystack';
+import { verifyAndApply } from '@/lib/paystack-events';
+import { paymentRefFromReference } from '@/lib/store/payment';
 import { STORE_TERMS_HREF, SUPPORT_EMAIL } from '@/lib/store/config';
 import { formatDateTime, formatRand } from '@/lib/store/format';
 import { maybeReleaseExpired, minutesLeftToPay } from '@/lib/store/orders';
@@ -23,12 +26,25 @@ export async function generateMetadata({ params }: { params: Promise<{ number: s
   return { title: `Order ${(await params).number}` };
 }
 
-export default async function OrderDetailPage({ params }: { params: Promise<{ number: string }> }) {
+export default async function OrderDetailPage({ params, searchParams }: { params: Promise<{ number: string }>; searchParams: Promise<{ reference?: string; trxref?: string }> }) {
   const { number } = await params;
+  const sp = await searchParams;
   const session = await auth();
+  const userId = session!.user!.id!;
   await maybeReleaseExpired();
-  const order = await getMyOrder(session!.user!.id!, decodeURIComponent(number));
+  let order = await getMyOrder(userId, decodeURIComponent(number));
   if (!order) notFound();
+
+  // Back from Paystack (?reference=…): confirm with Paystack server-side — the query string alone proves nothing.
+  const reference = sp.reference ?? sp.trxref;
+  if (reference && isValidReference(reference)) {
+    if (order.status === 'PENDING_PAYMENT' && paymentRefFromReference(reference) === order.paymentRef) {
+      await verifyAndApply(reference, userId);
+      order = (await getMyOrder(userId, order.number)) ?? order;
+    }
+    // The thank-you page clears the cart and keeps polling until the webhook lands.
+    if (order.status !== 'CANCELLED') redirect(`/store/thank-you?order=${encodeURIComponent(order.number)}`);
+  }
   const minutesLeft = order.status === 'PENDING_PAYMENT' ? minutesLeftToPay(order.createdAt) : 0;
   const track = order.status === 'SHIPPED' || order.status === 'DELIVERED' ? trackingLink(order.courier, order.trackingNumber) : null;
   const trackingIsUrl = !!order.trackingNumber && /^https:\/\//i.test(order.trackingNumber);
@@ -47,7 +63,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ nu
         <OrderTimeline status={order.status} createdAt={order.createdAt} paidAt={order.paidAt} shippedAt={order.shippedAt} deliveredAt={order.deliveredAt} cancelledAt={order.cancelledAt} />
         {order.status === 'PENDING_PAYMENT' && (
           <div className="mt-5 pt-5 border-t border-white/10">
-            {minutesLeft > 0 && payfastConfig() ? (
+            {minutesLeft > 0 && activePaymentProvider() ? (
               <>
                 <p className="text-white/70 text-sm mb-3">We haven’t received payment for this order yet.</p>
                 <PayNowButton number={order.number} minutesLeft={minutesLeft} />

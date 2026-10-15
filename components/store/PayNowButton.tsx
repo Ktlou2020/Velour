@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CreditCard, Loader2, X } from 'lucide-react';
-import { submitPayfastForm } from '@/lib/store/cart-client';
+import { followPaymentHandoff, type PaymentHandoff } from '@/lib/store/cart-client';
 
-/** "Pay now" (fresh signed PayFast form) and "Cancel order" for an unpaid order. */
+/** "Pay now" (fresh Paystack checkout or signed PayFast form) and "Cancel order" for an unpaid order. */
 export default function PayNowButton({ number, minutesLeft, showCancel = true }: { number: string; minutesLeft: number; showCancel?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState<'pay' | 'cancel' | null>(null);
@@ -15,9 +15,8 @@ export default function PayNowButton({ number, minutesLeft, showCancel = true }:
     setBusy('pay'); setError(null);
     try {
       const res = await fetch(`/api/store/orders/${encodeURIComponent(number)}/pay`, { method: 'POST' });
-      const d = await res.json().catch(() => ({})) as { error?: string; payfast?: { action: string; fields: [string, string][] } };
-      if (!res.ok || !d.payfast) { setError(d.error ?? 'Couldn’t start payment'); setBusy(null); router.refresh(); return; }
-      submitPayfastForm(d.payfast);
+      const d = await res.json().catch(() => ({})) as PaymentHandoff & { error?: string };
+      if (!res.ok || !followPaymentHandoff(d)) { setError(d.error ?? 'Couldn’t start payment'); setBusy(null); router.refresh(); return; }
     } catch {
       setError('Couldn’t start payment — check your connection'); setBusy(null);
     }

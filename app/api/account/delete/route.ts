@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { recomputeRating } from '@/lib/reviews'
 import { rateLimit, TOO_MANY_REQUESTS_MESSAGE } from '@/lib/rate-limit'
 import { deleteFiles, photoFileKeys } from '@/lib/storage'
+import { renewingSubscriptions, stopSubscriptionsOfDeletedAccount } from '@/lib/subscriptions'
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,6 +30,9 @@ export async function POST(req: NextRequest) {
     // Reviews this member wrote are deleted with them; re-score those members afterwards.
     const reviewed = await db.review.findMany({ where: { reviewerId: userId }, select: { revieweeId: true } })
 
+    // Recurring memberships to stop once the account (and its Subscription rows) are gone.
+    const renewing = await renewingSubscriptions(userId)
+
     await db.$transaction(async (tx) => {
       // Conversations aren't owned by a user, so they'd survive the cascade
       // (with lastMessage previews). Remove every conversation this user was
@@ -48,6 +52,11 @@ export async function POST(req: NextRequest) {
     })
 
     for (const r of reviewed) await recomputeRating(r.revieweeId).catch(() => {})
+
+    // Best effort: stop membership billing at the provider.
+    await stopSubscriptionsOfDeletedAccount(renewing).catch((e) =>
+      console.error('account delete: stopping subscriptions failed:', e instanceof Error ? e.message : e),
+    )
 
     // Best effort: a failure here must not fail the (already committed) deletion.
     await deleteFiles(storedPhotos.flatMap(photoFileKeys)).catch((e) =>

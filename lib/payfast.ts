@@ -233,3 +233,53 @@ export const MEMBERSHIP_PRICES: Record<'GOLD' | 'PLATINUM', Record<'monthly' | '
 export function membershipItemName(tier: 'GOLD' | 'PLATINUM'): string {
   return tier === 'GOLD' ? 'Unbound Gold' : 'Unbound Platinum'
 }
+
+// ─── Subscriptions API (cancel) ─────────────────────────────────────────────
+
+/** ISO-8601 timestamp in SAST, as PayFast's API expects (e.g. 2026-10-15T14:05:00+02:00). */
+function payfastTimestamp(now = new Date()): string {
+  const sast = new Date(now.getTime() + 2 * 60 * 60 * 1000)
+  return `${sast.toISOString().slice(0, 19)}+02:00`
+}
+
+/**
+ * Header signature for api.payfast.co.za: every header + body param plus
+ * `passphrase`, sorted alphabetically by key, `key=urlencode(value)` joined
+ * with '&', md5.
+ */
+export function payfastApiSignature(params: Record<string, string>, passphrase: string): string {
+  const all: Record<string, string> = { ...params, passphrase }
+  const base = Object.keys(all).sort().map((k) => `${k}=${phpUrlencode(all[k].trim())}`).join('&')
+  return crypto.createHash('md5').update(base).digest('hex')
+}
+
+export type PayfastCancelResult = 'cancelled' | 'failed' | 'unavailable'
+
+/**
+ * Cancel a PayFast recurring subscription by its token. 'unavailable' = no
+ * passphrase configured (the API needs it), so cancel manually in the PayFast
+ * dashboard. Never throws.
+ */
+export async function cancelPayfastSubscription(token: string): Promise<PayfastCancelResult> {
+  const cfg = payfastConfig()
+  if (!cfg || !cfg.passphrase) return 'unavailable'
+  if (!/^[A-Za-z0-9-]{8,64}$/.test(token)) return 'failed'
+  const headers = { 'merchant-id': cfg.merchantId, version: 'v1', timestamp: payfastTimestamp() }
+  const signature = payfastApiSignature(headers, cfg.passphrase)
+  const url = `https://api.payfast.co.za/subscriptions/${encodeURIComponent(token)}/cancel${cfg.sandbox ? '?testing=true' : ''}`
+  try {
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { ...headers, signature, Accept: 'application/json' },
+      signal: AbortSignal.timeout(15_000),
+      cache: 'no-store',
+    })
+    const json = (await res.json().catch(() => null)) as { code?: number; status?: string; data?: { response?: unknown; message?: string } } | null
+    if (res.ok && json && (json.status === 'success' || json.code === 200)) return 'cancelled'
+    console.warn(`[payfast] subscription cancel failed: HTTP ${res.status} ${String(json?.data?.message ?? json?.status ?? '').slice(0, 120)}`)
+    return 'failed'
+  } catch (e) {
+    console.error('[payfast] subscription cancel request failed:', e instanceof Error ? e.message : e)
+    return 'failed'
+  }
+}

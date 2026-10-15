@@ -123,6 +123,8 @@ model User {
   pushSubscriptions   PushSubscription[]
   datePlans           DatePlan[]
   verificationRequest VerificationRequest?
+  subscriptions       Subscription[]
+  payments            Payment[]
 }
 
 model Profile {
@@ -711,4 +713,70 @@ model AdminAuditLog {
 
   @@index([createdAt])
   @@index([targetId, createdAt])
+}
+
+// Paid membership lifecycle (one row per provider subscription; a member can
+// have older EXPIRED rows). Members whose tier was set before this existed, or
+// by an admin, have no row and are never touched by the lifecycle cron.
+model Subscription {
+  id                       String         @id @default(cuid())
+  userId                   String
+  user                     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // PAYSTACK | PAYFAST | ADMIN
+  provider                 String
+  tier                     MembershipTier
+  // monthly | annual
+  period                   String
+  // ACTIVE | CANCELLING | PAST_DUE | EXPIRED
+  status                   String         @default("ACTIVE")
+  currentPeriodEnd         DateTime
+  cancelAtPeriodEnd        Boolean        @default(false)
+  cancelledAt              DateTime?
+  // Paystack: needed to disable/enable and to build the "update card" link
+  providerSubscriptionCode String?        @unique
+  providerCustomerCode     String?
+  providerPlanCode         String?
+  emailToken               String?
+  // PayFast recurring billing token (ITN `token`)
+  payfastToken             String?        @unique
+  lastPaymentAt            DateTime?
+  lastPaymentCents         Int?
+  pastDueSince             DateTime?
+  pastDueReminderAt        DateTime?
+  // currentPeriodEnd the "renews/ends soon" reminder was sent for (once per period)
+  renewalReminderFor       DateTime?
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+  payments                 Payment[]
+
+  @@index([userId, status])
+  @@index([status, currentPeriodEnd])
+  @@index([providerCustomerCode])
+}
+
+// Every confirmed payment (membership or store), recorded once per provider reference.
+model Payment {
+  id             String          @id @default(cuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // PAYSTACK | PAYFAST
+  provider       String
+  // Paystack transaction reference, or "PF-<pf_payment_id>" for PayFast
+  reference      String          @unique
+  // MEMBERSHIP | STORE
+  kind           String
+  amountCents    Int
+  currency       String          @default("ZAR")
+  // SUCCESS | REFUNDED
+  status         String          @default("SUCCESS")
+  tier           MembershipTier?
+  period         String?
+  orderId        String?
+  subscriptionId String?
+  subscription   Subscription?   @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  raw            Json?
+  createdAt      DateTime        @default(now())
+
+  @@index([userId, createdAt])
+  @@index([orderId])
 }

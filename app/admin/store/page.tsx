@@ -4,6 +4,7 @@ import { AlertTriangle, Boxes, ExternalLink, ReceiptText, Store, Tags } from 'lu
 import { requireAdmin } from '@/auth';
 import { db } from '@/lib/db';
 import { payfastConfig } from '@/lib/payfast';
+import { paystackConfig } from '@/lib/paystack';
 import { LOW_STOCK_THRESHOLD, STORE_NAME } from '@/lib/store/config';
 import { formatRand } from '@/lib/store/format';
 import { maybeReleaseExpired } from '@/lib/store/orders';
@@ -25,6 +26,7 @@ export default async function AdminStorePage() {
     db.product.findMany({ where: { isActive: true, stock: { lte: LOW_STOCK_THRESHOLD } }, orderBy: { stock: 'asc' }, take: 10, select: { id: true, name: true, stock: true } }),
   ]);
   const cfg = payfastConfig();
+  const ps = paystackConfig();
   const revenue = paid30._sum.totalCents ?? 0;
 
   const stats = [
@@ -42,13 +44,14 @@ export default async function AdminStorePage() {
       </div>
       <p className="text-white/40 text-sm mb-6">{productCount} products · {categoryCount} categories · {pending} awaiting payment</p>
 
-      {!cfg && (
+      {!cfg && !ps && (
         <div role="alert" className="mb-6 rounded-2xl border border-[#D4AF37]/30 bg-[#D4AF37]/10 p-4 text-sm text-[#F5D77A] flex gap-2">
           <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-          PayFast isn’t configured (PAYFAST_MERCHANT_ID / PAYFAST_MERCHANT_KEY). Members can browse, but checkout is paused.
+          No payment provider is configured (PAYSTACK_SECRET_KEY, or PAYFAST_MERCHANT_ID / PAYFAST_MERCHANT_KEY). Members can browse, but checkout is paused.
         </div>
       )}
-      {cfg?.sandbox && <p className="mb-6 text-xs text-sky-300">PayFast sandbox mode is on — no real money moves.</p>}
+      {ps && <p className="mb-6 text-xs text-white/50">Payments go through Paystack{ps.testMode ? <span className="text-sky-300"> (test mode — no real money moves)</span> : null}{cfg ? '; PayFast stays configured as the fallback.' : '.'}</p>}
+      {!ps && cfg?.sandbox && <p className="mb-6 text-xs text-sky-300">PayFast sandbox mode is on — no real money moves.</p>}
 
       <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         {stats.map((s) => (

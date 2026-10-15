@@ -6,13 +6,13 @@ import { CheckCircle2, Clock, Loader2 } from 'lucide-react';
 import { cart } from '@/lib/store/cart-client';
 
 /**
- * PayFast sends buyers back here before (or after) its ITN reaches us, so
+ * The payment provider sends buyers back here before (or after) its notification reaches us, so
  * poll the order for a minute until it shows as paid.
  */
 export default function ThankYouClient({ number, initialStatus, email }: { number: string; initialStatus: string; email: string }) {
   const [status, setStatus] = useState(initialStatus);
 
-  // The order exists and the buyer came back from PayFast — the cart has done its job.
+  // The order exists and the buyer came back from paying — the cart has done its job.
   useEffect(() => { if (status !== 'CANCELLED') cart.clear(); }, [status]);
 
   useEffect(() => {

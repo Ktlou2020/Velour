@@ -27,7 +27,7 @@ export default function RefundsPage() {
           <Strong>Renewal.</Strong> When you upgrade, you authorise our payment provider to charge the same amount again at the start of each new period (every month, or every year for annual plans) until you cancel. The amount and period are shown before you pay. We will give you at least 30 days&apos; notice before any price change affects your renewal.
         </p>
         <p>
-          <Strong>How to cancel.</Strong> You can cancel at any time by emailing <Mail subject="Cancel subscription" /> from the email address on your account (or using the &quot;Cancel subscription&quot; button on your Subscription page, which opens that email). Please give your username. We confirm cancellations by email, and cancel the recurring payment with our payment provider so that no further charges are made.
+          <Strong>How to cancel.</Strong> You can cancel at any time with the &quot;Cancel membership&quot; button on your <A href="/subscription">Subscription page</A>. This stops the recurring payment with our payment provider straight away, so no further charges are made, and we confirm the cancellation by email. If you can&apos;t use the button, email <Mail subject="Cancel subscription" /> from the email address on your account and give your username — we&apos;ll cancel it for you.
         </p>
         <p>
           <Strong>What happens to your access.</Strong> After you cancel, your paid features stay active until the end of the period you have already paid for. Your account then moves to the Free plan — your profile, matches and messages are kept, but premium features switch off. To avoid being charged for the next period, cancel at least one business day before your renewal date.

@@ -275,12 +275,15 @@ export type PaymentOutcome =
   | 'paid' | 'duplicate' | 'amount_mismatch' | 'late_unfulfillable' | 'ignored' | 'cancelled'
 
 /**
- * Apply a verified PayFast ITN to a store order. Idempotent on pf_payment_id.
+ * Apply a verified payment notification (PayFast ITN or a verified Paystack
+ * charge) to a store order. Idempotent on the provider payment id, which is
+ * stored in Order.pfPaymentId (Paystack ids are prefixed "paystack:").
  */
 export async function applyStorePayment(
   order: { id: string; number: string; status: string; totalCents: number; pfPaymentId: string | null; adminNotes: string | null },
-  itn: { paymentStatus: string; pfPaymentId: string; amountGrossCents: number | null },
+  itn: { paymentStatus: string; pfPaymentId: string; amountGrossCents: number | null; provider?: 'PayFast' | 'Paystack' },
 ): Promise<PaymentOutcome> {
+  const via = itn.provider ?? 'PayFast'
   const pfId = itn.pfPaymentId.slice(0, 100)
   if (pfId && order.pfPaymentId === pfId && itn.paymentStatus === 'COMPLETE') return 'duplicate'
 
@@ -289,9 +292,9 @@ export async function applyStorePayment(
     if (itn.amountGrossCents === null || Math.abs(itn.amountGrossCents - order.totalCents) > 1) {
       await db.order.update({
         where: { id: order.id },
-        data: { adminNotes: appendNote(order.adminNotes, `[auto] PayFast payment ${pfId} amount ${itn.amountGrossCents === null ? '?' : formatRand(itn.amountGrossCents)} does not match order total ${formatRand(order.totalCents)} — NOT marked paid.`) },
+        data: { adminNotes: appendNote(order.adminNotes, `[auto] ${via} payment ${pfId} amount ${itn.amountGrossCents === null ? '?' : formatRand(itn.amountGrossCents)} does not match order total ${formatRand(order.totalCents)} — NOT marked paid.`) },
       })
-      await alertAdmin(`Payment amount mismatch on ${order.number}`, `PayFast payment ${pfId} reported ${itn.amountGrossCents ?? '?'} cents for order ${order.number} (total ${order.totalCents} cents). The order was not marked as paid.`)
+      await alertAdmin(`Payment amount mismatch on ${order.number}`, `${via} payment ${pfId} reported ${itn.amountGrossCents ?? '?'} cents for order ${order.number} (total ${order.totalCents} cents). The order was not marked as paid.`)
       return 'amount_mismatch'
     }
     // A different order already carries this PayFast id → replay against the wrong order.
@@ -332,9 +335,9 @@ export async function applyStorePayment(
       }
       await db.order.updateMany({
         where: { id: order.id, pfPaymentId: null },
-        data: { pfPaymentId: pfId, adminNotes: appendNote(order.adminNotes, `[auto] PayFast payment ${pfId} arrived after the reservation expired and the stock is gone — refund it in the PayFast dashboard, then mark Refunded.`) },
+        data: { pfPaymentId: pfId, adminNotes: appendNote(order.adminNotes, `[auto] ${via} payment ${pfId} arrived after the reservation expired and the stock is gone — refund it in the ${via} dashboard, then mark Refunded.`) },
       })
-      await alertAdmin(`Late payment on ${order.number} needs a refund`, `PayFast payment ${pfId} for ${order.number} arrived after the reservation expired and the items are no longer in stock. Refund it in the PayFast dashboard.`)
+      await alertAdmin(`Late payment on ${order.number} needs a refund`, `${via} payment ${pfId} for ${order.number} arrived after the reservation expired and the items are no longer in stock. Refund it in the ${via} dashboard.`)
       return 'late_unfulfillable'
     }
     return 'ignored'
@@ -342,7 +345,7 @@ export async function applyStorePayment(
 
   if (itn.paymentStatus === 'FAILED' || itn.paymentStatus === 'CANCELLED') {
     if (order.status !== 'PENDING_PAYMENT') return 'ignored'
-    const ok = await releaseOrder(order.id, ['PENDING_PAYMENT'], 'CANCELLED', { note: `[auto] PayFast reported ${itn.paymentStatus}${pfId ? ` (${pfId})` : ''}.` })
+    const ok = await releaseOrder(order.id, ['PENDING_PAYMENT'], 'CANCELLED', { note: `[auto] ${via} reported ${itn.paymentStatus}${pfId ? ` (${pfId})` : ''}.` })
     if (ok) await notifyOrder(order.id, 'CANCELLED', { email: false })
     return ok ? 'cancelled' : 'ignored'
   }

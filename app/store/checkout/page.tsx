@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { AlertCircle } from 'lucide-react';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { payfastConfig } from '@/lib/payfast';
+import { activePaymentProvider } from '@/lib/payments';
 import PayNowButton from '@/components/store/PayNowButton';
 import { ORDER_NUMBER_RE } from '@/lib/store/user-orders';
 import { maybeReleaseExpired, minutesLeftToPay } from '@/lib/store/orders';
@@ -52,7 +52,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
           )}
         </div>
       )}
-      <CheckoutClient prefill={prefill} paymentsEnabled={!!payfastConfig()} hasPending={pending?.status === 'PENDING_PAYMENT'} />
+      <CheckoutClient prefill={prefill} paymentsEnabled={!!activePaymentProvider()} hasPending={pending?.status === 'PENDING_PAYMENT'} />
     </div>
   );
 }

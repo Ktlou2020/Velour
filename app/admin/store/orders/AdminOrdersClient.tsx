@@ -37,8 +37,8 @@ const ACTION_UI: Record<string, { label: string; icon: typeof Truck; cls: string
   PROCESSING: { label: 'Mark processing', icon: PackageCheck, cls: 'bg-sky-500/20 text-sky-200 hover:bg-sky-500/30' },
   SHIPPED: { label: 'Mark shipped', icon: Truck, cls: 'bg-violet-500/20 text-violet-200 hover:bg-violet-500/30' },
   DELIVERED: { label: 'Mark delivered', icon: Home, cls: 'bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30' },
-  CANCELLED: { label: 'Cancel order', icon: Ban, cls: 'bg-red-500/15 text-red-200 hover:bg-red-500/25', confirm: 'Cancel this order? Unshipped items go back into stock. If it was paid, refund it in the PayFast dashboard too.' },
-  REFUNDED: { label: 'Mark refunded', icon: RotateCcw, cls: 'glass text-white/80 hover:text-white', confirm: 'Mark as refunded? Do the actual refund in the PayFast dashboard first. Unshipped items go back into stock.' },
+  CANCELLED: { label: 'Cancel order', icon: Ban, cls: 'bg-red-500/15 text-red-200 hover:bg-red-500/25', confirm: 'Cancel this order? Unshipped items go back into stock. If it was paid, refund it in the payment provider’s dashboard (Paystack or PayFast) too.' },
+  REFUNDED: { label: 'Mark refunded', icon: RotateCcw, cls: 'glass text-white/80 hover:text-white', confirm: 'Mark as refunded? Do the actual refund in the payment provider’s dashboard (Paystack or PayFast) first. Unshipped items go back into stock.' },
 };
 
 export default function AdminOrdersClient() {
@@ -216,7 +216,7 @@ function OrderPanel({ id, onClose, onChanged }: { id: string; onClose: () => voi
                 <p className="text-white/80">@{o.user.username}</p>
                 <p className="text-white/45 text-xs break-all">{o.user.email}</p>
                 <p className="text-white/45 text-xs mt-2 break-all">Ref {o.paymentRef}</p>
-                {o.pfPaymentId && <p className="text-white/45 text-xs break-all">PayFast #{o.pfPaymentId}</p>}
+                {o.pfPaymentId && <p className="text-white/45 text-xs break-all">{o.pfPaymentId.startsWith('paystack:') ? `Paystack ref ${o.pfPaymentId.slice(9)}` : `PayFast #${o.pfPaymentId}`}</p>}
                 {o.paidAt && <p className="text-white/45 text-xs">Paid {formatDateTime(o.paidAt)}</p>}
                 {o.courier && <p className="text-white/70 text-xs mt-2">{o.courier} · <span className="break-all">{o.trackingNumber}</span></p>}
               </div>
@@ -255,7 +255,7 @@ function OrderPanel({ id, onClose, onChanged }: { id: string; onClose: () => voi
                     );
                   })}
                 </div>
-                {data.actions.includes('REFUNDED') && <p className="text-[11px] text-white/40">Refunds themselves are made in the PayFast dashboard; this only records them and emails the customer.</p>}
+                {data.actions.includes('REFUNDED') && <p className="text-[11px] text-white/40">Refunds themselves are made in the Paystack or PayFast dashboard; this only records them and emails the customer.</p>}
                 {error && <p role="alert" className="text-red-300 text-sm">{error}</p>}
               </section>
             )}

@@ -73,7 +73,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             </li>
             <li className="flex gap-3 glass rounded-xl p-3.5">
               <ShieldCheck size={18} className="text-[#D4AF37] shrink-0 mt-0.5" aria-hidden="true" />
-              <p className="text-sm text-white/75 leading-relaxed"><span className="text-white font-medium">Secure checkout</span> with PayFast. Prices include 15% VAT.</p>
+              <p className="text-sm text-white/75 leading-relaxed"><span className="text-white font-medium">Secure checkout</span> — we never see your card details. Prices include 15% VAT.</p>
             </li>
           </ul>
 

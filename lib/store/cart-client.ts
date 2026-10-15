@@ -169,3 +169,18 @@ export function submitPayfastForm(form: { action: string; fields: [string, strin
   document.body.appendChild(el)
   el.submit()
 }
+
+export type PaymentHandoff = { redirectUrl?: string; payfast?: { action: string; fields: [string, string][] } }
+
+/** Go to the payment page for whichever provider the server chose. False = nothing to follow. */
+export function followPaymentHandoff(d: PaymentHandoff): boolean {
+  if (typeof d.redirectUrl === 'string' && /^https:\/\//.test(d.redirectUrl)) {
+    window.location.assign(d.redirectUrl)
+    return true
+  }
+  if (d.payfast) {
+    submitPayfastForm(d.payfast)
+    return true
+  }
+  return false
+}
