@@ -173,7 +173,7 @@ export async function getAdminAnalytics(days: AnalyticsRange, now = new Date()) 
     db.user.count({ where: notAdmin }),
     db.user.count({ where: { ...notAdmin, isActive: true } }),
     db.user.count({ where: { isActive: false } }),
-    db.user.count({ where: { ...notAdmin, isVerified: true } }),
+    db.user.count({ where: { ...notAdmin, emailVerifiedAt: { not: null } } }),
     db.user.count({ where: { ...notAdmin, verificationStatus: 'APPROVED' } }),
     db.profile.count({ where: { isCouple: true, user: notAdmin } }),
     db.profile.count({ where: { isOnline: true, lastSeen: { gte: new Date(now.getTime() - 15 * 60_000) } } }),

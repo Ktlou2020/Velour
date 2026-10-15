@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { EMAIL_UNVERIFIED_ERROR, hasConfirmedEmail } from '@/lib/email-verification'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import {
@@ -172,6 +173,9 @@ export async function POST(req: NextRequest) {
     const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!(await hasConfirmedEmail(session.user.id))) {
+      return NextResponse.json({ error: EMAIL_UNVERIFIED_ERROR, code: 'EMAIL_UNVERIFIED' }, { status: 403 })
     }
 
     const body = await req.json().catch(() => ({})) as { userId?: unknown; targetUsername?: unknown }

@@ -137,7 +137,7 @@ export async function PATCH(req: NextRequest) {
     let updateData: Record<string, unknown> = {}
     if (action === 'ban') updateData = { isActive: false }
     else if (action === 'unban') updateData = { isActive: true }
-    else if (action === 'verify') updateData = { isVerified: true }
+    else if (action === 'verify') updateData = { emailVerifiedAt: new Date() }
     else return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
 
     const updated = await db.user.update({

@@ -80,6 +80,9 @@ model User {
   isVerified   Boolean  @default(false)
   role         String   @default("USER")
 
+  // When the member clicked the link in their sign-up email (separate from
+  // isVerified, which is the selfie/photo verification badge).
+  emailVerifiedAt     DateTime?
   emailVerifyToken    String?
   emailVerifyExpiry   DateTime?
   passwordResetToken  String?

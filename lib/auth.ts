@@ -99,6 +99,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             passwordHash: true,
             role: true,
             isActive: true,
+            emailVerifiedAt: true,
           } as const
           // Exact match first; fall back to a case-insensitive match because
           // emails were historically stored exactly as typed.
@@ -122,6 +123,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             username: user.username,
             role: user.role,
             pwv: passwordVersion(user.passwordHash),
+            emailConfirmed: !!user.emailVerifiedAt,
           }
         } catch (err) {
           console.error('authorize error:', err instanceof Error ? err.message : err)
@@ -140,6 +142,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.username = (user as { username?: string }).username ?? ''
         token.role = (user as { role?: string }).role ?? 'USER'
         token.pwv = (user as { pwv?: string }).pwv ?? ''
+        token.emailConfirmed = (user as { emailConfirmed?: boolean }).emailConfirmed ?? false
         token.refreshedAt = now
         if (user.id) await updateLoginStreak(user.id)
         return token
@@ -148,15 +151,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (!token.id) return null
 
       const refreshedAt = typeof token.refreshedAt === 'number' ? token.refreshedAt : 0
-      if (now - refreshedAt < REFRESH_SECONDS * 1000) return token
+      // Unverified emails re-check on every request so confirming takes effect at once.
+      if (token.emailConfirmed !== false && now - refreshedAt < REFRESH_SECONDS * 1000) return token
 
       // Periodically re-validate against the database so bans, demotions and
       // password resets take effect without waiting for the user to sign out.
-      let dbUser: { username: string; role: string; isActive: boolean; passwordHash: string | null } | null
+      let dbUser: { username: string; role: string; isActive: boolean; passwordHash: string | null; emailVerifiedAt: Date | null } | null
       try {
         dbUser = await db.user.findUnique({
           where: { id: token.id as string },
-          select: { username: true, role: true, isActive: true, passwordHash: true },
+          select: { username: true, role: true, isActive: true, passwordHash: true, emailVerifiedAt: true },
         })
       } catch (err) {
         // DB hiccup: keep the existing session rather than logging everyone out.
@@ -174,6 +178,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       token.name = dbUser.username
       token.role = dbUser.role
       token.pwv = pwv
+      token.emailConfirmed = !!dbUser.emailVerifiedAt
       token.refreshedAt = now
       return token
     },
@@ -182,6 +187,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string
         ;(session.user as { username?: string }).username = token.username as string
         ;(session.user as { role?: string }).role = token.role as string
+        ;(session.user as { emailConfirmed?: boolean }).emailConfirmed = token.emailConfirmed !== false
       }
       return session
     },

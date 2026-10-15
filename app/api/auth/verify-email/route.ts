@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     await db.user.update({
       where: { id: user.id },
       data: {
-        isVerified: true,
+        emailVerifiedAt: new Date(),
         emailVerifyToken: null,
         emailVerifyExpiry: null,
       },

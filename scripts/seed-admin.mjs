@@ -31,7 +31,7 @@ async function main() {
   for (const email of emails) {
     const result = await db.user.updateMany({
       where: { email: { equals: email, mode: 'insensitive' } },
-      data: { role: 'ADMIN', isVerified: true },
+      data: { role: 'ADMIN', isVerified: true, emailVerifiedAt: new Date() },
     })
     if (result.count > 0) {
       console.log(`[seed-admin] ✓ ADMIN role set for ${email} (note: email ownership is not re-checked here)`)

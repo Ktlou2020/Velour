@@ -18,12 +18,12 @@ export async function POST() {
 
     const current = await db.user.findUnique({
       where: { id: session.user.id },
-      select: { isVerified: true },
+      select: { emailVerifiedAt: true },
     })
     if (!current) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    if (current.isVerified) {
+    if (current.emailVerifiedAt) {
       return NextResponse.json({ sent: false, alreadyVerified: true })
     }
 
