@@ -75,9 +75,9 @@ function VerifyEmailContent() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center shadow-lg shadow-[#DC143C]/25">
-              <span className="text-white font-serif font-bold text-2xl">H</span>
+              <span className="text-white font-serif font-bold text-2xl">U</span>
             </div>
-            <span className="text-3xl font-serif font-bold tracking-wide text-white">HUSH</span>
+            <span className="text-3xl font-serif font-bold tracking-wide text-white">UNBOUND</span>
           </Link>
         </div>
 
@@ -98,7 +98,7 @@ function VerifyEmailContent() {
                 <CheckCircle className="w-16 h-16 text-emerald-400" />
               </div>
               <h1 className="text-2xl font-serif font-bold text-white mb-2">Email Verified!</h1>
-              <p className="text-gray-400 mb-6">Welcome to Hush. Your account is now fully activated.</p>
+              <p className="text-gray-400 mb-6">Welcome to Unbound. Your account is now fully activated.</p>
               <Link
                 href="/members"
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white px-8 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-[#DC143C]/20"

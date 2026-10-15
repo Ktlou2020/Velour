@@ -4,7 +4,7 @@ import { BUSINESS } from '@/lib/business';
 
 const COLUMNS = [
   {
-    heading: 'Hush',
+    heading: 'Unbound',
     links: [
       { label: 'How it works', href: '/#how-it-works' },
       { label: 'Pricing', href: '/pricing' },
@@ -67,7 +67,7 @@ export default function Footer() {
             {BUSINESS.registrationNumber ? ` · Reg. ${BUSINESS.registrationNumber}` : ''}. Strictly 18+.
           </p>
           <p className="text-white/65 text-xs max-w-md md:text-right">
-            By using Hush you agree to our <Link href="/terms" className="underline hover:text-white">Terms of Service</Link> and confirm you are 18 or older.
+            By using Unbound you agree to our <Link href="/terms" className="underline hover:text-white">Terms of Service</Link> and confirm you are 18 or older.
           </p>
         </div>
       </div>

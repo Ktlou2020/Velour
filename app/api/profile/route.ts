@@ -140,11 +140,11 @@ export async function PUT(req: NextRequest) {
       } else {
         if (typeof body.videoUrl !== 'string') return bad('Invalid video URL')
         if (!platinum) return bad('Video profiles are a Platinum feature', 403)
-        if (!isOwnMediaUrl(body.videoUrl, 'video')) return bad('Video must be uploaded through Hush')
+        if (!isOwnMediaUrl(body.videoUrl, 'video')) return bad('Video must be uploaded through Unbound')
         const mediaId = mediaIdFromUrl(body.videoUrl)
         if (mediaId) {
           const owned = await db.photo.findFirst({ where: { id: mediaId, userId: session.user.id }, select: { id: true } })
-          if (!owned) return bad('Video must be uploaded through Hush')
+          if (!owned) return bad('Video must be uploaded through Unbound')
         }
         updateData.videoUrl = body.videoUrl
       }

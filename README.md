@@ -1,4 +1,4 @@
-# Hush — Where Connections Become Extraordinary
+# Unbound — Where Connections Become Extraordinary
 
 A world-class premium lifestyle and dating platform built with Next.js 15, TypeScript, Tailwind CSS, and Prisma.
 
@@ -120,7 +120,7 @@ On Railway, open the web service, go to **Variables**, and add:
 | --- | --- |
 | `VAPID_PUBLIC_KEY` | the generated *Public Key* |
 | `VAPID_PRIVATE_KEY` | the generated *Private Key* (secret) |
-| `VAPID_SUBJECT` | optional, e.g. `mailto:hello@hush.dating` (the default) |
+| `VAPID_SUBJECT` | optional, e.g. `mailto:hello@unbound.dating` (the default) |
 
 `NEXT_PUBLIC_VAPID_PUBLIC_KEY` is also accepted for the public key, but you don't need it: the browser
 fetches the key from `GET /api/push` at runtime, so you don't have to rebuild. Redeploy after you set
@@ -130,7 +130,7 @@ opens the `url` from the payload (same-origin paths only).
 
 ## Media storage
 
-Photos, chat images and Platinum profile videos are stored **by Hush itself on disk** and served through
+Photos, chat images and Platinum profile videos are stored **by Unbound itself on disk** and served through
 `GET /api/media/<id>` (`?size=thumb` for the 480px thumbnail), which checks on every request who may see the
 file. Nothing is publicly reachable by guessing a path.
 
@@ -153,12 +153,12 @@ file. Nothing is publicly reachable by guessing a path.
 
 ## Content protection (watermarks, no-save, privacy shield)
 
-No website can block OS screenshots; Hush makes stolen copies pointless and traceable instead.
+No website can block OS screenshots; Unbound makes stolen copies pointless and traceable instead.
 
 - **Per-viewer image watermarks** (`lib/watermark.ts`, used by `GET /api/media/<id>`): every image (full and
-  `?size=thumb`) served to anyone but its owner gets `@viewer · hush · YYYY-MM-DD` (SAST) tiled diagonally across
-  the whole picture at ~13% white with a faint dark outline, plus a solid `HUSH · @viewer` corner mark. Admins
-  get their own username too; logged-out visitors (public main photos on the landing page) get a generic `HUSH`
+  `?size=thumb`) served to anyone but its owner gets `@viewer · unbound · YYYY-MM-DD` (SAST) tiled diagonally across
+  the whole picture at ~13% white with a faint dark outline, plus a solid `UNBOUND · @viewer` corner mark. Admins
+  get their own username too; logged-out visitors (public main photos on the landing page) get a generic `UNBOUND`
   mark. Owners see the clean original. Text is drawn from embedded glyph outlines (`lib/watermark-glyphs.ts`,
   Inter, OFL) so no server fonts are needed. Responses are `Cache-Control: private, max-age=300`,
   `Vary: Cookie`, with a per-viewer-per-day ETag, sent whole (no ranges).
@@ -179,7 +179,7 @@ No website can block OS screenshots; Hush makes stolen copies pointless and trac
   capture tools), for 1.5 s after screenshot shortcuts (PrintScreen, ⌘⇧3/4/5, Win+Shift+S, with a reminder
   toast), and hides them when printing.
 - **Policy:** Terms §4 and the Safety Centre ("Content protection") prohibit capturing/sharing members' content;
-  reports use the reason "Shared my photos/videos outside Hush".
+  reports use the reason "Shared my photos/videos outside Unbound".
 
 ## Screenshot blocking in native apps
 
@@ -276,4 +276,4 @@ email, admin label and PayFast item name follows. Order numbers use `ORDER_NUMBE
 - **Admins** are granted on each deploy by `scripts/seed-admin.mjs` from `ADMIN_EMAILS` (comma-separated).
 - **Headers** (`next.config.js`): CSP, HSTS, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`,
   `Permissions-Policy`. When adding a new external image/font/API host, add it to the CSP or it will be blocked.
-# Hush — built 2026-06-03T16:54:21Z
+# Unbound — built 2026-06-03T16:54:21Z

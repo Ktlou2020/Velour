@@ -45,7 +45,7 @@ export function useViewerMark(requested?: string | boolean): string | null {
   const username = (data?.user as { username?: string } | undefined)?.username;
   if (username) return `@${username} · hush`;
   if (typeof requested === 'string' && !requested.includes('@')) return requested;
-  return 'hush';
+  return 'unbound';
 }
 
 /**

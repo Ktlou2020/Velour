@@ -54,7 +54,7 @@ export default function Navbar() {
     <div className="fixed top-0 left-0 right-0 z-40">
     <nav className="glass-dark border-b border-white/5" aria-label="Main">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between gap-4 h-16">
           {/* Logo */}
           <Logo />
 

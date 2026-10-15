@@ -45,8 +45,8 @@ const FAQS = [
   { q: 'Can I cancel anytime?', a: 'Yes, you can cancel your subscription at any time. Your premium access continues until the end of your billing period.' },
   { q: 'Is my payment information secure?', a: 'Absolutely. We use industry-standard SSL encryption and partner with PayFast for secure payment processing. We never store your card details.' },
   { q: 'What happens to my profile if I downgrade?', a: 'Your profile and all messages are preserved. You simply revert to the free tier feature set.' },
-  { q: 'Do you offer refunds?', a: 'If you are unhappy with your subscription, contact support@hush.dating and our team will review your request.' },
-  { q: 'Can I upgrade or downgrade mid-cycle?', a: 'Yes. Upgrades take effect as soon as payment is confirmed. For downgrades or billing changes, contact support@hush.dating.' },
+  { q: 'Do you offer refunds?', a: 'If you are unhappy with your subscription, contact support@unbound.dating and our team will review your request.' },
+  { q: 'Can I upgrade or downgrade mid-cycle?', a: 'Yes. Upgrades take effect as soon as payment is confirmed. For downgrades or billing changes, contact support@unbound.dating.' },
 ]
 
 type Tier = 'GOLD' | 'PLATINUM'
@@ -108,9 +108,9 @@ export default function UpgradePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center">
-              <span className="text-white font-serif font-bold">H</span>
+              <span className="text-white font-serif font-bold">U</span>
             </div>
-            <span className="text-xl font-serif font-bold text-white">HUSH</span>
+            <span className="text-xl font-serif font-bold text-white">UNBOUND</span>
           </Link>
           <Link href="/members" className="text-gray-400 hover:text-white text-sm transition-colors">Back to Members</Link>
         </div>

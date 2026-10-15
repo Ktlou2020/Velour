@@ -53,7 +53,7 @@ export async function recordProfileView(viewerId: string, viewedId: string): Pro
       },
     })
     sendPushToUser(viewedId, {
-      title: 'Profile view — Hush',
+      title: 'Profile view — Unbound',
       body: `${name} viewed your profile`,
       url: '/views',
       tag: `view-${viewerId}`,

@@ -78,11 +78,11 @@ const TIERS = [
 ];
 
 const FAQS = [
-  { q: 'Who is Hush for?', a: 'Adults 18 and over — singles and couples — who want to meet like-minded people with discretion and respect. Every orientation and relationship style is welcome.' },
+  { q: 'Who is Unbound for?', a: 'Adults 18 and over — singles and couples — who want to meet like-minded people with discretion and respect. Every orientation and relationship style is welcome.' },
   { q: 'Is it really free to join?', a: 'Yes. Creating a profile, browsing and messaging are free. Gold and Platinum add extra visibility, privacy and search tools if you want them.' },
   { q: 'How do you keep things discreet?', a: 'Chat photos stay blurred until you reveal them, profile photos are protected and watermarked, and you can snooze your profile or (on Platinum) browse incognito. We never post to your social accounts.' },
   { q: 'How do I know people are real?', a: 'Members can complete photo verification and earn a verified badge. You can block or report anyone in a couple of taps, and reports go straight to our moderation team.' },
-  { q: 'Where is Hush available?', a: 'We’re starting in South Africa, with members and events growing in Johannesburg, Cape Town and Durban first.' },
+  { q: 'Where is Unbound available?', a: 'We’re starting in South Africa, with members and events growing in Johannesburg, Cape Town and Durban first.' },
 ];
 
 function SectionHeading({ eyebrow, title, sub, id, tone = 'crimson' }: { eyebrow: string; title: string; sub?: string; id: string; tone?: 'crimson' | 'gold' }) {
@@ -282,7 +282,7 @@ export default function LandingPage() {
           <div className="max-w-4xl mx-auto">
             <div className="relative rounded-3xl overflow-hidden px-6 py-12 md:p-14 text-center" style={{ background: 'linear-gradient(135deg, #DC143C 0%, #9D0208 50%, #6A040F 100%)' }}>
               <div aria-hidden="true" className="absolute inset-0 shimmer pointer-events-none" />
-              <span aria-hidden="true" className="absolute -top-4 right-6 text-white/10 font-serif text-[9rem] leading-none font-bold select-none">H</span>
+              <span aria-hidden="true" className="absolute -top-4 right-6 text-white/10 font-serif text-[9rem] leading-none font-bold select-none">U</span>
               <h2 className="font-serif text-3xl md:text-5xl font-bold text-white mb-4 relative z-10 text-balance">
                 Your next great story starts quietly.
               </h2>
@@ -290,7 +290,7 @@ export default function LandingPage() {
                 Create your free profile in a couple of minutes. Upgrade only if — and when — you want more.
               </p>
               <Link href="/auth/signup" className="relative z-10 inline-flex items-center gap-2 bg-white text-[#9D0208] font-bold px-8 py-4 rounded-xl hover:bg-white/90 transition-all text-lg">
-                Join Hush free <ArrowRight size={20} aria-hidden="true" />
+                Join Unbound free <ArrowRight size={20} aria-hidden="true" />
               </Link>
             </div>
           </div>

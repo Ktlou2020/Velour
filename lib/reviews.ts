@@ -369,7 +369,7 @@ export const INELIGIBLE_MESSAGE: Record<IneligibleReason, string> = {
   not_found: 'Member not found.',
   inactive: 'This member isn’t active right now.',
   blocked: 'You can’t request a review from this member.',
-  no_conversation: 'You can ask for a review once you’ve both chatted on Hush.',
+  no_conversation: 'You can ask for a review once you’ve both chatted on Unbound.',
   pending: 'You’ve already asked — waiting for their reply.',
   already_reviewed: 'They’ve already reviewed you.',
 }

@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
       return new NextResponse(csv, {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="hush-analytics-${days}d-${new Date().toISOString().slice(0, 10)}.csv"`,
+          'Content-Disposition': `attachment; filename="unbound-analytics-${days}d-${new Date().toISOString().slice(0, 10)}.csv"`,
           'Cache-Control': 'no-store',
         },
       })

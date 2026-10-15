@@ -77,7 +77,7 @@ export default function MyReviewsPanel({ initial, compact = false, className = '
         <div className="space-y-6">
           {data.summary.count > 0 ? <ReviewSummaryBlock summary={data.summary} compact /> : (
             <p className="text-white/65 text-sm leading-relaxed">
-              No reviews yet. Met someone from Hush? Ask them for a review — members with reviews rank higher and are easier to trust.
+              No reviews yet. Met someone from Unbound? Ask them for a review — members with reviews rank higher and are easier to trust.
             </p>
           )}
 

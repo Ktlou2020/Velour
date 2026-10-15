@@ -7,7 +7,7 @@ import { BusinessDetails } from '@/components/LegalPage'
 
 export const metadata = {
   title: 'Terms of Service',
-  description: 'Terms of Service for the Hush lifestyle dating community.',
+  description: 'Terms of Service for the Unbound lifestyle dating community.',
 }
 
 export default function TermsPage() {
@@ -22,11 +22,11 @@ export default function TermsPage() {
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm">Back to Hush</span>
+            <span className="text-sm">Back to Unbound</span>
           </Link>
           <div className="flex items-center gap-2">
             <LogoMark size="sm" />
-            <span className="font-serif font-bold tracking-wide text-white">HUSH</span>
+            <span className="font-serif font-bold tracking-wide text-white">UNBOUND</span>
           </div>
         </div>
       </div>
@@ -47,12 +47,12 @@ export default function TermsPage() {
           {/* Intro */}
           <div className="glass rounded-2xl p-6">
             <p className="text-gray-300 leading-relaxed">
-              Welcome to Hush. These Terms of Service (&quot;Terms&quot;) govern your access to and use of the Hush platform, including our website, mobile application, and all related services (collectively, the &quot;Service&quot;). By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, you may not use the Service.
+              Welcome to Unbound. These Terms of Service (&quot;Terms&quot;) govern your access to and use of the Unbound platform, including our website, mobile application, and all related services (collectively, the &quot;Service&quot;). By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, you may not use the Service.
             </p>
             <p className="text-gray-300 leading-relaxed mt-3">
               {BUSINESS.legalName
-                ? <>Hush is operated by {BUSINESS.legalName}{BUSINESS.registrationNumber ? <> (registration number {BUSINESS.registrationNumber})</> : null}, a business based in South Africa (&quot;we&quot;, &quot;us&quot;).</>
-                : <>Hush is operated from South Africa (&quot;we&quot;, &quot;us&quot;).</>}{' '}
+                ? <>Unbound is operated by {BUSINESS.legalName}{BUSINESS.registrationNumber ? <> (registration number {BUSINESS.registrationNumber})</> : null}, a business based in South Africa (&quot;we&quot;, &quot;us&quot;).</>
+                : <>Unbound is operated from South Africa (&quot;we&quot;, &quot;us&quot;).</>}{' '}
               Our business and contact details are listed at the end of this document and on our <Link href="/contact" className="text-[#DC143C] hover:underline">Contact page</Link>.
             </p>
           </div>
@@ -65,7 +65,7 @@ export default function TermsPage() {
             </h2>
             <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
               <p>You must be at least <strong className="text-white">18 years of age</strong> to register for or use the Service. By creating an account, you represent and warrant that you are 18 or older and that all information you provide is accurate, current, and complete.</p>
-              <p>The Service is intended for adults seeking lifestyle connections, companionship, and dating. It is not intended for minors under any circumstances. Hush reserves the right to terminate any account we have reason to believe belongs to a minor, without notice.</p>
+              <p>The Service is intended for adults seeking lifestyle connections, companionship, and dating. It is not intended for minors under any circumstances. Unbound reserves the right to terminate any account we have reason to believe belongs to a minor, without notice.</p>
               <p>By using the Service, you also represent that you are not prohibited from using online services under the laws of South Africa or any other applicable jurisdiction.</p>
             </div>
           </section>
@@ -119,11 +119,11 @@ export default function TermsPage() {
                 <li>Upload malware, viruses, or any code that could harm the Service or other users</li>
                 <li>Attempt to gain unauthorised access to any part of the Service or another user&apos;s account</li>
                 <li>Scrape, crawl, or otherwise collect user data without our written consent</li>
-                <li>Screenshot, screen-record, download, save, copy or share another member&apos;s photos, videos, messages or profile content outside Hush, by any means, without that member&apos;s explicit permission</li>
+                <li>Screenshot, screen-record, download, save, copy or share another member&apos;s photos, videos, messages or profile content outside Unbound, by any means, without that member&apos;s explicit permission</li>
                 <li>Use the Service in any way that violates South African law or any other applicable law</li>
               </ul>
               <p className="mt-3">Violation of these prohibitions may result in immediate account termination and may be reported to law enforcement authorities.</p>
-              <p id="content-protection" className="mt-3 scroll-mt-24"><strong className="text-white">Members&apos; content stays on Hush.</strong> Every photo you view on Hush carries a watermark specific to you (your username and the date), and members&apos; videos carry the owner&apos;s mark plus your username on screen. A saved, screenshotted or recorded copy therefore identifies the account that made it. Sharing members&apos; content outside Hush leads to a permanent ban, and we may share the identifying information with the affected member and with law enforcement, including under the Cybercrimes Act 19 of 2020 and the Protection of Personal Information Act. Members can report leaked content from a member&apos;s profile or a photo (&quot;Shared my photos/videos outside Hush&quot;) or by emailing <a href={`mailto:${email}`} className="text-[#DC143C] hover:underline">{email}</a>.</p>
+              <p id="content-protection" className="mt-3 scroll-mt-24"><strong className="text-white">Members&apos; content stays on Unbound.</strong> Every photo you view on Unbound carries a watermark specific to you (your username and the date), and members&apos; videos carry the owner&apos;s mark plus your username on screen. A saved, screenshotted or recorded copy therefore identifies the account that made it. Sharing members&apos; content outside Unbound leads to a permanent ban, and we may share the identifying information with the affected member and with law enforcement, including under the Cybercrimes Act 19 of 2020 and the Protection of Personal Information Act. Members can report leaked content from a member&apos;s profile or a photo (&quot;Shared my photos/videos outside Unbound&quot;) or by emailing <a href={`mailto:${email}`} className="text-[#DC143C] hover:underline">{email}</a>.</p>
             </div>
           </section>
 
@@ -134,7 +134,7 @@ export default function TermsPage() {
               User Content
             </h2>
             <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
-              <p>You retain ownership of the content you post (&quot;User Content&quot;). By submitting User Content to the Service, you grant Hush a non-exclusive, worldwide, royalty-free, sublicensable licence to use, reproduce, modify, display, and distribute that content solely for the purpose of operating and improving the Service.</p>
+              <p>You retain ownership of the content you post (&quot;User Content&quot;). By submitting User Content to the Service, you grant Unbound a non-exclusive, worldwide, royalty-free, sublicensable licence to use, reproduce, modify, display, and distribute that content solely for the purpose of operating and improving the Service.</p>
               <p>You represent and warrant that you own or have the necessary rights to all User Content you post, and that your User Content does not infringe any third-party intellectual property, privacy, or other rights.</p>
               <p>We reserve the right (but not the obligation) to review, remove, or edit any User Content at our sole discretion.</p>
             </div>
@@ -147,7 +147,7 @@ export default function TermsPage() {
               Intellectual Property
             </h2>
             <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
-              <p>The Service and all its original content (excluding User Content), features, and functionality are and shall remain the exclusive property of {OPERATOR_NAME} and its licensors. The Hush name, logo and related marks belong to {OPERATOR_NAME}.</p>
+              <p>The Service and all its original content (excluding User Content), features, and functionality are and shall remain the exclusive property of {OPERATOR_NAME} and its licensors. The Unbound name, logo and related marks belong to {OPERATOR_NAME}.</p>
               <p>You may not copy, modify, distribute, sell, or lease any part of our Service or included software without our prior written permission.</p>
             </div>
           </section>
@@ -170,7 +170,7 @@ export default function TermsPage() {
               Subscriptions &amp; Payment Terms
             </h2>
             <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
-              <p>Hush offers a free plan and paid (Gold, Platinum) membership plans. Current prices are shown on our <Link href="/pricing" className="text-[#DC143C] hover:underline">pricing page</Link>. Paid plans are billed in advance, monthly or annually as selected at the time of purchase, and renew automatically for the same period until cancelled.</p>
+              <p>Unbound offers a free plan and paid (Gold, Platinum) membership plans. Current prices are shown on our <Link href="/pricing" className="text-[#DC143C] hover:underline">pricing page</Link>. Paid plans are billed in advance, monthly or annually as selected at the time of purchase, and renew automatically for the same period until cancelled.</p>
               <p><strong className="text-white">Billing:</strong> You authorise our third-party payment provider to charge your chosen payment method at the start of each billing period. We never see or store your full card details. All amounts are in South African Rand (ZAR){vat ? <> and include VAT at {VAT_RATE_PERCENT}%</> : null}.</p>
               <p><strong className="text-white">Cancellation:</strong> You may cancel at any time by emailing <a href={`mailto:${email}?subject=Cancel%20subscription`} className="text-[#DC143C] hover:underline">{email}</a> (the &quot;Cancel subscription&quot; button on your Subscription page opens this email). Cancellation stops future charges and takes effect at the end of the period you have paid for.</p>
               <p><strong className="text-white">Refunds:</strong> Refunds are handled as set out in our <Link href="/refunds" className="text-[#DC143C] hover:underline">Refund &amp; Cancellation Policy</Link>, which forms part of these Terms, and always subject to your rights under the Consumer Protection Act 68 of 2008 (CPA) and the Electronic Communications and Transactions Act 25 of 2002 (ECTA).</p>
@@ -185,7 +185,7 @@ export default function TermsPage() {
               Disclaimer of Warranties
             </h2>
             <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
-              <p>THE SERVICE IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY SOUTH AFRICAN LAW, HUSH DISCLAIMS ALL WARRANTIES INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.</p>
+              <p>THE SERVICE IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY SOUTH AFRICAN LAW, UNBOUND DISCLAIMS ALL WARRANTIES INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.</p>
               <p>We do not warrant that the Service will be uninterrupted, error-free, or free from harmful components. We do not guarantee the accuracy or completeness of any content posted by other users.</p>
               <p>Nothing in these Terms excludes or limits our liability for death or personal injury caused by our negligence, or for fraud, or to the extent such exclusion or limitation is not permitted by applicable law.</p>
             </div>
@@ -199,7 +199,7 @@ export default function TermsPage() {
             </h2>
             <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
               <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, {OPERATOR_NAME.toUpperCase()} SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR USE OF OR INABILITY TO USE THE SERVICE.</p>
-              <p>Our total aggregate liability to you for any claims arising from these Terms or your use of the Service shall not exceed the total amount you paid to Hush in the 12 months immediately preceding the event giving rise to the claim.</p>
+              <p>Our total aggregate liability to you for any claims arising from these Terms or your use of the Service shall not exceed the total amount you paid to Unbound in the 12 months immediately preceding the event giving rise to the claim.</p>
             </div>
           </section>
 
@@ -225,7 +225,7 @@ export default function TermsPage() {
             <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
               <p>These Terms are governed by and construed in accordance with the laws of the <strong className="text-white">Republic of South Africa</strong>. Any dispute arising from or in connection with these Terms shall be subject to the exclusive jurisdiction of the courts of South Africa.</p>
               <p>Before initiating any legal proceedings, the parties agree to attempt to resolve disputes amicably through good-faith negotiation. If negotiations fail within 30 days, either party may refer the dispute to mediation under the rules of the Arbitration Foundation of Southern Africa (AFSA).</p>
-              <p>Nothing in this clause prevents Hush from seeking urgent or interim relief from a court of competent jurisdiction.</p>
+              <p>Nothing in this clause prevents Unbound from seeking urgent or interim relief from a court of competent jurisdiction.</p>
             </div>
           </section>
 
@@ -247,7 +247,7 @@ export default function TermsPage() {
               {STORE_NAME} store terms
             </h2>
             <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
-              <p>{STORE_NAME} is the Hush online store for adult products. These store terms apply to every order placed in it, in addition to the rest of these Terms.</p>
+              <p>{STORE_NAME} is the Unbound online store for adult products. These store terms apply to every order placed in it, in addition to the rest of these Terms.</p>
               <p><strong className="text-white">18+ only.</strong> You may only buy from {STORE_NAME} if you are 18 or older. By placing an order you confirm that you, and the person receiving the parcel, are adults. We may cancel and refund any order we reasonably believe was placed by or for a minor.</p>
               <p><strong className="text-white">Prices and payment.</strong> Prices are in South African rand{vat ? <> and include VAT at {VAT_RATE_PERCENT}%</> : null}. Delivery is charged separately at checkout (free above the threshold shown in the store). Payment is processed by our third-party payment provider; we never see or store your card details. An order is confirmed only once the payment provider confirms the payment. Items are reserved for 30 minutes while you pay; unpaid orders are then cancelled and nothing is charged. If a product is mispriced or becomes unavailable after you pay, we will contact you and refund you in full.</p>
               <p><strong className="text-white">Delivery.</strong> We deliver within South Africa only, by courier, to the address you give. Delivery times are estimates. Risk passes to you on delivery. See our <Link href="/shipping" className="text-[#DC143C] hover:underline">Shipping &amp; Delivery Policy</Link> for fees, times and tracking. With discreet packaging (on by default) your parcel ships in a plain outer box with no product names or logos, and the sender is shown as a neutral trading name.</p>

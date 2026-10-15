@@ -9,7 +9,7 @@ import { STORE_NAME, VAT_RATE_PERCENT } from '@/lib/store/config'
 
 export const metadata = {
   title: 'Pricing',
-  description: 'Hush membership prices in South African rand: Free, Gold and Platinum, monthly or annual.',
+  description: 'Unbound membership prices in South African rand: Free, Gold and Platinum, monthly or annual.',
 }
 
 function rand(amount: number): string {
@@ -86,7 +86,7 @@ export default function PricingPage() {
     <LegalShell eyebrow="Membership" title="Pricing" lastUpdated="15 October 2026">
       <Intro>
         <p>
-          Joining Hush is free. Gold and Platinum are optional paid plans that add extra messaging, visibility and privacy tools. All prices are in <Strong>South African rand (ZAR)</Strong>
+          Joining Unbound is free. Gold and Platinum are optional paid plans that add extra messaging, visibility and privacy tools. All prices are in <Strong>South African rand (ZAR)</Strong>
           {vatRegistered ? <> and include VAT at {VAT_RATE_PERCENT}%</> : null}. The price you see is the price you pay — no hidden fees.
         </p>
       </Intro>
@@ -152,7 +152,7 @@ export default function PricingPage() {
       <div className="glass rounded-2xl p-6 text-center">
         <p className="text-gray-300 mb-4">Ready to meet like-minded singles and couples?</p>
         <Link href="/auth/signup" className="inline-block bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] text-white px-8 py-3 rounded-xl font-semibold transition-all">
-          Join Hush free
+          Join Unbound free
         </Link>
         <p className="text-gray-400 text-sm mt-4">Questions? <A href="/contact">Contact us</A>.</p>
       </div>

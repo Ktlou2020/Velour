@@ -82,7 +82,7 @@ export async function PATCH(req: NextRequest) {
     })
 
     sendPushToUser(request.userId, {
-      title: action === 'approve' ? '✓ Profile Verified — Hush' : 'Verification Update — Hush',
+      title: action === 'approve' ? '✓ Profile Verified — Unbound' : 'Verification Update — Unbound',
       body: action === 'approve' ? 'Your verified badge is now live!' : 'Your verification needs attention.',
       url: '/profile',
       tag: 'verification',

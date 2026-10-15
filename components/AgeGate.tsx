@@ -53,7 +53,7 @@ export default function AgeGate() {
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
           <LogoMark size="lg" />
-          <span className="text-4xl font-serif font-bold tracking-widest text-white">HUSH</span>
+          <span className="text-4xl font-serif font-bold tracking-widest text-white">UNBOUND</span>
         </div>
 
         {/* Gold divider */}
@@ -79,7 +79,7 @@ export default function AgeGate() {
             Welcome — adults only
           </h2>
           <p className="text-gray-400 text-base leading-relaxed mb-6">
-            Hush is a private dating community for singles and couples. You must be{' '}
+            Unbound is a private dating community for singles and couples. You must be{' '}
             <span className="text-white font-semibold">18 years of age or older</span> to enter.
           </p>
 

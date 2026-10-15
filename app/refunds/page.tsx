@@ -4,7 +4,7 @@ import { STORE_NAME, RESERVATION_MINUTES } from '@/lib/store/config'
 
 export const metadata = {
   title: 'Refund & Cancellation Policy',
-  description: 'How to cancel a Hush membership, cancel or return a Toystory order, and how refunds are paid.',
+  description: 'How to cancel an Unbound membership, cancel or return a Toystory order, and how refunds are paid.',
 }
 
 export default function RefundsPage() {
@@ -12,7 +12,7 @@ export default function RefundsPage() {
     <LegalShell title="Refund & Cancellation Policy" lastUpdated="15 October 2026">
       <Intro>
         <p>
-          This policy explains how you can cancel a paid Hush membership, cancel or return an order from the {STORE_NAME} store, and how and when refunds are paid. It is offered by {OPERATOR_NAME} and forms part of our <A href="/terms">Terms of Service</A>.
+          This policy explains how you can cancel a paid Unbound membership, cancel or return an order from the {STORE_NAME} store, and how and when refunds are paid. It is offered by {OPERATOR_NAME} and forms part of our <A href="/terms">Terms of Service</A>.
         </p>
         <p>
           Nothing in this policy limits your rights under the <Strong>Consumer Protection Act 68 of 2008</Strong> (CPA) or the <Strong>Electronic Communications and Transactions Act 25 of 2002</Strong> (ECTA). Where the law gives you more than this policy, the law applies.

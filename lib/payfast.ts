@@ -231,5 +231,5 @@ export const MEMBERSHIP_PRICES: Record<'GOLD' | 'PLATINUM', Record<'monthly' | '
 }
 
 export function membershipItemName(tier: 'GOLD' | 'PLATINUM'): string {
-  return tier === 'GOLD' ? 'Hush Gold' : 'Hush Platinum'
+  return tier === 'GOLD' ? 'Unbound Gold' : 'Unbound Platinum'
 }

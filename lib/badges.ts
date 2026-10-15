@@ -64,7 +64,7 @@ export function evaluateBadges(f: BadgeFacts): Badge[] {
     },
     {
       id: 'founding', label: 'Founding member', emoji: '🌱',
-      description: 'Joined Hush in its first months',
+      description: 'Joined Unbound in its first months',
       earned: f.createdAt < FOUNDING_CUTOFF,
     },
     ...(f.isCouple
@@ -94,7 +94,7 @@ export function evaluateBadges(f: BadgeFacts): Badge[] {
     },
     {
       id: 'event_goer', label: 'Event-goer', emoji: '🎟️',
-      description: 'Went to a Hush event',
+      description: 'Went to an Unbound event',
       earned: f.eventsAttended >= 1, progress: clampProgress(f.eventsAttended, 1), href: '/events',
     },
   ]

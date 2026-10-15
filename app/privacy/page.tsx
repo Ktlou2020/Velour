@@ -6,7 +6,7 @@ import { BusinessDetails } from '@/components/LegalPage'
 
 export const metadata = {
   title: 'Privacy Policy',
-  description: 'Privacy Policy for Hush, compliant with POPIA (South Africa).',
+  description: 'Privacy Policy for Unbound, compliant with POPIA (South Africa).',
 }
 
 export default function PrivacyPage() {
@@ -20,11 +20,11 @@ export default function PrivacyPage() {
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm">Back to Hush</span>
+            <span className="text-sm">Back to Unbound</span>
           </Link>
           <div className="flex items-center gap-2">
             <LogoMark size="sm" />
-            <span className="font-serif font-bold tracking-wide text-white">HUSH</span>
+            <span className="font-serif font-bold tracking-wide text-white">UNBOUND</span>
           </div>
         </div>
       </div>
@@ -45,10 +45,10 @@ export default function PrivacyPage() {
           {/* Intro */}
           <div className="glass rounded-2xl p-6">
             <p className="text-gray-300 leading-relaxed">
-              {OPERATOR_NAME} (&quot;Hush&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) is committed to protecting your personal information. This Privacy Policy explains how we collect, use, store, share, and protect your personal information in accordance with the <strong className="text-white">Protection of Personal Information Act 4 of 2013</strong> (POPIA) and other applicable South African laws.
+              {OPERATOR_NAME} (&quot;Unbound&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) is committed to protecting your personal information. This Privacy Policy explains how we collect, use, store, share, and protect your personal information in accordance with the <strong className="text-white">Protection of Personal Information Act 4 of 2013</strong> (POPIA) and other applicable South African laws.
             </p>
             <p className="text-gray-300 leading-relaxed mt-3">
-              By using the Hush platform, you consent to the processing of your personal information as described in this policy. If you do not agree, please do not use the Service.
+              By using the Unbound platform, you consent to the processing of your personal information as described in this policy. If you do not agree, please do not use the Service.
             </p>
           </div>
 
@@ -83,7 +83,7 @@ export default function PrivacyPage() {
               <div>
                 <h3 className="text-white font-semibold mb-2">1.3 Special categories of personal information</h3>
                 <p>
-                  Hush processes special categories of personal information under POPIA, specifically information relating to sexual orientation, gender identity, relationship preferences and — only if you choose to add it — race or ethnicity. We process this information because you have explicitly provided it for the purpose of using a lifestyle dating platform, and we rely on your explicit consent as the lawful basis for this processing. You can hide your gender and orientation from your profile at any time; hidden details are still used to suggest mutual matches but are never shown to other members. Ethnicity is optional, hidden unless you switch it on, and is never used for search, filtering, ranking or matching. You can remove any of these details whenever you like.
+                  Unbound processes special categories of personal information under POPIA, specifically information relating to sexual orientation, gender identity, relationship preferences and — only if you choose to add it — race or ethnicity. We process this information because you have explicitly provided it for the purpose of using a lifestyle dating platform, and we rely on your explicit consent as the lawful basis for this processing. You can hide your gender and orientation from your profile at any time; hidden details are still used to suggest mutual matches but are never shown to other members. Ethnicity is optional, hidden unless you switch it on, and is never used for search, filtering, ranking or matching. You can remove any of these details whenever you like.
                 </p>
               </div>
             </div>
@@ -123,7 +123,7 @@ export default function PrivacyPage() {
               <ul className="list-disc list-inside space-y-1.5 pl-4">
                 <li><strong className="text-white">Service providers:</strong> Third-party companies that help us operate the Service (hosting, email delivery, payment processing, analytics). These providers are bound by contractual obligations to protect your information and may only use it as instructed by us.</li>
                 <li><strong className="text-white">Other members:</strong> Profile information you make public (photos, bio, interests, online status) is visible to other registered members.</li>
-                <li><strong className="text-white">Legal authorities:</strong> Where required by law, court order, or to protect the rights, property, or safety of Hush, our members, or the public.</li>
+                <li><strong className="text-white">Legal authorities:</strong> Where required by law, court order, or to protect the rights, property, or safety of Unbound, our members, or the public.</li>
                 <li><strong className="text-white">Business transfers:</strong> In the event of a merger, acquisition, or sale of all or part of our business, your information may be transferred to the acquiring entity subject to equivalent privacy protections.</li>
               </ul>
               <p className="mt-2">Where we transfer personal information outside South Africa, we take appropriate safeguards to ensure adequate protection as required by POPIA.</p>
@@ -199,7 +199,7 @@ export default function PrivacyPage() {
             </h2>
             <div className="space-y-3 text-gray-300 leading-relaxed sm:pl-11">
               <p>The Service is strictly for adults aged 18 and over. We do not knowingly collect personal information from persons under 18. If we become aware that we have inadvertently collected personal information from a minor, we will take immediate steps to delete it and terminate the associated account.</p>
-              <p>If you believe a minor has created an account on Hush, please contact us at <a href={`mailto:${email}`} className="text-[#DC143C] hover:underline">{email}</a> immediately.</p>
+              <p>If you believe a minor has created an account on Unbound, please contact us at <a href={`mailto:${email}`} className="text-[#DC143C] hover:underline">{email}</a> immediately.</p>
             </div>
           </section>
 

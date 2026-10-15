@@ -273,7 +273,7 @@ export default function AccountPage() {
             <h2 className="text-white font-semibold">Your Data (POPIA)</h2>
           </div>
           <p className="text-white/65 text-sm mb-4 leading-relaxed">
-            Download a copy of all data Hush holds about you, including your profile, photos, messages, and activity. Your right under South African POPIA law.
+            Download a copy of all data Unbound holds about you, including your profile, photos, messages, and activity. Your right under South African POPIA law.
           </p>
           <a
             href="/api/account/export"

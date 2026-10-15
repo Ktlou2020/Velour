@@ -1,7 +1,7 @@
 /**
  * Media URLs.
  *
- * New uploads are stored by Hush itself and served through `/api/media/<id>`,
+ * New uploads are stored by Unbound itself and served through `/api/media/<id>`,
  * which checks who may see each file (private albums, private photos).
  * Older uploads may still point at Cloudinary.
  */

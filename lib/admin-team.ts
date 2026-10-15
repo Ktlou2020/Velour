@@ -43,7 +43,7 @@ export async function changeAdminRole(actorId: string, targetId: string, makeAdm
       data: {
         userId: targetId,
         type: 'SYSTEM',
-        title: makeAdmin ? 'You are now a Hush admin' : 'Admin access removed',
+        title: makeAdmin ? 'You are now an Unbound admin' : 'Admin access removed',
         body: makeAdmin
           ? 'You have been appointed as an admin. Open the admin panel from your account menu.'
           : 'Your admin access has been removed.',
@@ -52,7 +52,7 @@ export async function changeAdminRole(actorId: string, targetId: string, makeAdm
     }),
   ])
   sendPushToUser(targetId, {
-    title: makeAdmin ? 'You are now a Hush admin' : 'Admin access removed',
+    title: makeAdmin ? 'You are now an Unbound admin' : 'Admin access removed',
     body: makeAdmin ? 'Open the admin panel from your account menu.' : 'Your admin access has been removed.',
     url: makeAdmin ? '/admin' : '/members',
     tag: 'admin-role',

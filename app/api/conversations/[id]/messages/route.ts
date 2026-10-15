@@ -108,7 +108,7 @@ function buildGame(raw: unknown, senderId: string, as: string | null): GameMeta 
 }
 
 /**
- * Only accept images the sender uploaded to Hush (`/api/media/<id>`, from
+ * Only accept images the sender uploaded to Unbound (`/api/media/<id>`, from
  * POST /api/upload with purpose=chat) or legacy Cloudinary images.
  */
 async function isValidImageUrl(raw: unknown, senderId: string): Promise<boolean> {
@@ -450,7 +450,7 @@ export async function POST(
         multi: access.userIds.length > 2,
       })
       sendPushToUser(participant.userId, {
-        title: isPriority ? `⚡ ${senderLabel} — Hush` : `${senderLabel} — Hush`,
+        title: isPriority ? `⚡ ${senderLabel} — Unbound` : `${senderLabel} — Unbound`,
         body: preview,
         url: `/messages?conv=${conversationId}`,
         tag: `message-${conversationId}`,

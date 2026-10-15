@@ -24,7 +24,7 @@ export default function AdminSidebar() {
   return (
     <aside className="w-14 md:w-56 flex-shrink-0 bg-[#0A0A0F] border-r border-white/5 flex flex-col min-h-screen pt-4">
       <div className="px-4 mb-6 hidden md:block">
-        <p className="text-[#DC143C] font-bold text-lg font-serif">Hush</p>
+        <p className="text-[#DC143C] font-bold text-lg font-serif">Unbound</p>
         <p className="text-white/30 text-xs">Admin Panel</p>
       </div>
 

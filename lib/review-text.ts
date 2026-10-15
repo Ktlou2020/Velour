@@ -1,10 +1,10 @@
 /**
  * Text hygiene for review comments and responses.
  *
- * Hush is an adult site: frank, explicit descriptions between consenting
+ * Unbound is an adult site: frank, explicit descriptions between consenting
  * adults are allowed (reviewers tick "Contains explicit details" so the text
  * is blurred until a viewer taps it). Swearing is allowed too. What we refuse:
- *  - Contact details / moving off Hush: phone numbers, emails, links and
+ *  - Contact details / moving off Unbound: phone numbers, emails, links and
  *    domains, social handles ("@name") and "add me on insta/WhatsApp/…".
  *  - Slurs and hate speech (a short list — general profanity is fine).
  *  - Anything involving minors.
@@ -93,7 +93,7 @@ export function reviewTextProblem(text: string): string | null {
   if (URL_RE.test(text) || DOMAIN_RE.test(text)) return 'Please remove the link — reviews can’t include websites or links.'
   if (PHONE_RE.test(text)) return 'Please remove the phone number — reviews can’t include contact details.'
   if (HANDLE_RE.test(text) || SOCIAL_RE.test(text)) {
-    return 'Please leave out social media handles and other apps — keep contact on Hush.'
+    return 'Please leave out social media handles and other apps — keep contact on Unbound.'
   }
   if (MINOR_RE.test(text) || MINOR_AGE_RE.test(text)) {
     return 'Reviews can’t mention anyone under 18 or anything involving minors. ' + SAFETY_HINT
@@ -101,7 +101,7 @@ export function reviewTextProblem(text: string): string | null {
   if (NONCONSENT_RE.test(text)) {
     return 'This sounds like it may not have been consensual. Please don’t put that in a review — ' + SAFETY_HINT
   }
-  if (hasWord(normaliseForWords(text), SLURS)) return 'Please remove the slur. Hate speech isn’t allowed on Hush.'
+  if (hasWord(normaliseForWords(text), SLURS)) return 'Please remove the slur. Hate speech isn’t allowed on Unbound.'
   if (HEALTH_RE.test(text)) {
     return 'Please leave out health information such as STI or HIV status — it’s sensitive personal information and stays private.'
   }

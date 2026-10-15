@@ -56,7 +56,7 @@ export default function CookieBanner() {
               <Cookie className="w-4 h-4 text-[#DC143C]" />
             </div>
             <p className="text-gray-300 text-sm leading-relaxed">
-              We use essential cookies to keep you signed in and secure, and optional ones to improve Hush. See our{' '}
+              We use essential cookies to keep you signed in and secure, and optional ones to improve Unbound. See our{' '}
               <Link href="/privacy" className="text-[#DC143C] hover:underline font-medium">
                 Privacy Policy
               </Link>

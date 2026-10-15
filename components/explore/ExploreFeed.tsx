@@ -91,7 +91,7 @@ export default function ExploreFeed() {
   const likeSeq = useRef<Record<string, number>>({});
   const topLoaded = useRef(false);
 
-  const watermark = me?.username ?? (session?.user as { username?: string } | undefined)?.username ?? 'hush';
+  const watermark = me?.username ?? (session?.user as { username?: string } | undefined)?.username ?? 'unbound';
 
   // ── Loading ────────────────────────────────────────────────────────────
   const fetchPage = useCallback(async (q: FeedQuery, after: string | null) => {

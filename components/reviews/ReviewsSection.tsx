@@ -321,7 +321,7 @@ export default function ReviewsSection({ username, name, ownerView = false, clas
       {summary.count > 0 ? (showSummary ? <ReviewSummaryBlock summary={summary} /> : null) : (
         <p className="text-white/60 text-sm mb-1">
           {ownerView
-            ? 'No public reviews yet. Ask people you’ve met on Hush to review you — it helps others trust you.'
+            ? 'No public reviews yet. Ask people you’ve met on Unbound to review you — it helps others trust you.'
             : `No reviews yet. Reviews come from members who’ve met ${name}.`}
         </p>
       )}
@@ -354,7 +354,7 @@ export default function ReviewsSection({ username, name, ownerView = false, clas
         </button>
       )}
       <p className="text-white/40 text-[11px] mt-4 flex items-center gap-1.5">
-        <Shield size={11} aria-hidden="true" /> Only members who&apos;ve chatted on Hush can review each other. Reviews stay hidden until both have written one, or for 14 days.
+        <Shield size={11} aria-hidden="true" /> Only members who&apos;ve chatted on Unbound can review each other. Reviews stay hidden until both have written one, or for 14 days.
       </p>
     </section>
   );

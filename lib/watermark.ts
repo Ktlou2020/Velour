@@ -4,7 +4,7 @@
  * Every image a member opens that isn't their own is served with the
  * viewer's username and the date burned into the pixels: a faint diagonal
  * pattern tiled over the whole picture (so it can't be cropped out) plus a
- * small solid "HUSH · @viewer" mark in the corner. A saved or screenshotted
+ * small solid "UNBOUND · @viewer" mark in the corner. A saved or screenshotted
  * copy therefore names whoever took it.
  *
  * Text is drawn from embedded glyph outlines (lib/watermark-glyphs.ts), never
@@ -84,7 +84,7 @@ interface Layout {
 function layoutFor(width: number, height: number, spec: WatermarkSpec, date: string): Layout {
   const short = Math.min(width, height)
   const fs = clamp(Math.round(short * 0.026), 11, 40)
-  const tileText = spec.kind === 'viewer' ? `@${cleanName(spec.username)} · hush · ${date}` : 'HUSH · members only'
+  const tileText = spec.kind === 'viewer' ? `@${cleanName(spec.username)} · unbound · ${date}` : 'UNBOUND · members only'
   return {
     fs,
     tileText,
@@ -92,7 +92,7 @@ function layoutFor(width: number, height: number, spec: WatermarkSpec, date: str
     stepX: Math.ceil(measureText(tileText, fs) + fs * 3.5),
     stepY: Math.ceil(fs * 4.2),
     cs: clamp(Math.round(short * 0.021), 10, 28),
-    cornerText: spec.kind === 'viewer' ? `HUSH · @${cleanName(spec.username)}` : 'HUSH',
+    cornerText: spec.kind === 'viewer' ? `UNBOUND · @${cleanName(spec.username)}` : 'UNBOUND',
   }
 }
 
@@ -124,7 +124,7 @@ export function stripSvg(text: string, fs: number): { svg: string; w: number; h:
   return { svg, w, h, ax, ay }
 }
 
-/** The solid corner mark ("HUSH · @viewer" on a dark pill). */
+/** The solid corner mark ("UNBOUND · @viewer" on a dark pill). */
 export function cornerSvg(text: string, cs: number): { svg: string; w: number; h: number } {
   const padX = cs * 0.6
   const w = Math.ceil(measureText(text, cs) + padX * 2)

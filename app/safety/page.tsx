@@ -9,7 +9,7 @@ import ShareDateClient from './ShareDateClient'
 
 export const metadata = {
   title: 'Safety Centre',
-  description: 'Practical tips for meeting Hush members in person, emergency numbers for South Africa, and Share My Date.',
+  description: 'Practical tips for meeting Unbound members in person, emergency numbers for South Africa, and Share My Date.',
 }
 
 const TIPS = [
@@ -72,11 +72,11 @@ export default async function SafetyPage() {
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href={isLoggedIn ? '/members' : '/'} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm">Back to Hush</span>
+            <span className="text-sm">Back to Unbound</span>
           </Link>
           <div className="flex items-center gap-2">
             <LogoMark size="sm" />
-            <span className="font-serif font-bold tracking-wide text-white">HUSH</span>
+            <span className="font-serif font-bold tracking-wide text-white">UNBOUND</span>
           </div>
         </div>
       </div>
@@ -150,7 +150,7 @@ export default async function SafetyPage() {
           <div className="space-y-3 text-gray-300 leading-relaxed pl-11">
             <p>
               <strong className="text-white">Screenshots, screen recordings, saving and sharing members&apos; photos or videos are not allowed.</strong>{' '}
-              Saving is blocked across Hush: no right-click or long-press &ldquo;Save image&rdquo;, no video downloads, picture-in-picture or casting, and photos blur when you switch apps or print.
+              Saving is blocked across Unbound: no right-click or long-press &ldquo;Save image&rdquo;, no video downloads, picture-in-picture or casting, and photos blur when you switch apps or print.
             </p>
             <p>
               <strong className="text-white">Every copy is traceable.</strong> Each photo is served with a watermark of the viewer&apos;s username and the date burned into the image itself, so a screenshot or saved copy names the account that took it. Videos carry their owner&apos;s mark in the file and the viewer&apos;s username on screen. Your own photos look clean to you.
@@ -159,8 +159,8 @@ export default async function SafetyPage() {
               <strong className="text-white">To be honest about the limits:</strong> no website can fully stop a screenshot or a phone pointed at a screen. What we can do is make a copy useless to a thief and lead straight back to them.
             </p>
             <p>
-              <strong className="text-white">If your content was shared outside Hush:</strong> report the member from their profile (flag icon) or from the photo, and choose <em>&ldquo;Shared my photos/videos outside Hush&rdquo;</em>. If you have the leaked copy, email it to{' '}
-              <a href="mailto:support@hush.dating" className="text-[#DC143C] hover:underline">support@hush.dating</a> — the watermark tells us who saved it. Confirmed leaks lead to a permanent ban.
+              <strong className="text-white">If your content was shared outside Unbound:</strong> report the member from their profile (flag icon) or from the photo, and choose <em>&ldquo;Shared my photos/videos outside Unbound&rdquo;</em>. If you have the leaked copy, email it to{' '}
+              <a href="mailto:support@unbound.dating" className="text-[#DC143C] hover:underline">support@unbound.dating</a> — the watermark tells us who saved it. Confirmed leaks lead to a permanent ban.
             </p>
           </div>
         </section>
@@ -171,7 +171,7 @@ export default async function SafetyPage() {
             <span className="w-8 h-8 rounded-lg bg-[#DC143C]/15 flex items-center justify-center text-[#DC143C] flex-shrink-0">
               <Flag className="w-4 h-4" />
             </span>
-            Reporting &amp; blocking on Hush
+            Reporting &amp; blocking on Unbound
           </h2>
           <div className="space-y-3 text-gray-300 leading-relaxed pl-11">
             <p>
@@ -187,7 +187,7 @@ export default async function SafetyPage() {
             </p>
             <p>
               If something happened offline, please also report it to SAPS. You can contact our team at{' '}
-              <a href="mailto:support@hush.dating" className="text-[#DC143C] hover:underline">support@hush.dating</a>.
+              <a href="mailto:support@unbound.dating" className="text-[#DC143C] hover:underline">support@unbound.dating</a>.
             </p>
           </div>
         </section>

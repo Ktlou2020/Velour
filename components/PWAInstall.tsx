@@ -154,7 +154,7 @@ export default function PWAInstall() {
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
             <LogoMark size="sm" />
-            <p className="text-white text-sm font-semibold">Install Hush</p>
+            <p className="text-white text-sm font-semibold">Install Unbound</p>
           </div>
           <button onClick={dismiss} className="text-white/60 hover:text-white transition-colors" aria-label="Dismiss"><X size={16} /></button>
         </div>
@@ -181,7 +181,7 @@ export default function PWAInstall() {
       <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 z-40 glass border border-white/15 rounded-xl px-4 py-3 flex items-center gap-3 shadow-xl">
         <LogoMark size="sm" />
         <div className="flex-1 min-w-0">
-          <p className="text-white text-sm font-medium">Install Hush</p>
+          <p className="text-white text-sm font-medium">Install Unbound</p>
           <p className="text-white/65 text-xs">Add to your home screen</p>
         </div>
         <button onClick={install} className="flex items-center gap-1.5 bg-[#DC143C] hover:bg-[#FF1744] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0">

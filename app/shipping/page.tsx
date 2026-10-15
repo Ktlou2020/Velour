@@ -17,7 +17,7 @@ export default function ShippingPage() {
     <LegalShell title="Shipping & Delivery Policy" lastUpdated="15 October 2026">
       <Intro>
         <p>
-          This policy covers orders from {STORE_NAME}, the Hush store for adult products, operated by {OPERATOR_NAME}. Hush memberships are digital and are not shipped — they are active as soon as your payment is confirmed.
+          This policy covers orders from {STORE_NAME}, the Unbound store for adult products, operated by {OPERATOR_NAME}. Unbound memberships are digital and are not shipped — they are active as soon as your payment is confirmed.
         </p>
       </Intro>
 

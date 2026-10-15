@@ -181,7 +181,7 @@ export function MemberTile({ member, watermark }: { member: MemberData; watermar
 
 export default function InfiniteMembers({ initialMembers, filters }: Props) {
   const { data: session } = useSession();
-  const watermark = (session?.user as { username?: string })?.username ?? session?.user?.email ?? 'hush';
+  const watermark = (session?.user as { username?: string })?.username ?? session?.user?.email ?? 'unbound';
   const [members, setMembers] = useState<MemberData[]>(initialMembers);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(initialMembers.length >= 12);

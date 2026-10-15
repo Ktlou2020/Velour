@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     "Johannesburg dating",
     "Cape Town dating",
     "Durban dating",
-    "Hush",
+    "Unbound",
   ],
   authors: [{ name: SITE_NAME }],
   creator: SITE_NAME,

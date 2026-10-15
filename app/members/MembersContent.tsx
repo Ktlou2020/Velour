@@ -86,7 +86,7 @@ export default function MembersContent({
   const pathname = usePathname();
   const [, startTransition] = useTransition();
   const { data: session } = useSession();
-  const watermark = (session?.user as { username?: string })?.username ?? session?.user?.email ?? 'hush';
+  const watermark = (session?.user as { username?: string })?.username ?? session?.user?.email ?? 'unbound';
 
   const [ageMin, setAgeMin] = useState(searchParams.ageMin || '18');
   const [ageMax, setAgeMax] = useState(searchParams.ageMax || '65');
@@ -540,7 +540,7 @@ export default function MembersContent({
           </div>
           <h2 className="font-serif text-white font-bold text-2xl mb-2">No one matches these filters — yet</h2>
           <p className="text-white/70 text-sm sm:text-base mb-7 max-w-md mx-auto">
-            We only show people who&apos;d like to meet you too. Hush is new and growing every week — try widening your filters, or check who you&apos;d like to meet on your profile.
+            We only show people who&apos;d like to meet you too. Unbound is new and growing every week — try widening your filters, or check who you&apos;d like to meet on your profile.
           </p>
           <button
             onClick={() => { setShow([]); setCoupleTypes([]); setCity(''); setCountry(''); setOnlineOnly(false); router.push(`${pathname}${callerHasLocation && anywhereAllowed ? '?radius=any' : callerHasLocation ? '?radius=250' : ''}`); }}

@@ -148,7 +148,7 @@ export default function ReviewForm({ requestId, reviewee, existing, canAskBack }
         <label htmlFor="review-comment" className="text-white font-semibold text-sm block mb-1">Tell others about your experience</label>
         <p id="review-guidelines" className="text-white/60 text-xs leading-relaxed mb-2.5 flex gap-1.5">
           <Info size={13} className="flex-shrink-0 mt-px text-[#D4AF37]" aria-hidden="true" />
-          <span>Be honest — explicit details are fine on Hush. Don&apos;t include contact details, anything about minors or non-consent, health information, or details that identify someone outside Hush. If something unsafe happened, <Link href="/safety" className="text-[#FF4D6D] hover:underline">report it instead</Link>.</span>
+          <span>Be honest — explicit details are fine on Unbound. Don&apos;t include contact details, anything about minors or non-consent, health information, or details that identify someone outside Unbound. If something unsafe happened, <Link href="/safety" className="text-[#FF4D6D] hover:underline">report it instead</Link>.</span>
         </p>
         <textarea
           id="review-comment"

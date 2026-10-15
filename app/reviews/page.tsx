@@ -27,7 +27,7 @@ export default async function ReviewsPage() {
       <main className="pt-16">
         <div className="max-w-3xl mx-auto px-4 py-8 sm:py-10 space-y-6">
           <header>
-            <p className="eyebrow text-[#D4AF37] mb-2">Trust on Hush</p>
+            <p className="eyebrow text-[#D4AF37] mb-2">Trust on Unbound</p>
             <h1 className="font-serif text-3xl sm:text-4xl font-bold text-white">Reviews</h1>
             <p className="text-white/65 text-sm mt-2 max-w-xl leading-relaxed">
               Members who&apos;ve chatted can review each other after they meet. Reviews are double-blind — hidden until you&apos;ve both written one, or for 14 days — and free for everyone.

@@ -4,7 +4,7 @@ import { ORDER_NUMBER_PREFIX, STORE_NAME } from '@/lib/store/config'
 
 export const metadata = {
   title: 'Contact us',
-  description: 'How to contact Hush support, our business details, and links to our policies.',
+  description: 'How to contact Unbound support, our business details, and links to our policies.',
 }
 
 const POLICIES = [
@@ -37,7 +37,7 @@ export default function ContactPage() {
           <li><Strong>{STORE_NAME} orders:</Strong> deliveries, returns and refunds — email <Mail subject="Order query" /> and quote your order number (it starts with &quot;{ORDER_NUMBER_PREFIX}-&quot;).</li>
           <li><Strong>Privacy &amp; your data (POPIA):</Strong> requests to access, correct or delete your personal information — email <Mail subject="POPIA request" />{BUSINESS.informationOfficer ? <>, for the attention of our Information Officer, {BUSINESS.informationOfficer}</> : null}.</li>
           <li><Strong>Safety concerns:</Strong> use the Report button on any profile or message for the fastest response, or email <Mail subject="Safety report" />. If you are in immediate danger, call SAPS on <Strong>10111</Strong> or <Strong>112</Strong> from a mobile phone.</li>
-          <li><Strong>Leaked photos or videos:</Strong> report them from the member&apos;s profile (&quot;Shared my photos/videos outside Hush&quot;) or email us — we act on these urgently.</li>
+          <li><Strong>Leaked photos or videos:</Strong> report them from the member&apos;s profile (&quot;Shared my photos/videos outside Unbound&quot;) or email us — we act on these urgently.</li>
         </ul>
         <p>
           Visit our <A href="/safety">Safety Centre</A> for dating safety tips and Share My Date.

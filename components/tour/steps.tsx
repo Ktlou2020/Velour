@@ -24,7 +24,7 @@ export function buildSteps(onLinkClick: () => void): TourStep[] {
   return [
     {
       id: 'welcome',
-      title: 'Welcome to Hush',
+      title: 'Welcome to Unbound',
       icon: Sparkles,
       body: (
         <>

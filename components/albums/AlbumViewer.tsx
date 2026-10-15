@@ -33,7 +33,7 @@ interface Props {
 export default function AlbumViewer({ albumId, onClose, onLeft, onRequested }: Props) {
   const { data: session } = useSession();
   const { showToast } = useToast();
-  const watermark = (session?.user as { username?: string } | undefined)?.username ?? 'hush';
+  const watermark = (session?.user as { username?: string } | undefined)?.username ?? 'unbound';
   const [data, setData] = useState<AlbumData | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);

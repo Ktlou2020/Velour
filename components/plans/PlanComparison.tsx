@@ -43,7 +43,7 @@ export default function PlanComparison({ current, highlight = 'GOLD' }: { curren
       {/* Desktop table */}
       <div className="hidden md:block glass rounded-2xl overflow-hidden">
         <table className="w-full text-left">
-          <caption className="sr-only">What each Hush plan includes</caption>
+          <caption className="sr-only">What each Unbound plan includes</caption>
           <thead>
             <tr className="border-b border-white/10">
               <th scope="col" className="p-4 text-white/55 text-xs font-semibold uppercase tracking-wider w-[40%]">Feature</th>

@@ -7,7 +7,7 @@ import { STORE_NAME } from '@/lib/store/config';
 import { DailyBars, Funnel, HBars, Kpi, rands } from './charts';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Analytics — Hush admin' };
+export const metadata = { title: 'Analytics — Unbound admin' };
 
 const RANGE_LABEL: Record<number, string> = { 7: '7 days', 30: '30 days', 90: '90 days', 365: '12 months' };
 

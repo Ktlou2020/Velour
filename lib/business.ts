@@ -34,7 +34,7 @@ export interface BusinessDetails {
 // Each process.env.NEXT_PUBLIC_* must be written out literally so Next.js inlines it.
 export const BUSINESS: BusinessDetails = {
   legalName: clean(process.env.NEXT_PUBLIC_BUSINESS_LEGAL_NAME),
-  tradingName: 'Hush',
+  tradingName: 'Unbound',
   registrationNumber: clean(process.env.NEXT_PUBLIC_BUSINESS_REG_NUMBER),
   vatNumber: clean(process.env.NEXT_PUBLIC_BUSINESS_VAT_NUMBER),
   address: clean(process.env.NEXT_PUBLIC_BUSINESS_ADDRESS),

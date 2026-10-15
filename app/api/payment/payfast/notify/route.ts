@@ -21,7 +21,7 @@ function text(body: string, status: number) {
  * 4. Confirm with PayFast server-to-server (/eng/query/validate → "VALID");
  *    network trouble → 503 so PayFast retries. (PAYFAST_SKIP_VALIDATE=true skips this for local tests.)
  * 5. Route: m_payment_id matching an Order.paymentRef → store order;
- *    otherwise a membership payment (custom_str1 = userId, item_name "Hush Gold"/"Hush Platinum").
+ *    otherwise a membership payment (custom_str1 = userId, item_name "Unbound Gold"/"Unbound Platinum").
  * Valid-but-ignored notifications get 200 so PayFast stops retrying.
  */
 export async function POST(req: NextRequest) {

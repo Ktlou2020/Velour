@@ -213,7 +213,7 @@ export function PersonIdentityFields({ value: v, onChange, withName, nameLabel =
             className="input-dark w-full [color-scheme:dark]"
             aria-invalid={!!errors.dateOfBirth}
           />
-          <p className="text-white/50 text-xs mt-1.5">Only their age is shown. Everyone on Hush must be 18+.</p>
+          <p className="text-white/50 text-xs mt-1.5">Only their age is shown. Everyone on Unbound must be 18+.</p>
           <FieldError>{errors.dateOfBirth}</FieldError>
         </div>
       )}

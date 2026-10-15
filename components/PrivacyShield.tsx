@@ -40,7 +40,7 @@ export default function PrivacyShield() {
       const now = Date.now();
       if (now - toastAt.current > 4000) {
         toastAt.current = now;
-        showToast('Screenshots of members’ content aren’t allowed on Hush', 'info');
+        showToast('Screenshots of members’ content aren’t allowed on Unbound', 'info');
       }
     }
 
@@ -81,7 +81,7 @@ export default function PrivacyShield() {
       // Windows delivers PrintScreen on keyup only, after the capture is in the clipboard.
       if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
         flash();
-        try { navigator.clipboard?.writeText('Screenshots of members’ content aren’t allowed on Hush.').catch(() => {}); } catch { /* not allowed */ }
+        try { navigator.clipboard?.writeText('Screenshots of members’ content aren’t allowed on Unbound.').catch(() => {}); } catch { /* not allowed */ }
       }
     }
 
@@ -110,7 +110,7 @@ export default function PrivacyShield() {
 
   return (
     <div className="hush-print-notice" aria-hidden="true">
-      Members’ photos and videos are hidden when printing. Screenshots, recordings and sharing of members’ content are not allowed on Hush.
+      Members’ photos and videos are hidden when printing. Screenshots, recordings and sharing of members’ content are not allowed on Unbound.
     </div>
   );
 }

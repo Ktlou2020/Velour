@@ -22,9 +22,9 @@ export default function NotFound() {
 
       <div className="relative z-10 text-center max-w-lg mx-auto">
         {/* Logo */}
-        <Link href="/" className="inline-flex items-center gap-2 mb-12" aria-label="Hush home">
+        <Link href="/" className="inline-flex items-center gap-2 mb-12" aria-label="Unbound home">
           <LogoMark size="md" />
-          <span className="text-white font-bold text-2xl tracking-widest font-serif">HUSH</span>
+          <span className="text-white font-bold text-2xl tracking-widest font-serif">UNBOUND</span>
         </Link>
 
         {/* 404 */}

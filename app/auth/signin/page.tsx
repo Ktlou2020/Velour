@@ -21,7 +21,7 @@ function SigninContent() {
     if (searchParams.get('reset') === '1') {
       setSuccessMsg('Password updated! Please sign in.')
     } else if (searchParams.get('verified') === '1') {
-      setSuccessMsg('Email verified! Welcome to Hush.')
+      setSuccessMsg('Email verified! Welcome to Unbound.')
     }
   }, [searchParams])
 
@@ -97,11 +97,11 @@ function SigninContent() {
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <Link href="/" aria-label="Hush — home" className="inline-flex items-center gap-2 mb-4">
+          <Link href="/" aria-label="Unbound — home" className="inline-flex items-center gap-2 mb-4">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center shadow-lg shadow-[#DC143C]/25">
-              <span className="text-white font-serif font-bold text-2xl">H</span>
+              <span className="text-white font-serif font-bold text-2xl">U</span>
             </div>
-            <span className="text-3xl font-serif font-bold tracking-wide text-white">HUSH</span>
+            <span className="text-3xl font-serif font-bold tracking-wide text-white">UNBOUND</span>
           </Link>
           <h1 className="text-3xl font-serif font-bold text-white mb-2">Welcome back</h1>
           <p className="text-gray-400">Sign in to pick up where you left off.</p>
@@ -203,7 +203,7 @@ function SigninContent() {
         <div className="text-center mt-6 space-y-3">
           <p className="text-gray-400 text-sm">
             Don&apos;t have an account?{' '}
-            <Link href="/auth/signup" className="text-[#DC143C] hover:underline font-medium">Join Hush Free</Link>
+            <Link href="/auth/signup" className="text-[#DC143C] hover:underline font-medium">Join Unbound Free</Link>
           </p>
           <p className="text-gray-400 text-xs">
             Your details are private and never sold to third parties.

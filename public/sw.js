@@ -68,7 +68,7 @@ self.addEventListener('push', (event) => {
     data = { body: event.data ? event.data.text() : '' };
   }
 
-  const title = data.title || 'Hush';
+  const title = data.title || 'Unbound';
   const options = {
     body: data.body || 'You have a new notification',
     icon: data.icon || '/icon-192.png',
@@ -109,7 +109,7 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil((async () => {
     const windowClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    // Prefer a tab already on the target, then any Hush tab (focus + navigate)
+    // Prefer a tab already on the target, then any Unbound tab (focus + navigate)
     const exact = windowClients.find((c) => c.url === target);
     if (exact && 'focus' in exact) return exact.focus();
     for (const client of windowClients) {

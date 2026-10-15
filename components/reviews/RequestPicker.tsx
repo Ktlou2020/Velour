@@ -58,7 +58,7 @@ export default function RequestPicker({ open, onClose, onSent }: { open: boolean
         <div className="flex items-start justify-between gap-3 p-5 pb-3">
           <div>
             <h2 id="request-picker-title" className="text-white font-bold text-lg font-serif">Ask for a review</h2>
-            <p className="text-white/60 text-xs mt-0.5">People you&apos;ve chatted with on Hush. They&apos;ll get a private request.</p>
+            <p className="text-white/60 text-xs mt-0.5">People you&apos;ve chatted with on Unbound. They&apos;ll get a private request.</p>
           </div>
           <button ref={closeRef} type="button" onClick={onClose} className="text-white/60 hover:text-white p-1 -m-1" aria-label="Close">
             <X size={20} />

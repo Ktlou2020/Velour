@@ -14,11 +14,11 @@ export function LegalShell({ eyebrow = 'Legal', title, lastUpdated, children }: 
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm">Back to Hush</span>
+            <span className="text-sm">Back to Unbound</span>
           </Link>
           <div className="flex items-center gap-2">
             <LogoMark size="sm" />
-            <span className="font-serif font-bold tracking-wide text-white">HUSH</span>
+            <span className="font-serif font-bold tracking-wide text-white">UNBOUND</span>
           </div>
         </div>
       </div>

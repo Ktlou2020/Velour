@@ -191,7 +191,7 @@ export async function POST(req: NextRequest) {
         })
 
         for (const n of notify) {
-          sendPushToUser(n.userId, { title: "It's a Match! 🎉", body: `You and ${nameOf(n.matchedUserId)} liked each other on Hush`, url: matchUrl, tag: `match-${user1Id}-${user2Id}` }).catch(() => {})
+          sendPushToUser(n.userId, { title: "It's a Match! 🎉", body: `You and ${nameOf(n.matchedUserId)} liked each other on Unbound`, url: matchUrl, tag: `match-${user1Id}-${user2Id}` }).catch(() => {})
         }
         matched = true
       } else {
@@ -226,7 +226,7 @@ export async function POST(req: NextRequest) {
           },
         })
         sendPushToUser(toUserId, {
-          title: `${c.title} — Hush`,
+          title: `${c.title} — Unbound`,
           body: c.body,
           url: '/matches#liked-you',
           tag: `like-${userId}`,

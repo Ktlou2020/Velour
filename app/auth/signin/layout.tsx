@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Sign in',
-  description: 'Sign in to your Hush account.',
+  description: 'Sign in to your Unbound account.',
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {

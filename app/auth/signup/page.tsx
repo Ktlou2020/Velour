@@ -60,7 +60,7 @@ export default function SignupPage() {
     if (!policy.every((p) => p.ok)) errs.password = 'Use at least 8 characters with a letter and a number'
     const age = ageOn(dateOfBirth)
     if (age === null) errs.dateOfBirth = 'Please enter your date of birth'
-    else if (age < 18) errs.dateOfBirth = 'Sorry — you need to be 18 or older to join Hush'
+    else if (age < 18) errs.dateOfBirth = 'Sorry — you need to be 18 or older to join Unbound'
     else if (age > 120) errs.dateOfBirth = 'Please check your date of birth'
     if (!agreed) errs.terms = 'Please confirm you are 18+ and agree to the Terms'
     return errs
@@ -119,13 +119,13 @@ export default function SignupPage() {
 
       <div className="w-full max-w-md relative">
         <div className="text-center mb-7">
-          <Link href="/" aria-label="Hush — home" className="inline-flex items-center gap-2 mb-5">
+          <Link href="/" aria-label="Unbound — home" className="inline-flex items-center gap-2 mb-5">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center">
-              <span className="text-white font-serif font-bold text-xl">H</span>
+              <span className="text-white font-serif font-bold text-xl">U</span>
             </div>
-            <span className="text-2xl font-serif font-bold tracking-wide text-white">HUSH</span>
+            <span className="text-2xl font-serif font-bold tracking-wide text-white">UNBOUND</span>
           </Link>
-          <h1 className="text-3xl font-serif font-bold text-white mb-2">Join Hush</h1>
+          <h1 className="text-3xl font-serif font-bold text-white mb-2">Join Unbound</h1>
           <p className="text-gray-400">Free to join. Discreet by design. For singles and couples of every kind.</p>
         </div>
 
@@ -258,7 +258,7 @@ export default function SignupPage() {
                 onChange={(e) => { setDateOfBirth(e.target.value); clearField('dateOfBirth') }}
                 onBlur={() => {
                   const a = ageOn(dateOfBirth)
-                  if (a !== null && a < 18) setFieldErrors((p) => ({ ...p, dateOfBirth: 'Sorry — you need to be 18 or older to join Hush' }))
+                  if (a !== null && a < 18) setFieldErrors((p) => ({ ...p, dateOfBirth: 'Sorry — you need to be 18 or older to join Unbound' }))
                 }}
                 autoComplete="bday"
                 aria-invalid={!!fieldErrors.dateOfBirth}

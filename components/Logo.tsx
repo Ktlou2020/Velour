@@ -8,7 +8,7 @@ const SIZES: Record<Size, { mark: string; letter: string; word: string }> = {
   lg: { mark: 'w-12 h-12 rounded-xl', letter: 'text-2xl', word: 'text-3xl' },
 };
 
-/** The Hush monogram on its own (decorative). */
+/** The Unbound monogram on its own (decorative). */
 export function LogoMark({ size = 'md', className = '' }: { size?: Size; className?: string }) {
   const s = SIZES[size];
   return (
@@ -16,7 +16,7 @@ export function LogoMark({ size = 'md', className = '' }: { size?: Size; classNa
       aria-hidden="true"
       className={`${s.mark} inline-flex items-center justify-center bg-gradient-to-br from-[#DC143C] to-[#8F0D25] shadow-lg shadow-[#DC143C]/25 flex-shrink-0 ${className}`}
     >
-      <span className={`text-white font-bold font-serif leading-none ${s.letter}`}>H</span>
+      <span className={`text-white font-bold font-serif leading-none ${s.letter}`}>U</span>
     </span>
   );
 }
@@ -35,14 +35,14 @@ export default function Logo({
   const inner = (
     <>
       <LogoMark size={size} />
-      <span className={`text-white font-bold tracking-[0.2em] font-serif ${s.word}`}>HUSH</span>
+      <span className={`text-white font-bold tracking-[0.14em] font-serif ${s.word}`}>UNBOUND</span>
     </>
   );
   if (href === null) {
     return <span className={`inline-flex items-center gap-2 ${className}`}>{inner}</span>;
   }
   return (
-    <Link href={href} aria-label="Hush — home" className={`inline-flex items-center gap-2 ${className}`}>
+    <Link href={href} aria-label="Unbound — home" className={`inline-flex items-center gap-2 ${className}`}>
       {inner}
     </Link>
   );

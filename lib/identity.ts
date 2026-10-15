@@ -273,7 +273,7 @@ export function cleanPerson(raw: unknown): { person: PersonDetails; error?: stri
   const pr = str(m.pronouns, 30); if (pr) person.pronouns = pr
   const dob = toDateString(m.dateOfBirth)
   if (dob) {
-    if (!isAdult(dob)) error = 'Everyone on Hush must be 18 or older'
+    if (!isAdult(dob)) error = 'Everyone on Unbound must be 18 or older'
     else person.dateOfBirth = dob
   }
   const o = str(m.orientation, 40); if (o) person.orientation = o

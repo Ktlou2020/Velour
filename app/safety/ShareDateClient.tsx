@@ -182,7 +182,7 @@ export default function ShareDateClient() {
             </div>
           </div>
           <div>
-            <label htmlFor="sd-username" className={label}>Hush username (optional)</label>
+            <label htmlFor="sd-username" className={label}>Unbound username (optional)</label>
             <input id="sd-username" maxLength={31} value={form.matchUsername} onChange={(e) => set('matchUsername', e.target.value)} placeholder="@username" className={input} />
           </div>
           <div>

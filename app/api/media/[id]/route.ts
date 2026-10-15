@@ -95,8 +95,8 @@ function parseRange(header: string | null, size: number): { start: number; end: 
  * Anything not visible is a 404 so existence isn't leaked.
  *
  * Images are served clean only to their owner. Everyone else gets a copy with
- * a forensic watermark burned in (lib/watermark.ts): "@viewer · hush · date"
- * for members and admins, a generic "HUSH" mark for logged-out visitors
+ * a forensic watermark burned in (lib/watermark.ts): "@viewer · unbound · date"
+ * for members and admins, a generic "UNBOUND" mark for logged-out visitors
  * (public main photos on the landing page). Store product photos (the
  * "__store" album) are served clean to every logged-in member. Watermarked images are always
  * sent whole (no ranges) and never shared between viewers in caches.

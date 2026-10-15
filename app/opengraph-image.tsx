@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-export const alt = 'Hush — Where Connections Become Extraordinary';
+export const alt = 'Unbound — Where Connections Become Extraordinary';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -37,9 +37,9 @@ export default function OpengraphImage() {
               fontWeight: 700,
             }}
           >
-            H
+            U
           </div>
-          <div style={{ fontSize: 44, fontWeight: 700, letterSpacing: 14 }}>HUSH</div>
+          <div style={{ fontSize: 44, fontWeight: 700, letterSpacing: 14 }}>UNBOUND</div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>

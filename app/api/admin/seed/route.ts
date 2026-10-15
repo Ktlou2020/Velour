@@ -39,8 +39,8 @@ export async function POST(req: NextRequest) {
 
       const events = [
         {
-          title: 'Hush Mixer — Johannesburg',
-          description: 'An exclusive evening mixer for Hush members in Joburg. Dress to impress!',
+          title: 'Unbound Mixer — Johannesburg',
+          description: 'An exclusive evening mixer for Unbound members in Joburg. Dress to impress!',
           date: week2,
           location: 'The Maslow Hotel, Sandton',
           city: 'Johannesburg',

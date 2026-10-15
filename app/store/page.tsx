@@ -41,7 +41,7 @@ export default async function StoreHome({ searchParams }: { searchParams: Promis
         <section className="relative overflow-hidden border-b border-white/5">
           <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(220,20,60,0.18),transparent_55%),radial-gradient(ellipse_at_bottom_left,rgba(212,175,55,0.10),transparent_50%)]" />
           <div className="relative max-w-6xl mx-auto px-4 py-12 sm:py-20">
-            <p className="eyebrow text-[#D4AF37] mb-3">The Hush store · 18+</p>
+            <p className="eyebrow text-[#D4AF37] mb-3">The Unbound store · 18+</p>
             <h1 className="font-serif text-4xl sm:text-6xl font-bold text-white tracking-tight">{STORE_NAME}</h1>
             <p className="text-white/70 text-base sm:text-lg mt-3 max-w-xl leading-relaxed">{STORE_TAGLINE}</p>
             <ul className="flex flex-wrap gap-x-6 gap-y-2 mt-6 text-sm text-white/60">
@@ -61,7 +61,7 @@ export default async function StoreHome({ searchParams }: { searchParams: Promis
         {storeEmpty ? (
           <EmptyState icon={PackageOpen} title={`${STORE_NAME} is being stocked`}
             description="New arrivals are on their way. Check back soon."
-            action={isAdmin ? { label: 'Set up the store', href: '/admin/store' } : { label: 'Back to Hush', href: '/members' }} />
+            action={isAdmin ? { label: 'Set up the store', href: '/admin/store' } : { label: 'Back to Unbound', href: '/members' }} />
         ) : (
           <>
             {featured.length > 0 && (

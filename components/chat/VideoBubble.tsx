@@ -55,7 +55,7 @@ export default function VideoBubble({ src, durationSec, sent, blurred, pending =
       />
       {/* Light watermark, like protected photos */}
       {!hidden && !started && (
-        <span className="pointer-events-none absolute bottom-2 left-2.5 text-[10px] font-semibold tracking-[0.25em] text-white/35 select-none" aria-hidden="true">HUSH</span>
+        <span className="pointer-events-none absolute bottom-2 left-2.5 text-[10px] font-semibold tracking-[0.25em] text-white/35 select-none" aria-hidden="true">UNBOUND</span>
       )}
       {hidden ? (
         <button

@@ -71,7 +71,7 @@ interface Props {
 const REPORT_REASONS = [
   'Fake profile / Catfishing',
   'Inappropriate content',
-  'Shared my photos/videos outside Hush',
+  'Shared my photos/videos outside Unbound',
   'Harassment or abuse',
   'Spam or scam',
   'Underage user',
@@ -199,7 +199,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
             <div className="relative flex-shrink-0 -mb-2">
               <div className="w-28 h-28 sm:w-40 sm:h-40 rounded-3xl overflow-hidden border-4 border-[#0A0A0F] shadow-2xl bg-gradient-to-br from-rose-900 to-red-700 flex items-center justify-center">
                 {heroPhoto ? (
-                  <ProtectedImage src={heroPhoto.url} alt={`${displayName}'s profile photo`} className="w-full h-full" watermark={session?.user?.email ?? 'hush'} loading="eager" />
+                  <ProtectedImage src={heroPhoto.url} alt={`${displayName}'s profile photo`} className="w-full h-full" watermark={session?.user?.email ?? 'unbound'} loading="eager" />
                 ) : (
                   <span className="text-white text-5xl font-bold font-serif">{initials}</span>
                 )}
@@ -454,7 +454,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                     onClick={() => setLightboxIdx(i)}
                     className={`relative overflow-hidden rounded-xl group ${i === 0 ? 'col-span-2 sm:col-span-2 row-span-2 aspect-[4/3]' : 'aspect-square'}`}
                   >
-                    <ProtectedImage src={photo.url} alt={`${displayName} — photo ${i + 1}`} className="w-full h-full" watermark={session?.user?.email ?? 'hush'} />
+                    <ProtectedImage src={photo.url} alt={`${displayName} — photo ${i + 1}`} className="w-full h-full" watermark={session?.user?.email ?? 'unbound'} />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                       <Eye size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
                     </div>
@@ -599,7 +599,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
             </button>
           )}
           <div className="max-w-[90vw] max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
-            <ProtectedImage src={photos[lightboxIdx].url} alt={`Photo ${lightboxIdx + 1}`} className="max-w-[90vw] max-h-[85vh] rounded-2xl shadow-2xl" watermark={session?.user?.email ?? 'hush'} />
+            <ProtectedImage src={photos[lightboxIdx].url} alt={`Photo ${lightboxIdx + 1}`} className="max-w-[90vw] max-h-[85vh] rounded-2xl shadow-2xl" watermark={session?.user?.email ?? 'unbound'} />
             <p className="text-white/60 text-xs text-center mt-3">{lightboxIdx + 1} / {photos.length}</p>
           </div>
         </div>

@@ -262,7 +262,7 @@ export default function OnboardingPage() {
   function finish() {
     if (uid) clearSaved(uid);
     const first = s.isCouple ? s.displayName.trim() : (s.displayName.trim().split(' ')[0] || '');
-    showToast(`Welcome to Hush${first ? `, ${first}` : ''}! Here are people who'd like to meet you too.`, 'success');
+    showToast(`Welcome to Unbound${first ? `, ${first}` : ''}! Here are people who'd like to meet you too.`, 'success');
     router.push('/discover');
     router.refresh();
   }
@@ -354,7 +354,7 @@ export default function OnboardingPage() {
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 mb-2">
             <LogoMark size="md" />
-            <span className="text-white font-bold text-2xl tracking-widest font-serif">HUSH</span>
+            <span className="text-white font-bold text-2xl tracking-widest font-serif">UNBOUND</span>
           </div>
           <p className="text-white/65 text-sm">A few details and you’re in. You can change everything later.</p>
         </div>
@@ -475,7 +475,7 @@ export default function OnboardingPage() {
                         </label>
                         {s.partnerOwnAccount ? (
                           <div data-err="invite">
-                            <Label htmlFor="ob-invite" optional>Partner’s Hush username</Label>
+                            <Label htmlFor="ob-invite" optional>Partner’s Unbound username</Label>
                             <input
                               id="ob-invite"
                               type="text"
@@ -491,7 +491,7 @@ export default function OnboardingPage() {
                             {inviteSentTo ? (
                               <p className="text-emerald-400 text-xs mt-1.5" role="status">Invitation sent to @{inviteSentTo}.</p>
                             ) : (
-                              <p className="text-white/50 text-xs mt-1.5">We’ll send them an invitation to link. Not on Hush yet? Ask them to sign up, then invite them from your profile.</p>
+                              <p className="text-white/50 text-xs mt-1.5">We’ll send them an invitation to link. Not on Unbound yet? Ask them to sign up, then invite them from your profile.</p>
                             )}
                           </div>
                         ) : (
@@ -693,7 +693,7 @@ export default function OnboardingPage() {
           )}
 
           {step === 0 && (
-            <p className="mt-6 text-white/45 text-xs flex gap-2"><Info size={13} className="flex-shrink-0 mt-0.5" aria-hidden="true" />Women, men, non-binary people and couples of every kind are welcome on Hush.</p>
+            <p className="mt-6 text-white/45 text-xs flex gap-2"><Info size={13} className="flex-shrink-0 mt-0.5" aria-hidden="true" />Women, men, non-binary people and couples of every kind are welcome on Unbound.</p>
           )}
 
           {/* Navigation */}

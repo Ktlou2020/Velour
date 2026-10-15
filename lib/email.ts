@@ -15,7 +15,7 @@ function createTransporter() {
 }
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-const fromAddress = process.env.EMAIL_FROM ?? 'Hush <noreply@hush.dating>'
+const fromAddress = process.env.EMAIL_FROM ?? 'Unbound <noreply@unbound.dating>'
 
 const baseStyle = `
   font-family: 'Georgia', serif;
@@ -40,7 +40,7 @@ function wrapEmail(title: string, body: string): string {
           <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg,#DC143C,#8F0D25); padding:32px; text-align:center;">
-              <span style="font-size:36px; font-weight:bold; color:#ffffff; letter-spacing:4px; font-family:'Georgia',serif;">HUSH</span>
+              <span style="font-size:36px; font-weight:bold; color:#ffffff; letter-spacing:4px; font-family:'Georgia',serif;">UNBOUND</span>
               <p style="color:rgba(255,255,255,0.8); margin:8px 0 0; font-size:13px; letter-spacing:2px; text-transform:uppercase;">${title}</p>
             </td>
           </tr>
@@ -53,7 +53,7 @@ function wrapEmail(title: string, body: string): string {
           <!-- Footer -->
           <tr>
             <td style="padding:24px 32px; border-top:1px solid rgba(255,255,255,0.06); text-align:center;">
-              <p style="color:#555566; font-size:12px; margin:0 0 4px;">© ${new Date().getFullYear()} Hush. All rights reserved.</p>
+              <p style="color:#555566; font-size:12px; margin:0 0 4px;">© ${new Date().getFullYear()} Unbound. All rights reserved.</p>
               <p style="color:#555566; font-size:12px; margin:0;">
                 <a href="${appUrl}/privacy" style="color:#DC143C; text-decoration:none;">Privacy Policy</a>
                 &nbsp;·&nbsp;
@@ -76,7 +76,7 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
   const body = `
     <h2 style="color:#ffffff; font-family:'Georgia',serif; font-size:24px; margin:0 0 16px;">Verify Your Email</h2>
     <p style="color:#aaaacc; font-size:15px; line-height:1.7; margin:0 0 24px;">
-      Welcome to Hush. Please verify your email address to unlock full access to our exclusive community.
+      Welcome to Unbound. Please verify your email address to unlock full access to our exclusive community.
     </p>
     <div style="text-align:center; margin:32px 0;">
       <a href="${link}" style="display:inline-block; background:linear-gradient(135deg,#DC143C,#8F0D25); color:#ffffff; text-decoration:none; padding:14px 36px; border-radius:10px; font-weight:600; font-size:15px; letter-spacing:0.5px;">
@@ -90,7 +90,7 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
       ${link}
     </p>
     <p style="color:#555566; font-size:13px; margin:0;">
-      This link expires in 24 hours. If you did not create a Hush account, you can safely ignore this email.
+      This link expires in 24 hours. If you did not create an Unbound account, you can safely ignore this email.
     </p>
   `
 
@@ -98,7 +98,7 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
 
   const transporter = createTransporter()
   if (!transporter) {
-    console.log('[Hush Email - DEV] Verification email:')
+    console.log('[Unbound Email - DEV] Verification email:')
     console.log(`  To: ${to}`)
     console.log(`  Link: ${link}`)
     return
@@ -107,7 +107,7 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
   await transporter.sendMail({
     from: fromAddress,
     to,
-    subject: 'Verify your Hush email address',
+    subject: 'Verify your Unbound email address',
     html,
   })
 }
@@ -118,7 +118,7 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
   const body = `
     <h2 style="color:#ffffff; font-family:'Georgia',serif; font-size:24px; margin:0 0 16px;">Reset Your Password</h2>
     <p style="color:#aaaacc; font-size:15px; line-height:1.7; margin:0 0 24px;">
-      We received a request to reset the password for your Hush account. Click the button below to choose a new password.
+      We received a request to reset the password for your Unbound account. Click the button below to choose a new password.
     </p>
     <div style="text-align:center; margin:32px 0;">
       <a href="${link}" style="display:inline-block; background:linear-gradient(135deg,#DC143C,#8F0D25); color:#ffffff; text-decoration:none; padding:14px 36px; border-radius:10px; font-weight:600; font-size:15px; letter-spacing:0.5px;">
@@ -140,7 +140,7 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
 
   const transporter = createTransporter()
   if (!transporter) {
-    console.log('[Hush Email - DEV] Password reset email:')
+    console.log('[Unbound Email - DEV] Password reset email:')
     console.log(`  To: ${to}`)
     console.log(`  Link: ${link}`)
     return
@@ -149,7 +149,7 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
   await transporter.sendMail({
     from: fromAddress,
     to,
-    subject: 'Reset your Hush password',
+    subject: 'Reset your Unbound password',
     html,
   })
 }
@@ -172,7 +172,7 @@ export async function sendBrandedEmail(to: string, subject: string, title: strin
 
   const transporter = createTransporter()
   if (!transporter) {
-    console.log(`[Hush Email - DEV] ${subject}`)
+    console.log(`[Unbound Email - DEV] ${subject}`)
     console.log(`  To: ${to}`)
     return
   }
