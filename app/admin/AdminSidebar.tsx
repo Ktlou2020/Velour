@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Flag, ArrowLeft, Star, Store, Boxes, Tags, ReceiptText } from 'lucide-react';
+import { LayoutDashboard, BarChart3, UserCog, Users, Flag, ArrowLeft, Star, Store, Boxes, Tags, ReceiptText } from 'lucide-react';
 import { STORE_NAME } from '@/lib/store/config';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/team', label: 'Admin team', icon: UserCog },
   { href: '/admin/reports', label: 'Reports', icon: Flag },
   { href: '/admin/reviews', label: 'Reviews', icon: Star },
   { href: '/admin/store', label: STORE_NAME, icon: Store },

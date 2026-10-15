@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import ProtectedImage from '@/components/ProtectedImage';
-import { Search, Shield, Ban, UserCheck, Crown } from 'lucide-react';
+import { Search, Shield, Ban, UserCheck, Crown, ShieldOff } from 'lucide-react';
 
 interface UserRow {
   id: string;
@@ -11,6 +11,7 @@ interface UserRow {
   role: string;
   isActive: boolean;
   isVerified: boolean;
+  isSuperAdmin?: boolean;
   createdAt: Date | string;
   profile: {
     displayName?: string | null;
@@ -23,9 +24,12 @@ interface UserRow {
 
 interface Props {
   initialUsers: UserRow[];
+  viewerId: string;
+  viewerIsSuperAdmin: boolean;
 }
 
-export default function AdminUsersClient({ initialUsers }: Props) {
+export default function AdminUsersClient({ initialUsers, viewerId, viewerIsSuperAdmin }: Props) {
+  const [error, setError] = useState('');
   const [users, setUsers] = useState<UserRow[]>(initialUsers);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,7 +40,11 @@ export default function AdminUsersClient({ initialUsers }: Props) {
     return u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
   });
 
-  async function doAction(userId: string, action: 'ban' | 'unban' | 'verify' | 'promote') {
+  async function doAction(userId: string, action: 'ban' | 'unban' | 'verify' | 'promote' | 'demote') {
+    const who = users.find((u) => u.id === userId)?.username ?? 'this member';
+    if (action === 'promote' && !window.confirm(`Appoint @${who} as an admin? They will be able to moderate members, reports, reviews and the store.`)) return;
+    if (action === 'demote' && !window.confirm(`Remove admin access for @${who}?`)) return;
+    setError('');
     setActionLoading(`${userId}-${action}`);
     try {
       const res = await fetch('/api/admin/users', {
@@ -49,6 +57,9 @@ export default function AdminUsersClient({ initialUsers }: Props) {
         setUsers((prev) =>
           prev.map((u) => (u.id === userId ? { ...u, ...updated } : u))
         );
+      } else {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setError(body.error ?? 'That action failed.');
       }
     } finally {
       setActionLoading(null);
@@ -113,6 +124,10 @@ export default function AdminUsersClient({ initialUsers }: Props) {
           />
         </div>
       </div>
+
+      {error && (
+        <p role="alert" className="mb-4 text-sm text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">{error}</p>
+      )}
 
       <div className="glass rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
@@ -180,9 +195,10 @@ export default function AdminUsersClient({ initialUsers }: Props) {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        u.role === 'ADMIN' ? 'bg-[#DC143C]/20 text-[#DC143C]' : 'bg-white/10 text-white/40'
+                        u.isSuperAdmin ? 'bg-[#D4AF37]/20 text-[#D4AF37]'
+                        : u.role === 'ADMIN' ? 'bg-[#DC143C]/20 text-[#DC143C]' : 'bg-white/10 text-white/40'
                       }`}>
-                        {u.role}
+                        {u.isSuperAdmin ? 'SUPER ADMIN' : u.role}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -222,17 +238,29 @@ export default function AdminUsersClient({ initialUsers }: Props) {
                             <Shield size={12} />
                           </button>
                         )}
-                        {u.role !== 'ADMIN' && (
+                        {viewerIsSuperAdmin && u.role !== 'ADMIN' && u.isActive && (
                           <button
                             onClick={() => doAction(u.id, 'promote')}
                             disabled={!!actionLoading}
-                            title="Promote to Admin"
+                            title="Appoint as admin"
+                            aria-label={`Appoint @${u.username} as admin`}
                             className="w-7 h-7 rounded-lg bg-[#D4AF37]/20 text-[#D4AF37] hover:bg-[#D4AF37]/30 flex items-center justify-center transition-colors"
                           >
                             <Crown size={12} />
                           </button>
                         )}
-                        {u.isActive ? (
+                        {viewerIsSuperAdmin && u.role === 'ADMIN' && !u.isSuperAdmin && u.id !== viewerId && (
+                          <button
+                            onClick={() => doAction(u.id, 'demote')}
+                            disabled={!!actionLoading}
+                            title="Remove admin"
+                            aria-label={`Remove admin access for @${u.username}`}
+                            className="w-7 h-7 rounded-lg bg-white/10 text-white/60 hover:bg-white/20 flex items-center justify-center transition-colors"
+                          >
+                            <ShieldOff size={12} />
+                          </button>
+                        )}
+                        {u.isSuperAdmin || u.id === viewerId || (u.role === 'ADMIN' && !viewerIsSuperAdmin) ? null : u.isActive ? (
                           <button
                             onClick={() => doAction(u.id, 'ban')}
                             disabled={!!actionLoading}

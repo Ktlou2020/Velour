@@ -1,1 +1,1 @@
-export { handlers, auth, signIn, signOut, requireAdmin } from '@/lib/auth'
+export { handlers, auth, signIn, signOut, requireAdmin, requireSuperAdmin } from '@/lib/auth'

@@ -2,6 +2,7 @@ import NextAuth, { CredentialsSignin } from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
+import { isSuperAdminEmail } from '@/lib/admin-roles'
 import { getClientIp, rateLimit, resetRateLimit } from '@/lib/rate-limit'
 import { hashToken } from '@/lib/security'
 
@@ -190,17 +191,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 /**
  * Authoritative admin check for API routes and admin pages: verifies the
  * role in the database, not just the (possibly up to REFRESH_SECONDS old)
- * session token. Returns the admin's id, or null.
+ * session token. Returns the admin's id (and whether they are a super admin), or null.
  */
-export async function requireAdmin(): Promise<{ id: string } | null> {
+export async function requireAdmin(): Promise<{ id: string; isSuperAdmin: boolean } | null> {
   const session = await auth()
   const id = session?.user?.id
   if (!id) return null
   try {
-    const user = await db.user.findUnique({ where: { id }, select: { role: true, isActive: true } })
+    const user = await db.user.findUnique({ where: { id }, select: { role: true, isActive: true, email: true } })
     if (!user || !user.isActive || user.role !== 'ADMIN') return null
-    return { id }
+    return { id, isSuperAdmin: isSuperAdminEmail(user.email) }
   } catch {
     return null
   }
+}
+
+/** Like requireAdmin, but only for super admins (who may appoint/remove admins). */
+export async function requireSuperAdmin(): Promise<{ id: string; isSuperAdmin: true } | null> {
+  const admin = await requireAdmin()
+  return admin?.isSuperAdmin ? { id: admin.id, isSuperAdmin: true } : null
 }

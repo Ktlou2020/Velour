@@ -695,3 +695,17 @@ model OrderItem {
   quantity   Int
   image      String?
 }
+
+// Who changed admin roles (and other sensitive admin actions), for accountability.
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  // e.g. ADMIN_APPOINTED | ADMIN_REMOVED | USER_BANNED | USER_UNBANNED
+  action    String
+  targetId  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([targetId, createdAt])
+}

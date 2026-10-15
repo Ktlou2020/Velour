@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
               type: 'PAYMENT',
               title: 'Membership Activated',
               body: `Your ${tier} membership is now active. Enjoy all the benefits!`,
-              data: { tier, itemName, url: '/subscription', ...(pfPaymentId ? { pfPaymentId } : {}) },
+              data: { tier, itemName, amountCents: amountGrossCents, url: '/subscription', ...(pfPaymentId ? { pfPaymentId } : {}) },
             },
           })
         }

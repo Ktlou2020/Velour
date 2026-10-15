@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/auth';
 import { db } from '@/lib/db';
+import { isSuperAdminEmail } from '@/lib/admin-roles';
 import AdminUsersClient from './AdminUsersClient';
 
 export default async function AdminUsersPage() {
@@ -33,5 +34,11 @@ export default async function AdminUsersPage() {
     },
   });
 
-  return <AdminUsersClient initialUsers={users} />;
+  return (
+    <AdminUsersClient
+      initialUsers={users.map((u) => ({ ...u, isSuperAdmin: isSuperAdminEmail(u.email) }))}
+      viewerId={admin.id}
+      viewerIsSuperAdmin={admin.isSuperAdmin}
+    />
+  );
 }
