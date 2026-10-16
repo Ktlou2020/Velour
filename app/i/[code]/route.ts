@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { REFERRAL_COOKIE, REFERRAL_COOKIE_MAX_AGE, normalizeReferralCode } from '@/lib/referrals'
+import { SITE_URL } from '@/app/site'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,10 +9,11 @@ export const dynamic = 'force-dynamic'
  * by /api/register) and send the visitor to sign-up with ?ref= so the page can
  * show the "you were invited" note. Unknown-looking codes just go to sign-up.
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   const { code: raw } = await params
   const code = normalizeReferralCode(raw)
-  const target = new URL('/auth/signup', req.nextUrl.origin)
+  // Public site URL: behind Railway's proxy the request origin is the internal 0.0.0.0 address.
+  const target = new URL('/auth/signup', SITE_URL)
   if (code) target.searchParams.set('ref', code)
   const res = NextResponse.redirect(target, 307)
   if (code) {
