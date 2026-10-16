@@ -23,6 +23,10 @@ export default auth((req) => {
   ) {
     return NextResponse.redirect(new URL('/auth/confirm-email', req.nextUrl.origin))
   }
+  // The logo / home links point at "/" — signed-in members belong on their home feed, not the public landing.
+  if (pathname === '/' && isLoggedIn) {
+    return NextResponse.redirect(new URL('/members', req.nextUrl.origin))
+  }
   if (isAuthPage && isLoggedIn && !authPassThrough.some((p) => pathname.startsWith(p))) {
     const membersUrl = new URL('/members', req.nextUrl.origin)
     return NextResponse.redirect(membersUrl)
