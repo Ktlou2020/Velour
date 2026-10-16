@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
-import { Shield, Download, Trash2, Camera, CheckCircle, Clock, XCircle, Flame, Moon, BarChart3, CreditCard, ChevronRight } from 'lucide-react';
+import { Shield, Download, Trash2, Camera, CheckCircle, Clock, XCircle, Flame, Moon, BarChart3, CreditCard, ChevronRight, Mail } from 'lucide-react';
 import TravelModeCard from '@/components/plans/TravelModeCard';
 import PlanChip from '@/components/plans/PlanChip';
 import type { Allowance } from '@/components/plans/AllowanceMeter';
@@ -34,6 +34,34 @@ export default function AccountPage() {
   const [snoozeChoice, setSnoozeChoice] = useState<string>('24h');
   const [snoozeBusy, setSnoozeBusy] = useState(false);
   const [allowance, setAllowance] = useState<Allowance | null>(null);
+  const [marketingEmails, setMarketingEmails] = useState<boolean | null>(null);
+  const [emailPrefBusy, setEmailPrefBusy] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/account/email-preferences').then(r => r.ok ? r.json() : null).then(d => { if (d) setMarketingEmails(!!d.marketingEmails); }).catch(() => {});
+  }, []);
+
+  async function toggleMarketingEmails() {
+    if (marketingEmails === null) return;
+    const next = !marketingEmails;
+    setEmailPrefBusy(true);
+    try {
+      const res = await fetch('/api/account/email-preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ marketingEmails: next }),
+      });
+      const d = await res.json().catch(() => ({})) as { marketingEmails?: boolean; error?: string };
+      if (res.ok) {
+        setMarketingEmails(!!d.marketingEmails);
+        showToast(d.marketingEmails ? 'Email updates are on' : 'Email updates are off', 'success');
+      } else {
+        showToast(d.error ?? 'Something went wrong', 'error');
+      }
+    } catch {
+      showToast('Network error', 'error');
+    } finally { setEmailPrefBusy(false); }
+  }
 
   useEffect(() => {
     fetch('/api/likes/allowance').then(r => r.ok ? r.json() : null).then(d => { if (d) setAllowance(d); }).catch(() => {});
@@ -264,6 +292,31 @@ export default function AccountPage() {
               </button>
             </div>
           )}
+        </div>
+
+        {/* Email preferences */}
+        <div className="glass rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Mail size={20} className="text-[#D4AF37]" />
+            <h2 className="text-white font-semibold">Email</h2>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p id="marketing-emails-label" className="text-white text-sm font-medium">Emails about likes, messages and tips</p>
+              <p className="text-white/55 text-xs mt-1 leading-relaxed">Occasional, discreet nudges — never message contents. Account and billing emails are always sent.</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!!marketingEmails}
+              aria-labelledby="marketing-emails-label"
+              onClick={toggleMarketingEmails}
+              disabled={marketingEmails === null || emailPrefBusy}
+              className={`relative flex-shrink-0 w-12 h-7 rounded-full transition-colors disabled:opacity-60 ${marketingEmails ? 'bg-[#DC143C]' : 'bg-white/15'}`}
+            >
+              <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${marketingEmails ? 'translate-x-5' : ''}`} />
+            </button>
+          </div>
         </div>
 
         {/* Data Export */}

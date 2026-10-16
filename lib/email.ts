@@ -24,11 +24,14 @@ function parseFrom(from: string): { name?: string; email: string } {
   return m ? { name: m[1].trim() || undefined, email: m[2].trim() } : { email: from.trim() }
 }
 
-async function sendViaBrevo(apiKey: string, to: string, subject: string, html: string): Promise<void> {
+async function sendViaBrevo(apiKey: string, to: string, subject: string, html: string, extraHeaders?: Record<string, string>): Promise<void> {
   const res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: { 'api-key': apiKey, 'content-type': 'application/json', accept: 'application/json' },
-    body: JSON.stringify({ sender: parseFrom(fromAddress), to: [{ email: to }], subject, htmlContent: html }),
+    body: JSON.stringify({
+      sender: parseFrom(fromAddress), to: [{ email: to }], subject, htmlContent: html,
+      ...(extraHeaders && Object.keys(extraHeaders).length ? { headers: extraHeaders } : {}),
+    }),
     signal: AbortSignal.timeout(15_000),
   })
   if (!res.ok) {
@@ -42,15 +45,15 @@ async function sendViaBrevo(apiKey: string, to: string, subject: string, html: s
 }
 
 /** Deliver one email. Returns false when no provider is configured (dev: logged instead). */
-async function deliver(to: string, subject: string, html: string): Promise<boolean> {
+async function deliver(to: string, subject: string, html: string, headers?: Record<string, string>): Promise<boolean> {
   const brevoKey = process.env.BREVO_API_KEY?.trim()
   if (brevoKey) {
-    await sendViaBrevo(brevoKey, to, subject, html)
+    await sendViaBrevo(brevoKey, to, subject, html, headers)
     return true
   }
   const transporter = createTransporter()
   if (!transporter) return false
-  await transporter.sendMail({ from: fromAddress, to, subject, html })
+  await transporter.sendMail({ from: fromAddress, to, subject, html, ...(headers ? { headers } : {}) })
   return true
 }
 
@@ -189,10 +192,17 @@ export function escapeHtml(value: string): string {
  * Send a branded email. `bodyHtml` is inserted as-is, so escape any
  * user-supplied values with `escapeHtml` before building it.
  */
-export async function sendBrandedEmail(to: string, subject: string, title: string, bodyHtml: string): Promise<void> {
+export async function sendBrandedEmail(
+  to: string,
+  subject: string,
+  title: string,
+  bodyHtml: string,
+  /** Optional extra headers, e.g. List-Unsubscribe / List-Unsubscribe-Post. */
+  headers?: Record<string, string>,
+): Promise<void> {
   const html = wrapEmail(title, bodyHtml)
 
-  if (!(await deliver(to, subject, html))) {
+  if (!(await deliver(to, subject, html, headers))) {
     console.log(`[Unbound Email - DEV] ${subject}`)
     console.log(`  To: ${to}`)
   }

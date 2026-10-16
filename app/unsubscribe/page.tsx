@@ -1,5 +1,8 @@
 import { Suspense } from 'react';
+import type { Metadata } from 'next';
 import UnsubscribeContent from './UnsubscribeContent';
+
+export const metadata: Metadata = { title: 'Email preferences', robots: { index: false, follow: false } };
 
 export default function UnsubscribePage() {
   return (
