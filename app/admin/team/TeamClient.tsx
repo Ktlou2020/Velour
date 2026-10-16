@@ -42,6 +42,58 @@ function when(d: string) {
   return new Date(d).toLocaleString('en-ZA', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Johannesburg' });
 }
 
+function DemoProfilesCard() {
+  const [count, setCount] = useState<number | null>(null);
+  const [canManage, setCanManage] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  useEffect(() => {
+    fetch('/api/admin/demo', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) { setCount(d.count); setCanManage(!!d.canManage); } })
+      .catch(() => {});
+  }, []);
+
+  async function run(action: 'seed' | 'remove') {
+    if (action === 'remove' && !window.confirm('Remove all demo profiles? This deletes them and any chats with them.')) return;
+    setBusy(true);
+    setMsg('');
+    try {
+      const res = await fetch('/api/admin/demo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setMsg(d.error ?? 'Something went wrong.'); return; }
+      setCount(d.count);
+      setMsg(action === 'seed' ? `Added ${d.created} demo profiles${d.skipped ? ` (${d.skipped} already existed)` : ''}.` : `Removed ${d.removed} demo profiles.`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="glass rounded-2xl mt-6 p-4 sm:p-5" aria-labelledby="demo-h">
+      <h2 id="demo-h" className="text-white/80 text-sm font-medium">Demo profiles {count !== null && <span className="text-white/40">({count})</span>}</h2>
+      <p className="text-white/50 text-xs mt-1 leading-relaxed">
+        30 sample members across South Africa so the site doesn&apos;t look empty at launch. They never like or message anyone,
+        don&apos;t count towards founding spots, analytics or emails. Remove them before you start taking payments.
+      </p>
+      {msg && <p role="status" className="text-xs text-emerald-300 mt-2">{msg}</p>}
+      {canManage && (
+        <div className="flex gap-2 mt-3">
+          <button onClick={() => run('seed')} disabled={busy} className="text-xs px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/15 disabled:opacity-50">
+            {busy ? 'Working…' : 'Add demo profiles'}
+          </button>
+          {!!count && (
+            <button onClick={() => run('remove')} disabled={busy} className="text-xs px-3 py-2 rounded-lg bg-red-500/15 text-red-300 hover:bg-red-500/25 disabled:opacity-50">
+              Remove all
+            </button>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function TeamClient() {
   const [data, setData] = useState<TeamData | null>(null);
   const [error, setError] = useState('');
@@ -164,6 +216,8 @@ export default function TeamClient() {
           </ul>
         )}
       </section>
+
+      <DemoProfilesCard />
 
       <section className="glass rounded-2xl mt-6 p-4 sm:p-5" aria-labelledby="log-h">
         <h2 id="log-h" className="text-white/80 text-sm font-medium flex items-center gap-2"><History size={14} aria-hidden="true" /> Admin activity</h2>

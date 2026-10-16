@@ -157,6 +157,7 @@ export async function sendOnce(
 function reachable(now: Date): Prisma.UserWhereInput {
   return {
     isActive: true,
+    isDemo: false,
     emailMarketingOptOut: false,
     emailVerifiedAt: { not: null },
     NOT: { profile: { is: { isSnoozed: true, OR: [{ snoozedUntil: null }, { snoozedUntil: { gt: now } }] } } },
@@ -489,6 +490,7 @@ async function winBackEmail(u: Member): Promise<BuiltEmail> {
       where: {
         id: { not: u.id },
         isActive: true,
+        isDemo: false,
         createdAt: { gt: since },
         profile: { is: { city: { equals: city, mode: 'insensitive' } } },
       },

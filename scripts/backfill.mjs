@@ -22,7 +22,7 @@ async function main() {
     let next = (agg._max.foundingMemberNumber ?? 0) + 1
     if (next > limit) return []
     const candidates = await tx.profile.findMany({
-      where: { foundingMemberNumber: null, OR: [{ isCouple: true }, { gender: 'WOMAN' }], user: { role: { not: 'ADMIN' }, isActive: true } },
+      where: { foundingMemberNumber: null, OR: [{ isCouple: true }, { gender: 'WOMAN' }], user: { role: { not: 'ADMIN' }, isActive: true, isDemo: false } },
       orderBy: { user: { createdAt: 'asc' } },
       take: limit - next + 1,
       select: { userId: true },

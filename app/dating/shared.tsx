@@ -13,7 +13,7 @@ export async function cityMemberCount(names: string[] | undefined): Promise<numb
   if (!names?.length) return null
   try {
     const n = await db.profile.count({
-      where: { city: { in: names, mode: 'insensitive' }, user: { isActive: true } },
+      where: { city: { in: names, mode: 'insensitive' }, user: { isActive: true, isDemo: false } },
     })
     return n >= MIN_PUBLIC_COUNT ? n : null
   } catch {

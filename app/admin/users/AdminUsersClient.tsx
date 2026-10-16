@@ -12,6 +12,7 @@ interface UserRow {
   isActive: boolean;
   isVerified: boolean;
   isSuperAdmin?: boolean;
+  isDemo?: boolean;
   createdAt: Date | string;
   profile: {
     displayName?: string | null;
@@ -200,6 +201,7 @@ export default function AdminUsersClient({ initialUsers, viewerId, viewerIsSuper
                       }`}>
                         {u.isSuperAdmin ? 'SUPER ADMIN' : u.role}
                       </span>
+                      {u.isDemo && <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-300">DEMO</span>}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-0.5">

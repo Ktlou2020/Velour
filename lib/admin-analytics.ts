@@ -96,7 +96,7 @@ async function seriesBetween(from: Date, to: Date, days: number): Promise<Analyt
     signups, activeChatters, messages, matches, likes, profileViews, photoLikes, reviews,
     sparkAnswers, storeOrders, storeRevenueCents, reports, blocks, payments,
   ] = await Promise.all([
-    dailyCount('User', 'createdAt', from, to, `AND "role" <> 'ADMIN'`),
+    dailyCount('User', 'createdAt', from, to, `AND "role" <> 'ADMIN' AND "isDemo" = false`),
     dailyCount('Message', 'createdAt', from, to, '', 'count(DISTINCT "senderId")'),
     dailyCount('Message', 'createdAt', from, to),
     dailyCount('Match', 'createdAt', from, to),
@@ -154,7 +154,8 @@ export async function getAdminAnalytics(days: AnalyticsRange, now = new Date()) 
   const dayAgo = new Date(now.getTime() - DAY_MS)
   const weekAgo = new Date(now.getTime() - 7 * DAY_MS)
   const monthAgo = new Date(now.getTime() - 30 * DAY_MS)
-  const notAdmin = { role: { not: 'ADMIN' } }
+  // Admins and seeded demo profiles aren't members for reporting purposes.
+  const notAdmin = { role: { not: 'ADMIN' }, isDemo: false }
   const cohort = { createdAt: { gte: from, lt: to } }
 
   const [
@@ -198,7 +199,7 @@ export async function getAdminAnalytics(days: AnalyticsRange, now = new Date()) 
           WHEN a < 55 THEN '45–54' ELSE '55+' END AS band, count(*) AS n
         FROM (SELECT date_part('year', age(p."dateOfBirth")) AS a FROM "Profile" p
               JOIN "User" u ON u.id = p."userId"
-              WHERE p."dateOfBirth" IS NOT NULL AND u.role <> 'ADMIN') t
+              WHERE p."dateOfBirth" IS NOT NULL AND u.role <> 'ADMIN' AND u."isDemo" = false) t
         GROUP BY 1`,
     ),
 
@@ -368,7 +369,7 @@ async function retention(from: Date, now: Date, afterDays: number, returnedOnly:
   if (cutoff <= from) return 0
   const rows = await db.$queryRawUnsafe<{ n: bigint }[]>(
     `SELECT count(*) AS n FROM "User" u JOIN "Profile" p ON p."userId" = u.id
-      WHERE u.role <> 'ADMIN' AND u."createdAt" >= $1 AND u."createdAt" < $2
+      WHERE u.role <> 'ADMIN' AND u."isDemo" = false AND u."createdAt" >= $1 AND u."createdAt" < $2
       ${returnedOnly ? `AND p."lastSeen" >= u."createdAt" + interval '${afterDays} days'` : ''}`,
     from,
     cutoff,

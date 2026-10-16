@@ -48,9 +48,9 @@ export async function claimFoundingSpot(userId: string): Promise<number | null> 
     await tx.$executeRawUnsafe(`SELECT pg_advisory_xact_lock(${LOCK_KEY})`)
     const user = await tx.user.findUnique({
       where: { id: userId },
-      select: { role: true, isActive: true, profile: { select: { foundingMemberNumber: true, gender: true, isCouple: true } } },
+      select: { role: true, isActive: true, isDemo: true, profile: { select: { foundingMemberNumber: true, gender: true, isCouple: true } } },
     })
-    if (!user?.profile || user.role === 'ADMIN' || !user.isActive || user.profile.foundingMemberNumber != null) return null
+    if (!user?.profile || user.role === 'ADMIN' || user.isDemo || !user.isActive || user.profile.foundingMemberNumber != null) return null
     if (!isFoundingEligible(user.profile)) return null
     const agg = await tx.profile.aggregate({ _max: { foundingMemberNumber: true } })
     const next = (agg._max.foundingMemberNumber ?? 0) + 1
