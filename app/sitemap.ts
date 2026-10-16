@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { SITE_URL } from './site'
+import { DATING_PAGES } from './dating/data'
 
 // Only public, indexable pages. Member areas require sign-in and are disallowed in robots.ts.
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -14,5 +15,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/terms`, lastModified: now, changeFrequency: 'yearly', priority: 0.4 },
     { url: `${SITE_URL}/refunds`, lastModified: now, changeFrequency: 'yearly', priority: 0.4 },
     { url: `${SITE_URL}/shipping`, lastModified: now, changeFrequency: 'yearly', priority: 0.4 },
+    { url: `${SITE_URL}/dating`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
+    ...DATING_PAGES.map((p) => ({
+      url: `${SITE_URL}/dating/${p.slug}`,
+      lastModified: now,
+      changeFrequency: 'weekly' as const,
+      priority: p.kind === 'audience' ? 0.7 : 0.6,
+    })),
   ]
 }

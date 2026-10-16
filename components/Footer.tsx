@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Logo from './Logo';
 import { BUSINESS } from '@/lib/business';
+import { FOOTER_DATING_LINKS } from '@/app/dating/footer-links';
 
 const COLUMNS = [
   {
@@ -11,6 +12,10 @@ const COLUMNS = [
       { label: 'Join free', href: '/auth/signup' },
       { label: 'Sign in', href: '/auth/signin' },
     ],
+  },
+  {
+    heading: 'Dating near you',
+    links: FOOTER_DATING_LINKS,
   },
   {
     heading: 'Help',
@@ -35,7 +40,7 @@ export default function Footer() {
   return (
     <footer className="bg-[#060609] border-t border-white/5 pt-14 pb-10 px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="grid gap-10 grid-cols-2 md:grid-cols-5 mb-12">
+        <div className="grid gap-10 grid-cols-2 md:grid-cols-6 mb-12">
           <div className="col-span-2">
             <Logo className="mb-4" />
             <p className="text-white/60 text-sm leading-relaxed max-w-sm">

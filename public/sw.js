@@ -1,61 +1,108 @@
-const CACHE_NAME = 'hush-v1';
-const PRECACHE_URLS = ['/', '/members', '/discover', '/messages', '/offline'];
+/* Unbound service worker.
+ *
+ * Caching rules (privacy first — this is an adult dating site):
+ *  - /_next/static/** (content-hashed, immutable) and app icons/screenshots: cache-first.
+ *  - Page navigations: network-only (member pages are personal and are never
+ *    stored); when the network fails, the precached /offline page is shown.
+ *  - /api/** (incl. /api/media, which is private and watermarked per viewer),
+ *    /_next/image, /_next/data, RSC fetches, media, non-GET and cross-origin
+ *    requests: not handled here at all — they always go straight to the network.
+ *  - Bump VERSION to drop every old cache on activate.
+ */
+const VERSION = 'v2';
+const STATIC_CACHE = `unbound-static-${VERSION}`;
+const OFFLINE_CACHE = `unbound-offline-${VERSION}`;
+const CURRENT_CACHES = [STATIC_CACHE, OFFLINE_CACHE];
+const OFFLINE_URL = '/offline';
+const STATIC_MAX_ENTRIES = 300;
+
+const STATIC_FILES = new Set([
+  '/icon-192.png', '/icon-512.png', '/icon-512-maskable.png', '/apple-touch-icon.png',
+  '/favicon.ico', '/favicon-16x16.png', '/favicon-32x32.png',
+]);
+
+function isCacheableStatic(url) {
+  return (
+    url.pathname.startsWith('/_next/static/') ||
+    url.pathname.startsWith('/screenshots/') ||
+    STATIC_FILES.has(url.pathname)
+  );
+}
 
 // ── Install ──────────────────────────────────────────────────────────────────
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) =>
-      cache.addAll(PRECACHE_URLS).catch(() => {})
-    )
+    caches.open(OFFLINE_CACHE)
+      .then((cache) => cache.add(new Request(OFFLINE_URL, { cache: 'reload', credentials: 'same-origin' })))
+      .catch(() => {})
   );
   self.skipWaiting();
 });
 
 // ── Activate ─────────────────────────────────────────────────────────────────
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
+  event.waitUntil((async () => {
+    // Drops old versions, including the legacy 'hush-v1' cache that stored member pages.
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((k) => !CURRENT_CACHES.includes(k)).map((k) => caches.delete(k)));
+    if (self.registration.navigationPreload) {
+      try { await self.registration.navigationPreload.enable(); } catch { /* unsupported */ }
+    }
+    await self.clients.claim();
+  })());
 });
+
+async function trimCache(name, max) {
+  const cache = await caches.open(name);
+  const keys = await cache.keys();
+  if (keys.length <= max) return;
+  await Promise.all(keys.slice(0, keys.length - max).map((k) => cache.delete(k)));
+}
+
+async function cacheFirst(event) {
+  const { request } = event;
+  const cache = await caches.open(STATIC_CACHE);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok && response.type === 'basic') {
+    event.waitUntil(cache.put(request, response.clone()).then(() => trimCache(STATIC_CACHE, STATIC_MAX_ENTRIES)).catch(() => {}));
+  }
+  return response;
+}
+
+async function networkWithOfflineFallback(event) {
+  try {
+    const preloaded = await event.preloadResponse;
+    if (preloaded) return preloaded;
+    return await fetch(event.request);
+  } catch {
+    const offline = await caches.match(OFFLINE_URL, { cacheName: OFFLINE_CACHE });
+    return offline || new Response('You are offline.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  }
+}
 
 // ── Fetch ────────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  if (request.method !== 'GET') return;
+
   const url = new URL(request.url);
-
   if (url.origin !== self.location.origin) return;
+  // Never touch API traffic — /api/media is private and watermarked per viewer.
+  if (url.pathname.startsWith('/api/')) return;
+  // Range requests (video/audio) and media elements always go to the network.
+  if (request.headers.has('range') || request.destination === 'video' || request.destination === 'audio') return;
 
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/')) {
-    // Network-only for auth and API (never serve stale auth)
-    event.respondWith(
-      fetch(request).catch(() =>
-        new Response(JSON.stringify({ error: 'Offline' }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 503,
-        })
-      )
-    );
+  if (request.mode === 'navigate') {
+    event.respondWith(networkWithOfflineFallback(event));
     return;
   }
 
-  // Stale-while-revalidate for pages, cache-first for static assets
-  event.respondWith(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      const cached = await cache.match(request);
-      const fetchPromise = fetch(request)
-        .then((response) => {
-          if (response.ok && request.method === 'GET') {
-            cache.put(request, response.clone());
-          }
-          return response;
-        })
-        .catch(() => cached || caches.match('/offline'));
-      return cached || fetchPromise;
-    })
-  );
+  if (isCacheableStatic(url)) {
+    event.respondWith(cacheFirst(event));
+  }
+  // Everything else (RSC payloads, /_next/image, /_next/data, user uploads) is network-only.
 });
 
 // ── Push Notifications ───────────────────────────────────────────────────────

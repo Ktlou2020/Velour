@@ -1,42 +1,62 @@
 {
-  "name": "Unbound — Where Connections Become Extraordinary",
+  "id": "/members",
+  "name": "Unbound — Private dating for singles & couples",
   "short_name": "Unbound",
-  "description": "The world's most refined lifestyle dating community",
-  "start_url": "/members",
-  "display": "standalone",
-  "background_color": "#0A0A0F",
-  "theme_color": "#DC143C",
-  "orientation": "portrait",
+  "description": "Unbound is a private, members-first dating community for singles and couples in South Africa: photo-verified profiles, private albums, incognito browsing and curated events. Strictly 18+.",
+  "start_url": "/members?source=pwa",
   "scope": "/",
-  "lang": "en",
-  "categories": ["lifestyle", "social"],
+  "display": "standalone",
+  "display_override": ["standalone"],
+  "background_color": "#0A0A0F",
+  "theme_color": "#0A0A0F",
+  "orientation": "portrait",
+  "lang": "en-ZA",
+  "dir": "ltr",
+  "categories": ["social", "lifestyle"],
+  "prefer_related_applications": false,
   "icons": [
-    { "src": "/icon-192.png",           "sizes": "192x192",  "type": "image/png", "purpose": "any" },
-    { "src": "/icon-512.png",           "sizes": "512x512",  "type": "image/png", "purpose": "any" },
-    { "src": "/icon-512-maskable.png",  "sizes": "512x512",  "type": "image/png", "purpose": "maskable" },
-    { "src": "/apple-touch-icon.png",   "sizes": "180x180",  "type": "image/png", "purpose": "any" }
+    { "src": "/icon-192.png",          "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png",          "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/apple-touch-icon.png",  "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/narrow.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Unbound — private, verified dating for singles and couples"
+    },
+    {
+      "src": "/screenshots/wide.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Unbound — private, verified dating for singles and couples"
+    }
   ],
   "shortcuts": [
     {
       "name": "Discover",
       "short_name": "Discover",
       "description": "Browse new profiles",
-      "url": "/discover",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "url": "/discover?source=pwa-shortcut",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Messages",
       "short_name": "Messages",
       "description": "Check your messages",
-      "url": "/messages",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "url": "/messages?source=pwa-shortcut",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
-      "name": "Members",
-      "short_name": "Members",
-      "description": "Browse members",
-      "url": "/members",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "name": "Explore",
+      "short_name": "Explore",
+      "description": "Explore the members' photo gallery",
+      "url": "/gallery/explore?source=pwa-shortcut",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

@@ -68,14 +68,19 @@ export const metadata: Metadata = {
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
     ],
-    apple: "/apple-touch-icon.png",
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
+  // Next 15 renders `capable` as the standard mobile-web-app-capable tag only;
+  // older iOS Safari still needs the apple- prefixed one (added via `other`).
   appleWebApp: {
     capable: true,
     title: SITE_NAME,
     statusBarStyle: "black-translucent",
   },
   formatDetection: { telephone: false },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+  },
 };
 
 export const viewport: Viewport = {
