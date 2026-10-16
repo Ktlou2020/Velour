@@ -1,4 +1,4 @@
-# "db-backup" Railway service: root directory /ops/backup, runs once a day.
+# "db-backup" Railway service (Settings → Source → Root Directory: /ops/backup), runs once a day.
 # 23:00 UTC = 01:00 SAST. See ../../scripts/restore.md to restore.
 [build]
 builder = "nixpacks"
