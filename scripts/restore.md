@@ -1,8 +1,8 @@
 # Restoring a database backup
 
 `ops/backup/backup.mjs` uploads a nightly `pg_dump` in **custom format** (`-Fc`, already compressed) to
-`<bucket>/backups/unbound-YYYY-MM-DDTHH-mm.dump` (UTC). Restore it with `pg_restore` (version 17 or
-newer — the same `postgresql_17` client the backup service uses).
+`<bucket>/backups/unbound-YYYY-MM-DDTHH-mm.dump` (UTC). Restore it with `pg_restore` (version 18 or
+newer — the same `postgresql-client-18` the backup service uses).
 
 Media files are not in the dump: they live on the web service's volume (`UPLOAD_DIR`) or the media
 bucket, and should be restored from the same point in time.

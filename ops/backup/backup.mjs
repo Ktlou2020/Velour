@@ -78,7 +78,9 @@ export function makeS3({ endpoint, bucket, accessKeyId, secretAccessKey, region 
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const req = await aws.sign(url(key, query), { method, body, headers: { ...headers, 'x-amz-content-sha256': payloadHash } })
-        const res = await (fetchImpl ?? fetch)(req, { signal: AbortSignal.timeout(10 * 60_000) })
+        // Send the raw body, not the signed Request: a Request's body is a stream, which
+        // fetch sends chunked with no Content-Length, and S3 rejects that (411).
+        const res = await (fetchImpl ?? fetch)(req.url, { method, headers: req.headers, body, signal: AbortSignal.timeout(10 * 60_000) })
         const text = await res.text()
         if (res.ok) return { res, text }
         const code = /<Code>([^<]+)<\/Code>/.exec(text)?.[1]
@@ -171,7 +173,7 @@ function run(cmd, args, { capture = false } = {}) {
     let stdout = ''
     p.stderr.on('data', (d) => (stderr += d))
     p.stdout?.on('data', (d) => (stdout += d))
-    p.on('error', (e) => reject(new Error(`${cmd}: ${e.code === 'ENOENT' ? 'not installed (add postgresql_17 to nixpacks.toml / use the Nixpacks builder)' : e.message}`)))
+    p.on('error', (e) => reject(new Error(`${cmd}: ${e.code === 'ENOENT' ? 'not installed (build from ops/backup/Dockerfile)' : e.message}`)))
     p.on('close', (code) => (code === 0 ? resolve(stdout) : reject(new Error(`${cmd} exited ${code}: ${stderr.trim().slice(-2000)}`))))
   })
 }
@@ -228,7 +230,7 @@ async function main() {
   const pgDump = env.PG_DUMP_PATH || 'pg_dump'
   const pgRestore = env.PG_RESTORE_PATH || 'pg_restore'
   const version = spawnSync(pgDump, ['--version'], { encoding: 'utf8' })
-  if (version.error) throw new Error(`${pgDump} not found — add postgresql_17 to nixpacks.toml and build this service with Nixpacks`)
+  if (version.error) throw new Error(`${pgDump} not found — build this service from ops/backup/Dockerfile (postgresql-client-18)`)
   log(version.stdout.trim())
 
   const dir = await mkdtemp(join(tmpdir(), 'unbound-backup-'))
