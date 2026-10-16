@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
-import { Eye, EyeOff, Check, User, Users, Circle } from 'lucide-react'
+import { Eye, EyeOff, Check, User, Users, Circle, Gift } from 'lucide-react'
 
 type AccountType = 'SINGLE' | 'COUPLE'
 type Field = 'email' | 'username' | 'password' | 'dateOfBirth' | 'terms'
@@ -35,6 +35,12 @@ export default function SignupPage() {
   const [founding, setFounding] = useState<{ limit: number; left: number } | null>(null)
   useEffect(() => {
     fetch('/api/founding').then((r) => (r.ok ? r.json() : null)).then(setFounding).catch(() => {})
+  }, [])
+  // Invite code from /i/<code> (which also sets an httpOnly cookie the server reads).
+  const [refCode, setRefCode] = useState<string | null>(null)
+  useEffect(() => {
+    const r = new URLSearchParams(window.location.search).get('ref')?.trim().toUpperCase() ?? ''
+    if (/^[23456789A-HJKMNP-Z]{7}$/.test(r)) setRefCode(r)
   }, [])
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<Field, string>>>({})
   const errorRef = useRef<HTMLDivElement>(null)
@@ -86,7 +92,7 @@ export default function SignupPage() {
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim(), email: email.trim(), password, dateOfBirth, accountType }),
+        body: JSON.stringify({ username: username.trim(), email: email.trim(), password, dateOfBirth, accountType, ...(refCode ? { ref: refCode } : {}) }),
       })
       const data = await res.json().catch(() => ({})) as { success?: boolean; error?: string }
       if (!res.ok) {
@@ -134,6 +140,12 @@ export default function SignupPage() {
           {founding && founding.left > 0 && (
             <p className="mt-4 inline-block px-3 py-1.5 rounded-full text-xs border border-[#D4AF37]/40 bg-[#D4AF37]/10 text-[#F5D77A]">
               👑 Founding offer: Platinum free forever for the first {founding.limit} women &amp; couples · {founding.left} {founding.left === 1 ? 'spot' : 'spots'} left
+            </p>
+          )}
+          {refCode && (
+            <p role="status" className="mt-4 flex items-start justify-center gap-2 text-sm text-[#F5D77A]">
+              <Gift size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
+              <span>You were invited — you&apos;ll both get a week of Gold once you&apos;re set up.</span>
             </p>
           )}
         </div>

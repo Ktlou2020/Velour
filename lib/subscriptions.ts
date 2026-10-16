@@ -31,7 +31,9 @@ export const REMINDER_DAYS = 3
 export const PAST_DUE_REMINDER_HOURS = 48
 const DAY_MS = 24 * 60 * 60 * 1000
 
-export type SubscriptionProvider = 'PAYSTACK' | 'PAYFAST' | 'ADMIN'
+// REFERRAL: a free week of Gold from invite-a-friend (lib/referrals.ts) — period 'week',
+// never renews (CANCELLING + cancelAtPeriodEnd), expired by expireDue like any other row.
+export type SubscriptionProvider = 'PAYSTACK' | 'PAYFAST' | 'ADMIN' | 'REFERRAL'
 export type SubscriptionStatus = 'ACTIVE' | 'CANCELLING' | 'PAST_DUE' | 'EXPIRED'
 export const OPEN_STATUSES: SubscriptionStatus[] = ['ACTIVE', 'CANCELLING', 'PAST_DUE']
 
@@ -45,7 +47,7 @@ export function tierLabel(t: MembershipTier | string): string {
 }
 
 export function periodLabel(p: string): string {
-  return p === 'annual' ? 'annual' : 'monthly'
+  return p === 'annual' ? 'annual' : p === 'week' ? 'one week' : 'monthly'
 }
 
 /** +1 month / +1 year, clamped to the month's last day (31 Jan → 28 Feb). */

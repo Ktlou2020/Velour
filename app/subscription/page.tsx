@@ -103,7 +103,10 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
       .map((o) => [o.id, o.number]),
   );
   const subForTier = sub && sub.tier === tier ? sub : null;
-  const priceLabel = subForTier && (subForTier.tier === 'GOLD' || subForTier.tier === 'PLATINUM')
+  const isInviteReward = subForTier?.provider === 'REFERRAL';
+  const priceLabel = isInviteReward
+    ? 'Free week · invite reward'
+    : subForTier && (subForTier.tier === 'GOLD' || subForTier.tier === 'PLATINUM')
     ? `${formatRand(Math.round(MEMBERSHIP_PRICES[subForTier.tier][subForTier.period === 'annual' ? 'annual' : 'monthly'] * 100))} / ${subForTier.period === 'annual' ? 'year' : 'month'}`
     : plan.price;
   const endsOn = sub ? formatDate(sub.currentPeriodEnd) : '';
@@ -183,7 +186,7 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
                 {STATUS_CHIP[sub.status] && (
                   <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_CHIP[sub.status].cls}`}>{STATUS_CHIP[sub.status].label}</span>
                 )}
-                <span className="text-white/45 text-xs">{tierLabel(sub.tier)} · {sub.period === 'annual' ? 'Annual' : 'Monthly'} · {paymentProviderLabel(sub.provider === 'ADMIN' ? null : sub.provider)}</span>
+                <span className="text-white/45 text-xs">{tierLabel(sub.tier)} · {sub.provider === 'REFERRAL' ? '1 week · Invite reward' : <>{sub.period === 'annual' ? 'Annual' : 'Monthly'} · {paymentProviderLabel(sub.provider === 'ADMIN' ? null : sub.provider)}</>}</span>
               </div>
               <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div>
@@ -207,7 +210,9 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
               )}
               {sub.cancelAtPeriodEnd && (
                 <p className="mt-3 text-white/55 text-sm">
-                  {sub.provider === 'PAYSTACK' && !sub.providerPlanCode
+                  {sub.provider === 'REFERRAL'
+                    ? <>This week of Gold is a thank-you for an invite — nothing to pay.</>
+                    : sub.provider === 'PAYSTACK' && !sub.providerPlanCode
                     ? <>This was a one-off payment for the period, so it won&apos;t renew automatically.</>
                     : <>You won&apos;t be charged again.</>}{' '}
                   After {endsOn} your account moves to the Free plan — your profile, matches and messages stay.

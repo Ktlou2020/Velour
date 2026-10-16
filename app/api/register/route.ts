@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { maybeClaimFounding } from '@/lib/founding'
+import { REFERRAL_COOKIE, linkReferral } from '@/lib/referrals'
 import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
 import { sendVerificationEmail } from '@/lib/email'
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest) {
       password?: unknown
       dateOfBirth?: unknown
       accountType?: unknown
+      ref?: unknown
     } | null
     if (!body) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
@@ -125,6 +127,11 @@ export async function POST(req: NextRequest) {
     // they choose a gender in onboarding.
     await maybeClaimFounding(user.id)
 
+    // Invite-a-friend: link this member to whoever invited them (code from the
+    // sign-up form's ?ref= or the ub_ref cookie set by /i/<code>). Invalid
+    // codes and self-referrals are ignored; never blocks sign-up.
+    await linkReferral(user.id, body.ref ?? req.cookies.get(REFERRAL_COOKIE)?.value)
+
     // Send verification email (non-blocking)
     try {
       const verifyToken = generateToken()
@@ -139,10 +146,12 @@ export async function POST(req: NextRequest) {
       console.error('Failed to send verification email after registration:', emailError instanceof Error ? emailError.message : emailError)
     }
 
-    return NextResponse.json(
+    const res = NextResponse.json(
       { success: true, message: 'Account created' },
       { status: 201 }
     )
+    res.cookies.delete(REFERRAL_COOKIE) // invite code used (or not wanted) — forget it
+    return res
   } catch (error) {
     console.error('Registration error:', error)
     return NextResponse.json(

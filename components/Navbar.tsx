@@ -6,7 +6,7 @@ import Logo from './Logo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Menu, X, ChevronDown, LogOut, User, Crown, MessageCircle, Eye, Shield, CreditCard, ShieldCheck, BarChart3, CalendarDays, MessagesSquare, Bell , ShoppingBag, Map as MapIcon } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, Crown, MessageCircle, Eye, Shield, CreditCard, ShieldCheck, BarChart3, CalendarDays, MessagesSquare, Bell , ShoppingBag, Map as MapIcon, Gift } from 'lucide-react';
 import { startTour } from './tour/events';
 import NotificationBell from './NotificationBell';
 import { useUnreadCounts } from './notifications/unread-store';
@@ -191,6 +191,13 @@ export default function Navbar() {
                       >
                         <ShieldCheck size={14} />Safety Centre
                       </Link>
+                      <Link
+                        href="/invite"
+                        className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Gift size={14} />Invite friends
+                      </Link>
                       <button
                         type="button"
                         className="w-full flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
@@ -339,6 +346,13 @@ export default function Navbar() {
                   onClick={() => setMobileOpen(false)}
                 >
                   <ShieldCheck size={14} />Safety Centre
+                </Link>
+                <Link
+                  href="/invite"
+                  className="flex items-center gap-2 px-4 py-2 glass border border-white/10 rounded-lg text-white/70 text-sm"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <Gift size={14} />Invite friends
                 </Link>
                 <button
                   type="button"

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { hashToken } from '@/lib/security'
+import { maybeRewardReferral } from '@/lib/referrals'
 
 // Called via fetch() from /auth/verify-email. Returns JSON (not a redirect) so
 // the page can tell success from failure.
@@ -33,6 +34,9 @@ export async function GET(req: NextRequest) {
         emailVerifyExpiry: null,
       },
     })
+
+    // Invite-a-friend: confirming the email may complete a pending referral.
+    await maybeRewardReferral(user.id)
 
     return NextResponse.json({ verified: true })
   } catch (error) {

@@ -26,6 +26,8 @@ const JOBS = [
   { name: 'view-once', every: 'run' },
   // Membership expiry + reminder emails (documented as the hourly cron).
   { name: 'subscriptions', every: 'hour' },
+  // Invite-a-friend rewards the event hooks missed (idempotent).
+  { name: 'referrals', every: 'hour' },
 ]
 
 const secret = process.env.CRON_SECRET

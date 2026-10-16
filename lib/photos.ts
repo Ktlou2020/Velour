@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { deleteFiles, photoFileKeys } from '@/lib/storage'
+import { maybeRewardReferral } from '@/lib/referrals'
 
 /** Make `photoId` the user's main photo (Photo.isProfile + Profile.profilePhoto). */
 export async function setMainPhoto(userId: string, photo: { id: string; url: string }) {
@@ -8,6 +9,8 @@ export async function setMainPhoto(userId: string, photo: { id: string; url: str
     db.photo.update({ where: { id: photo.id }, data: { isProfile: true } }),
     db.profile.updateMany({ where: { userId }, data: { profilePhoto: photo.url } }),
   ])
+  // Invite-a-friend: a main photo may complete a pending referral (never throws).
+  await maybeRewardReferral(userId)
 }
 
 /** Delete one of the user's photos (row + stored files). Returns false if not theirs. */
