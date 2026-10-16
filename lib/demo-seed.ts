@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
 import { completenessOf } from '@/lib/identity'
 import { DEMO_CITIES, DEMO_PROFILES } from '@/lib/demo-profiles'
+import { deleteFiles, photoFileKeys } from '@/lib/storage'
 
 const HOUR = 60 * 60 * 1000
 const DAY = 24 * HOUR
@@ -91,9 +92,12 @@ export async function removeDemoProfiles(): Promise<number> {
   if (ids.length === 0) return 0
   // Conversations they were in (as participants) go too, so members don't see empty chats.
   const convs = await db.conversationParticipant.findMany({ where: { userId: { in: ids } }, select: { conversationId: true } })
+  // Their uploaded photo files (rows go with the cascade; files must be deleted explicitly).
+  const photos = await db.photo.findMany({ where: { userId: { in: ids } }, select: { storageKey: true, mimeType: true } })
   await db.$transaction([
     db.conversation.deleteMany({ where: { id: { in: [...new Set(convs.map((c) => c.conversationId))] } } }),
     db.user.deleteMany({ where: { id: { in: ids } } }),
   ])
+  await deleteFiles(photos.flatMap(photoFileKeys))
   return ids.length
 }

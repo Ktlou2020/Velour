@@ -84,6 +84,9 @@ function DemoProfilesCard() {
             {busy ? 'Working…' : 'Add demo profiles'}
           </button>
           {!!count && (
+            <a href="/admin/demo" className="text-xs px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/15">Manage photos</a>
+          )}
+          {!!count && (
             <button onClick={() => run('remove')} disabled={busy} className="text-xs px-3 py-2 rounded-lg bg-red-500/15 text-red-300 hover:bg-red-500/25 disabled:opacity-50">
               Remove all
             </button>
