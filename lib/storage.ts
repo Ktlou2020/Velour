@@ -727,12 +727,26 @@ async function s3Fetch(cfg: S3Config, method: string, key: string, init: { heade
   const ac = new AbortController()
   const timer = setTimeout(() => ac.abort(new Error(`S3 ${method} timed out`)), S3_TIMEOUT_MS)
   try {
-    return await cfg.client.fetch(objectUrl(cfg, key), {
-      method,
-      headers: init.headers,
-      body: init.body ? (new Uint8Array(init.body.buffer, init.body.byteOffset, init.body.length) as unknown as BodyInit) : undefined,
-      signal: ac.signal,
-    })
+    if (!init.body) return await cfg.client.fetch(objectUrl(cfg, key), { method, headers: init.headers, signal: ac.signal })
+    // aws4fetch wraps a body in a streaming Request, which Node sends chunked with no
+    // Content-Length — S3 rejects that (411 MissingContentLength). Sign, then send the
+    // raw bytes so fetch sets Content-Length itself.
+    const bytes = new Uint8Array(init.body.buffer, init.body.byteOffset, init.body.length) as unknown as BodyInit
+    for (let attempt = 0; ; attempt++) {
+      const signed = await cfg.client.sign(objectUrl(cfg, key), { method, headers: init.headers, body: bytes })
+      try {
+        const res = await fetch(signed.url, { method, headers: signed.headers, body: bytes, signal: ac.signal })
+        if ((res.status >= 500 || res.status === 429) && attempt < 2) {
+          await res.body?.cancel().catch(() => {})
+          await new Promise((r) => setTimeout(r, 100 * 2 ** attempt))
+          continue
+        }
+        return res
+      } catch (e) {
+        if (ac.signal.aborted || attempt >= 2) throw e
+        await new Promise((r) => setTimeout(r, 100 * 2 ** attempt))
+      }
+    }
   } finally {
     clearTimeout(timer)
   }
