@@ -26,6 +26,8 @@ const JOBS = [
   { name: 'view-once', every: 'run' },
   // Membership expiry + reminder emails (documented as the hourly cron).
   { name: 'subscriptions', every: 'hour' },
+  // Lifecycle emails: deduped per member, quiet hours enforced server-side, 200 per run.
+  { name: 'lifecycle', every: 'run' },
   // Invite-a-friend rewards the event hooks missed (idempotent).
   { name: 'referrals', every: 'hour' },
 ]

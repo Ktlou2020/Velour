@@ -206,7 +206,7 @@ export async function getAdminAnalytics(days: AnalyticsRange, now = new Date()) 
     db.user.count({ where: { ...cohort, ...notAdmin, profile: { profileCompleteness: { gte: 70 } } } }),
     db.user.count({ where: { ...cohort, ...notAdmin, messagesSent: { some: {} } } }),
     db.user.count({ where: { ...cohort, ...notAdmin, OR: [{ matchesA: { some: {} } }, { matchesB: { some: {} } }] } }),
-    db.user.count({ where: { ...cohort, ...notAdmin, profile: { membershipTier: { in: ['GOLD', 'PLATINUM'] }, foundingMemberNumber: null } } }),
+    db.user.count({ where: { ...cohort, ...notAdmin, profile: { membershipTier: { in: ['GOLD', 'PLATINUM'] }, foundingMemberNumber: null }, subscriptions: { none: { provider: 'REFERRAL', status: { in: ['ACTIVE', 'CANCELLING', 'PAST_DUE'] } } } } }),
 
     retention(from, now, 1, true),
     retention(from, now, 1, false),
@@ -257,7 +257,22 @@ export async function getAdminAnalytics(days: AnalyticsRange, now = new Date()) 
   }))
   // Founding members have Platinum free, so they aren't paying members.
   const founders = await db.profile.count({ where: { foundingMemberNumber: { not: null }, user: notAdmin } })
-  const paying = Math.max(0, tiers[1].count + tiers[2].count - founders)
+  // Members whose Gold is only a free invite-reward week aren't paying either.
+  const open = { status: { in: ['ACTIVE', 'CANCELLING', 'PAST_DUE'] } }
+  const referralOnly = await db.profile.count({
+    where: {
+      membershipTier: { in: ['GOLD', 'PLATINUM'] },
+      foundingMemberNumber: null,
+      user: {
+        ...notAdmin,
+        AND: [
+          { subscriptions: { some: { provider: 'REFERRAL', ...open } } },
+          { subscriptions: { none: { provider: { in: ['PAYSTACK', 'PAYFAST'] }, ...open } } },
+        ],
+      },
+    },
+  })
+  const paying = Math.max(0, tiers[1].count + tiers[2].count - founders - referralOnly)
   const ageOrder = ['18–24', '25–34', '35–44', '45–54', '55+']
 
   return {
