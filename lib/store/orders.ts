@@ -18,6 +18,7 @@ import { formatRand } from './format'
 import { shippingFor } from './pricing'
 import { storeSettings } from './settings'
 import { alertAdmin, notifyOrder } from './notify'
+import { submitOrderToCJ } from '@/lib/cj-fulfillment'
 
 export class StoreError extends Error {
   constructor(public status: number, message: string, public code = 'STORE_ERROR', public details?: Record<string, unknown>) {
@@ -308,6 +309,7 @@ export async function applyStorePayment(
       })
       if (r.count === 1) {
         await notifyOrder(order.id, 'PAID')
+        submitOrderToCJ(order.id).catch(e => console.error('[CJ auto-fulfil]', e))
         return 'paid'
       }
       return 'duplicate'
@@ -331,6 +333,7 @@ export async function applyStorePayment(
       }).catch((e) => { if (e instanceof StoreError) return false; throw e })
       if (revived) {
         await notifyOrder(order.id, 'PAID')
+        submitOrderToCJ(order.id).catch(e => console.error('[CJ auto-fulfil]', e))
         return 'paid'
       }
       await db.order.updateMany({

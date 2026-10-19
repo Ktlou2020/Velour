@@ -657,6 +657,8 @@ model Product {
   stock          Int              @default(0)
   sku            String?          @unique
   weightGrams    Int?
+  cjPid          String?          @unique
+  cjVariantId    String?
   tags           String[]         @default([])
   isActive       Boolean          @default(true)
   isFeatured     Boolean          @default(false)
@@ -692,6 +694,7 @@ model Order {
   discreetPackaging Boolean     @default(true)
   courier           String?
   trackingNumber    String?
+  cjOrderId         String?
   // Payment (PayFast once-off)
   paymentRef        String      @unique
   pfPaymentId       String?     @unique
