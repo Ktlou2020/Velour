@@ -14,7 +14,7 @@ try {
 // script-src needs 'unsafe-inline' unless we move to per-request nonces.
 const csp = [
   "default-src 'self'",
-  "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://picsum.photos https://ui-avatars.com https://lh3.googleusercontent.com",
+  "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://picsum.photos https://ui-avatars.com https://lh3.googleusercontent.com https://*.cjdropshipping.com https://cjdropshipping.com",
   "media-src 'self' blob: https://res.cloudinary.com",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
@@ -51,6 +51,8 @@ const nextConfig = {
       { protocol: 'https', hostname: 'ui-avatars.com', pathname: '/**' },
       { protocol: 'https', hostname: 'lh3.googleusercontent.com', pathname: '/**' },
       { protocol: 'https', hostname: 'res.cloudinary.com', pathname: '/**' },
+      { protocol: 'https', hostname: '**.cjdropshipping.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'cjimg.fusionhalo.com', pathname: '/**' },
     ],
   },
   async headers() {
