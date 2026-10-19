@@ -9,6 +9,7 @@ import { LOW_STOCK_THRESHOLD, STORE_NAME } from '@/lib/store/config';
 import { formatRand } from '@/lib/store/format';
 import { maybeReleaseExpired } from '@/lib/store/orders';
 import SeedButton from './SeedButton';
+import CJSyncButton from './CJSyncButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,9 +91,15 @@ export default async function AdminStorePage() {
         )}
       </section>
 
-      <section className="glass rounded-2xl p-5">
-        <h2 className="text-white font-semibold mb-1">Sample catalogue</h2>
-        <p className="text-white/45 text-sm mb-4">Adds 4 categories and 8 text-only sample products (marked “Sample — edit or delete”) so you can see how the store looks. Existing items are left alone.</p>
+      <section className=”glass rounded-2xl p-5”>
+        <h2 className=”text-white font-semibold mb-1”>CJ Dropshipping — import products</h2>
+        <p className=”text-white/45 text-sm mb-3”>Pulls adult wellness products from CJ Dropshipping and adds them to your catalogue with a 35% markup. Safe to run repeatedly — existing products are updated, not duplicated.</p>
+        <CJSyncButton />
+      </section>
+
+      <section className=”glass rounded-2xl p-5”>
+        <h2 className=”text-white font-semibold mb-1”>Sample catalogue</h2>
+        <p className=”text-white/45 text-sm mb-4”>Adds 4 categories and 8 text-only sample products (marked “Sample — edit or delete”) so you can see how the store looks. Existing items are left alone.</p>
         <SeedButton />
       </section>
     </div>
