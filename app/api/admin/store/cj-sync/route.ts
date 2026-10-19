@@ -39,18 +39,20 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}))
-  const keyword: string = body.keyword ?? ''
-  const categoryKeyword: string = body.categoryKeyword ?? 'adult toys'
+  const keyword: string = body.keyword ?? 'vibrator'
+  const categoryKeyword: string = body.categoryKeyword ?? ''
   const pages: number = Math.min(body.pages ?? 3, 10)
 
   let created = 0, updated = 0, skipped = 0
   const errors: string[] = []
+  let totalFetched = 0
 
   for (let page = 1; page <= pages; page++) {
     let list
     try {
       const result = await searchCJProducts({ keyword, categoryKeyword, pageNum: page, pageSize: 50 })
       list = result.list
+      totalFetched += list?.length ?? 0
     } catch (e) {
       errors.push(`Page ${page} fetch failed: ${(e as Error).message}`)
       break
@@ -110,5 +112,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ created, updated, skipped, errors })
+  return NextResponse.json({ created, updated, skipped, errors, totalFetched })
 }

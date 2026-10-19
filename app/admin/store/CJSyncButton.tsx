@@ -8,6 +8,7 @@ interface SyncResult {
   updated: number;
   skipped: number;
   errors: string[];
+  totalFetched: number;
 }
 
 export default function CJSyncButton() {
@@ -23,7 +24,7 @@ export default function CJSyncButton() {
       const res = await fetch('/api/admin/store/cj-sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ categoryKeyword: 'adult toys', pages: 5 }),
+        body: JSON.stringify({ keyword: 'vibrator', pages: 5 }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Sync failed'); return; }
@@ -47,8 +48,8 @@ export default function CJSyncButton() {
       </button>
       {result && (
         <p className="mt-2 text-sm text-white/60">
-          Done — <span className="text-emerald-400">{result.created} created</span>, {result.updated} updated, {result.skipped} skipped
-          {result.errors.length > 0 && <span className="text-red-400"> · {result.errors.length} errors</span>}
+          Done — fetched {result.totalFetched}, <span className="text-emerald-400">{result.created} created</span>, {result.updated} updated, {result.skipped} skipped
+          {result.errors.length > 0 && <span className="text-red-400"> · {result.errors.length} errors: {result.errors[0]}</span>}
         </p>
       )}
       {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
