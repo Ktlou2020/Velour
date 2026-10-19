@@ -100,7 +100,6 @@ export async function POST(req: NextRequest) {
               cjVariantId: primaryVariant ? (primaryVariant as { vid?: string }).vid ?? null : null,
               tags: ['cj'],
               isActive: true,
-              createdBy: session.user!.id!,
             },
           })
           created++
