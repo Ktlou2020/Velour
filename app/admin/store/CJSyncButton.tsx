@@ -9,6 +9,7 @@ interface SyncResult {
   skipped: number;
   errors: string[];
   totalFetched: number;
+  totalInDb?: number;
 }
 
 // Each sync call runs one keyword to avoid timeout
@@ -30,7 +31,7 @@ export default function CJSyncButton() {
     setErrors([]);
     setTotals({ created: 0, updated: 0, skipped: 0, fetched: 0 });
 
-    let created = 0, updated = 0, skipped = 0, fetched = 0;
+    let created = 0, updated = 0, skipped = 0, fetched = 0, lastDbTotal = 0;
     const allErrors: string[] = [];
 
     for (const keyword of KEYWORDS) {
@@ -47,6 +48,7 @@ export default function CJSyncButton() {
           updated += data.updated;
           skipped += data.skipped;
           fetched += data.totalFetched;
+          lastDbTotal = data.totalInDb ?? lastDbTotal;
           allErrors.push(...data.errors);
           setTotals({ created, updated, skipped, fetched });
         } else {
@@ -58,7 +60,7 @@ export default function CJSyncButton() {
       setErrors([...allErrors]);
     }
 
-    setProgress('');
+    setProgress(`Done — ${lastDbTotal} active products in store`);
     setDone(true);
     setLoading(false);
   }

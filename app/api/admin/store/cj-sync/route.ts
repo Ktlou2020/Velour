@@ -104,12 +104,16 @@ export async function POST(req: NextRequest) {
           if (item.productImage) images.push(item.productImage)
           variants.forEach((v: { variantImage?: string }) => { if (v.variantImage && !images.includes(v.variantImage)) images.push(v.variantImage) })
 
-          const existingProduct = await db.product.findUnique({ where: { cjPid: item.pid }, select: { id: true } })
+          // Use upsert on slug as well to avoid unique constraint races
+          const existingProduct = await db.product.findFirst({
+            where: { OR: [{ cjPid: item.pid }, { slug }] },
+            select: { id: true },
+          })
 
           if (existingProduct) {
             await db.product.update({
               where: { id: existingProduct.id },
-              data: { priceCents, stock, images, updatedAt: new Date() },
+              data: { priceCents, stock, images, cjPid: item.pid, updatedAt: new Date() },
             })
             updated++
           } else {
@@ -138,5 +142,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ created, updated, skipped, errors, totalFetched })
+  const totalInDb = await db.product.count({ where: { isActive: true } })
+  return NextResponse.json({ created, updated, skipped, errors, totalFetched, totalInDb })
 }
