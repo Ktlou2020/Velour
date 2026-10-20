@@ -20,26 +20,27 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 // Keywords to search — each runs up to `pages` pages
 const DEFAULT_KEYWORDS = [
-  'women vibrator pleasure',
-  'clitoral stimulator',
-  'dildo women adult',
-  'adult sex toy women',
-  'butt plug adult',
-  'sexy lingerie women',
-  'sexy costume women',
-  'penis ring couple',
-  'handcuffs sex restraint',
+  'sex toy',
+  'dildo',
+  'masturbator',
+  'clitoral vibrator',
+  'anal plug',
+  'cock ring',
+  'lingerie women',
+  'erotic lingerie',
+  'sexy costume adult',
+  'adult toy women',
 ]
 
 // Block products whose CJ category contains any of these (case-insensitive)
 const BLOCKED_CATEGORY_FRAGMENTS = [
-  'hand tool', 'power tool', 'tool set', 'drill', 'construction', 'building',
+  'hand tool', 'power tool', 'tool set', 'drill', 'construction', 'building material',
   'hardware', 'automotive', 'kitchen', 'garden', 'cookware', 'furniture',
-  'phone', 'computer', 'laptop', 'tablet', 'camera', 'electronic',
-  'baby', 'children', 'kids', 'toy car', 'lego',
-  'sport', 'fitness', 'outdoor', 'camping', 'bicycle',
-  'pet ', 'office', 'stationery', 'book',
-  'concrete', 'tiling', 'plumbing', 'electrical',
+  'phone', 'computer', 'laptop', 'tablet', 'camera',
+  'baby', 'children', 'kids', 'toy car',
+  'outdoor', 'camping', 'bicycle',
+  'pet supply', 'office', 'stationery',
+  'concrete', 'tiling', 'plumbing',
 ]
 
 function isBlockedCategory(categoryName: string): boolean {
@@ -162,5 +163,5 @@ export async function POST(req: NextRequest) {
   }
 
   const totalInDb = await db.product.count({ where: { isActive: true } })
-  return NextResponse.json({ created, updated, skipped, errors, totalFetched, totalInDb })
+  return NextResponse.json({ created, updated, skipped, errors, totalFetched, totalInDb, keywordsSearched: keywords })
 }

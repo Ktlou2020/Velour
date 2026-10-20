@@ -94,7 +94,7 @@ export default function CJSyncButton() {
       {(loading || done) && (
         <p className="mt-2 text-sm text-white/60">
           Fetched {totals.fetched} · <span className="text-emerald-400">{totals.created} created</span> · {totals.updated} updated · {totals.skipped} skipped
-          {errors.length > 0 && <span className="text-red-400"> · {errors.length} errors</span>}
+          {errors.length > 0 && <span className="text-red-400"> · {errors.length} errors: {errors[0]}</span>}
         </p>
       )}
       {errors.length > 0 && (

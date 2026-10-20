@@ -7,13 +7,13 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 
 const BLOCKED_FRAGMENTS = [
-  'hand tool', 'power tool', 'tool set', 'drill', 'construction', 'building',
+  'hand tool', 'power tool', 'tool set', 'drill', 'construction', 'building material',
   'hardware', 'automotive', 'kitchen', 'garden', 'cookware', 'furniture',
-  'phone', 'computer', 'laptop', 'tablet', 'camera', 'electronic',
-  'baby', 'children', 'kids', 'toy car', 'lego',
-  'sport', 'fitness', 'outdoor', 'camping', 'bicycle',
-  'pet ', 'office', 'stationery', 'book',
-  'concrete', 'tiling', 'plumbing', 'electrical',
+  'phone', 'computer', 'laptop', 'tablet', 'camera',
+  'baby', 'children', 'kids', 'toy car',
+  'outdoor', 'camping', 'bicycle',
+  'pet supply', 'office', 'stationery',
+  'concrete', 'tiling', 'plumbing',
 ]
 
 export async function POST(req: NextRequest) {
