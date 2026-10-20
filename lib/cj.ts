@@ -113,7 +113,7 @@ export async function searchCJProducts(opts: {
   pageSize?: number
 }): Promise<CJProductListPage> {
   return cjGet<CJProductListPage>('/product/list', {
-    categoryKeyword: opts.categoryKeyword ?? 'adult',
+    categoryKeyword: opts.categoryKeyword ?? '',
     productNameEn: opts.keyword ?? '',
     pageNum: opts.pageNum ?? 1,
     pageSize: Math.min(opts.pageSize ?? 20, 200),
