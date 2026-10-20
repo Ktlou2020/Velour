@@ -31,18 +31,6 @@ const DEFAULT_KEYWORDS = [
   'handcuffs restraint',
 ]
 
-// Category name substrings (case-insensitive) that are NOT adult wellness — skip these
-const BLOCKED_CATEGORY_FRAGMENTS = [
-  'kitchen', 'garden', 'tool', 'electronic', 'phone', 'computer', 'laptop',
-  'watch', 'jewel', 'car ', 'auto', 'baby', 'children', 'kids', 'toy car',
-  'sport', 'fitness', 'outdoor', 'camping', 'pet ', 'office', 'stationery',
-  'book', 'hair clip', 'nail art',
-]
-
-function isBlockedCategory(categoryName: string): boolean {
-  const lower = categoryName.toLowerCase()
-  return BLOCKED_CATEGORY_FRAGMENTS.some((f) => lower.includes(f))
-}
 
 function toSlug(name: string, pid: string): string {
   const base = slugify(name, { lower: true, strict: true }).slice(0, 60)
@@ -95,9 +83,6 @@ export async function POST(req: NextRequest) {
         // De-duplicate across keyword searches
         if (seenPids.has(item.pid)) { skipped++; continue }
         seenPids.add(item.pid)
-
-        // Filter out non-adult categories
-        if (isBlockedCategory(item.categoryName || '')) { skipped++; continue }
 
         try {
           const product = await getCJProduct(item.pid).catch(() => item as typeof item)

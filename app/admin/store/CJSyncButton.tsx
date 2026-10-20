@@ -39,7 +39,7 @@ export default function CJSyncButton() {
         const res = await fetch('/api/admin/store/cj-sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ keywords: [keyword], pages: 2 }),
+          body: JSON.stringify({ keywords: [keyword], pages: 3 }),
         });
         const data: SyncResult = await res.json();
         if (res.ok) {
