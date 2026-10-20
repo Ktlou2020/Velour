@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
         if (!costUsd) { skipped++; continue }
 
         const priceCents = toCents(costUsd)
+        if (!isFinite(priceCents) || priceCents <= 0) { skipped++; continue }
         const stock = variants.reduce((s: number, v: { variantStock?: number }) => s + (v.variantStock ?? 0), 0) || 99
         const categoryId = await ensureCategory(item.categoryName || 'Adult Wellness')
         const slug = toSlug(item.productNameEn, item.pid)
