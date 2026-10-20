@@ -24,7 +24,7 @@ export default function CJSyncButton() {
       const res = await fetch('/api/admin/store/cj-sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword: 'vibrator', pages: 5 }),
+        body: JSON.stringify({ pages: 3 }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Sync failed'); return; }
