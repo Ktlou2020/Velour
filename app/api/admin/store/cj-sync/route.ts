@@ -16,6 +16,8 @@ import { db } from '@/lib/db'
 import { searchCJProducts, getCJProduct, toCents } from '@/lib/cj'
 import slugify from 'slugify'
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
 // Keywords to search — each runs up to `pages` pages
 const DEFAULT_KEYWORDS = [
   'vibrator',
@@ -77,11 +79,13 @@ export async function POST(req: NextRequest) {
     for (let page = 1; page <= pages; page++) {
       let list
       try {
-        const result = await searchCJProducts({ keyword, pageNum: page, pageSize: 50 })
+        const result = await searchCJProducts({ keyword, pageNum: page, pageSize: 20 })
         list = result.list
         totalFetched += list?.length ?? 0
+        await sleep(1100)
       } catch (e) {
         errors.push(`"${keyword}" page ${page}: ${(e as Error).message}`)
+        await sleep(2000)
         break
       }
 
@@ -97,6 +101,7 @@ export async function POST(req: NextRequest) {
 
         try {
           const product = await getCJProduct(item.pid).catch(() => item as typeof item)
+          await sleep(1100)
           const variants = (product as typeof item & { variantList?: { variantStock?: number; variantSellPrice?: number }[] }).variantList ?? []
           const primaryVariant = variants[0]
 
