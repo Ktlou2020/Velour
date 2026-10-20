@@ -20,10 +20,26 @@ const KEYWORDS = [
 
 export default function CJSyncButton() {
   const [loading, setLoading] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
+  const [cleanMsg, setCleanMsg] = useState('');
   const [progress, setProgress] = useState('');
   const [totals, setTotals] = useState({ created: 0, updated: 0, skipped: 0, fetched: 0 });
   const [errors, setErrors] = useState<string[]>([]);
   const [done, setDone] = useState(false);
+
+  async function cleanup() {
+    setCleaning(true);
+    setCleanMsg('');
+    try {
+      const res = await fetch('/api/admin/store/cj-cleanup', { method: 'POST' });
+      const data = await res.json() as { deleted: number; message?: string; names?: string[] };
+      setCleanMsg(`Removed ${data.deleted} non-adult products${data.names?.length ? ': ' + data.names.join(', ') : ''}`);
+    } catch {
+      setCleanMsg('Cleanup failed');
+    } finally {
+      setCleaning(false);
+    }
+  }
 
   async function sync() {
     setLoading(true);
@@ -84,6 +100,16 @@ export default function CJSyncButton() {
       {errors.length > 0 && (
         <p className="mt-1 text-xs text-red-400">{errors[0]}</p>
       )}
+      <div className="mt-3 flex items-center gap-3">
+        <button
+          onClick={cleanup}
+          disabled={cleaning || loading}
+          className="text-xs text-white/40 hover:text-red-400 underline disabled:opacity-40 transition-colors"
+        >
+          {cleaning ? 'Removing…' : 'Remove non-adult products'}
+        </button>
+        {cleanMsg && <span className="text-xs text-white/50">{cleanMsg}</span>}
+      </div>
     </div>
   );
 }

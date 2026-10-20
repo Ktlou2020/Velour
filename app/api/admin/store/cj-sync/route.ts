@@ -20,16 +20,32 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 // Keywords to search — each runs up to `pages` pages
 const DEFAULT_KEYWORDS = [
-  'vibrator',
-  'dildo',
-  'sex toy',
-  'lingerie',
-  'sexy costume',
-  'sexy underwear',
-  'adult toy',
-  'butt plug',
-  'handcuffs restraint',
+  'women vibrator pleasure',
+  'clitoral stimulator',
+  'dildo women adult',
+  'adult sex toy women',
+  'butt plug adult',
+  'sexy lingerie women',
+  'sexy costume women',
+  'penis ring couple',
+  'handcuffs sex restraint',
 ]
+
+// Block products whose CJ category contains any of these (case-insensitive)
+const BLOCKED_CATEGORY_FRAGMENTS = [
+  'hand tool', 'power tool', 'tool set', 'drill', 'construction', 'building',
+  'hardware', 'automotive', 'kitchen', 'garden', 'cookware', 'furniture',
+  'phone', 'computer', 'laptop', 'tablet', 'camera', 'electronic',
+  'baby', 'children', 'kids', 'toy car', 'lego',
+  'sport', 'fitness', 'outdoor', 'camping', 'bicycle',
+  'pet ', 'office', 'stationery', 'book',
+  'concrete', 'tiling', 'plumbing', 'electrical',
+]
+
+function isBlockedCategory(categoryName: string): boolean {
+  const lower = categoryName.toLowerCase()
+  return BLOCKED_CATEGORY_FRAGMENTS.some((f) => lower.includes(f))
+}
 
 
 function toSlug(name: string, pid: string): string {
@@ -83,6 +99,9 @@ export async function POST(req: NextRequest) {
         // De-duplicate across keyword searches
         if (seenPids.has(item.pid)) { skipped++; continue }
         seenPids.add(item.pid)
+
+        // Skip hardware, tools, electronics, etc.
+        if (isBlockedCategory(item.categoryName || '')) { skipped++; continue }
 
         try {
           const product = await getCJProduct(item.pid).catch(() => item as typeof item)
