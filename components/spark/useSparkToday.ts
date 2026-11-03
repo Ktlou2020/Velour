@@ -42,16 +42,17 @@ export function markSparkAnswered(answer: string) {
   listeners.forEach((l) => l(cache!.data));
 }
 
-export function useSparkToday(): SparkToday | null {
+/** `enabled: false` skips the fetch entirely (Spark switched off, lib/features.ts). */
+export function useSparkToday(enabled = true): SparkToday | null {
   const { status } = useSession();
   const [data, setData] = useState<SparkToday | null>(cache?.data ?? null);
   useEffect(() => {
-    if (status !== 'authenticated') return;
+    if (!enabled || status !== 'authenticated') return;
     listeners.add(setData);
     fetchToday().then((d) => { if (d) setData(d); });
     // Re-check occasionally (the question changes at midnight SAST).
     const id = setInterval(() => fetchToday(), TTL_MS);
     return () => { listeners.delete(setData); clearInterval(id); };
-  }, [status]);
-  return status === 'authenticated' ? data : null;
+  }, [status, enabled]);
+  return enabled && status === 'authenticated' ? data : null;
 }

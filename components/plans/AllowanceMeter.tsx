@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Heart, Star, Infinity as InfinityIcon } from 'lucide-react';
+import { Heart, Infinity as InfinityIcon } from 'lucide-react';
 import type { Allowance } from '@/app/api/likes/limits';
 
 export type { Allowance };
@@ -13,13 +13,12 @@ function resetPhrase(iso: string): string {
   return `on ${d.toLocaleDateString('en-ZA', { weekday: 'long', timeZone: 'Africa/Johannesburg' })}`;
 }
 
-/** Friendly "38 likes left today · Super likes: 1 left" meter. */
+/** Friendly "38 likes left today" meter. */
 export default function AllowanceMeter({ allowance, className = '' }: { allowance: Allowance | null; className?: string }) {
   if (!allowance) return <div className={`h-6 w-48 rounded-full skeleton ${className}`} aria-hidden="true" />;
-  const { likes, superLikes } = allowance;
+  const { likes } = allowance;
   const pct = likes.limit ? Math.max(0, Math.min(100, ((likes.remaining ?? 0) / likes.limit) * 100)) : 100;
   const low = likes.limit !== null && (likes.remaining ?? 0) <= Math.ceil(likes.limit * 0.2);
-  const superPeriod = superLikes.period === 'day' ? 'today' : 'this week';
 
   return (
     <div className={`flex items-center gap-x-4 gap-y-1.5 flex-wrap text-xs ${className}`} aria-live="polite">
@@ -46,13 +45,6 @@ export default function AllowanceMeter({ allowance, className = '' }: { allowanc
             </span>
           </>
         )}
-      </div>
-      <div className="flex items-center gap-1.5 text-white/75" title={`Refreshes ${resetPhrase(superLikes.resetsAt)}`}>
-        <Star size={12} className="text-[#D4AF37] fill-[#D4AF37]" aria-hidden="true" />
-        <span>
-          Super likes: <span className="font-semibold text-white">{superLikes.remaining}</span> left {superPeriod}
-          {superLikes.bonus > 0 && <span className="text-[#D4AF37]"> +{superLikes.bonus} bonus</span>}
-        </span>
       </div>
       {allowance.tier === 'FREE' && likes.limit !== null && low && (
         <Link href="/upgrade#compare" className="text-[#D4AF37] hover:underline">Unlimited with Gold</Link>

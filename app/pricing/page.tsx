@@ -36,7 +36,7 @@ const CARDS: Card[] = [
     border: 'border-white/10',
     blurb: 'Everything you need to join, browse and start chatting.',
     features: [
-      `${PLANS.FREE.likesPerDay} likes a day + ${PLANS.FREE.superLikes} super like a day`,
+      `${PLANS.FREE.likesPerDay} likes a day`,
       `Messages: unlimited for your first ${NEW_MEMBER_UNLIMITED_MESSAGES_DAYS} days, then ${PLANS.FREE.messagesPer24h} per 24 hours`,
       `Search up to ${PLANS.FREE.maxSearchRadiusKm} km from you`,
       `${PLANS.FREE.dailyPicks} daily picks`,
@@ -53,10 +53,9 @@ const CARDS: Card[] = [
     blurb: 'Unlimited messaging and the tools to find the right people faster.',
     features: [
       'Unlimited messages & likes',
-      `${PLANS.GOLD.superLikes} super likes a week`,
-      'See who liked & viewed you',
+      'See who liked you',
       'Search anywhere, travel mode & advanced filters',
-      `Read receipts & ${PLANS.GOLD.priorityMessagesPerWeek} priority messages a week`,
+      'Read receipts',
       'Monthly profile boost & priority in search',
       'Unlimited private albums & host events',
     ],
@@ -70,11 +69,9 @@ const CARDS: Card[] = [
     blurb: 'Maximum visibility and privacy.',
     features: [
       'Everything in Gold',
-      `${PLANS.PLATINUM.superLikes} super likes a week & unlimited priority messages`,
       'Weekly profile boost & spotlight in discover',
       'Incognito browsing',
-      'Video profile & compatibility insights',
-      'Profile insights dashboard',
+      'Video profile',
     ],
   },
 ]

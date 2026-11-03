@@ -3,17 +3,17 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Home, Compass, MessageCircle, Images, User } from 'lucide-react';
+import { Home, Compass, MessageCircle, Heart, User } from 'lucide-react';
+import { featureOn } from '@/lib/features';
 import { useSparkToday } from './spark/useSparkToday';
 import { useUnreadCounts } from './notifications/unread-store';
 
-// Explore (the public photo gallery) earns a tab; Spark and Events live in the
-// menu and on the Members page.
+// The simple platform: browse, swipe, chat, profile. Matches take the slot Explore had.
 // `tour`: the data-tour anchor the first-run tour spotlights on mobile.
 const TABS: { href: string; label: string; icon: typeof Home; tour: string; showBadge?: boolean; sparkDot?: boolean }[] = [
   { href: '/members', tour: 'members', label: 'Home', icon: Home },
   { href: '/discover', tour: 'discover', label: 'Discover', icon: Compass },
-  { href: '/gallery/explore', tour: 'explore', label: 'Explore', icon: Images },
+  { href: '/matches', tour: 'matches', label: 'Matches', icon: Heart },
   { href: '/messages', tour: 'messages', label: 'Messages', icon: MessageCircle, showBadge: true },
   { href: '/profile', tour: 'profile', label: 'Profile', icon: User },
 ];
@@ -26,7 +26,7 @@ export default function MobileNav() {
   // Messages tab badge = unread MESSAGES (ConversationParticipant.unreadCount,
   // live via the shared SSE store) — not the notification count.
   const { unreadMessages: unread } = useUnreadCounts(status === 'authenticated');
-  const spark = useSparkToday();
+  const spark = useSparkToday(featureOn('spark'));
   const sparkPending = !!spark && !spark.answered;
 
   if (status !== 'authenticated') return null;

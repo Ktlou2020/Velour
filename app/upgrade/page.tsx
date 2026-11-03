@@ -9,12 +9,11 @@ import PlanComparison from '@/components/plans/PlanComparison'
 // Card highlights only — the full, enforced list is the comparison table below
 // (rendered from lib/plans.ts PLAN_FEATURES).
 const FREE_FEATURES = [
-  `${PLANS.FREE.likesPerDay} likes a day + ${PLANS.FREE.superLikes} super like a day`,
+  `${PLANS.FREE.likesPerDay} likes a day`,
   `Messages: unlimited for your first ${NEW_MEMBER_UNLIMITED_MESSAGES_DAYS} days, then ${PLANS.FREE.messagesPer24h} per 24 hours`,
-  'Reactions, chat games & icebreakers',
+  'Photos & emoji reactions in chat',
   `Search up to ${PLANS.FREE.maxSearchRadiusKm} km from you`,
   `${PLANS.FREE.dailyPicks} hand-picked matches every day`,
-  'Daily Spark, status & profile badges',
   'Post in forums, RSVP to events',
   `${PLANS.FREE.privateAlbums} private photo album`,
   'Singles & couples profiles, safety centre',
@@ -23,21 +22,18 @@ const GOLD_FEATURES = [
   'Unlimited messaging',
   `${PLANS.GOLD.chatVideoMaxSec}-second videos in chat`,
   'Unlimited likes',
-  `${PLANS.GOLD.superLikes} super likes a week`,
-  'See who liked you & who viewed you',
+  'See who liked you',
   'Search anywhere & travel mode',
   'Advanced filters & undo your last swipe',
-  `Read receipts & ${PLANS.GOLD.priorityMessagesPerWeek} priority messages a week`,
+  'Read receipts',
   `${PLANS.GOLD.dailyPicks} daily picks, monthly boost, priority in search`,
   'Unlimited private albums & host events',
 ]
 const PLATINUM_FEATURES = [
   'Everything in Gold',
-  `${PLANS.PLATINUM.superLikes} super likes a week & unlimited priority messages`,
   `${PLANS.PLATINUM.dailyPicks} daily picks & a weekly boost`,
   'Spotlight at the top of discover',
-  'Profile insights dashboard',
-  'Incognito browsing & compatibility insights',
+  'Incognito browsing',
   'Video profile',
 ]
 
@@ -284,7 +280,7 @@ export default function UpgradePage() {
             {[
               { icon: MessageCircle, title: 'Unlimited messaging', desc: 'Plus 60-second videos in chat' },
               { icon: Heart, title: 'See who liked you', desc: 'Like them back for an instant match' },
-              { icon: Eye, title: 'See who viewed you', desc: 'Know who is curious about you' },
+              { icon: Eye, title: 'Read receipts', desc: 'Know when your message was seen' },
               { icon: Plane, title: 'Travel mode', desc: 'Meet people before you land' },
             ].map(({ icon: Icon, title, desc }) => (
               <div key={title} className="glass rounded-xl p-5 text-center">

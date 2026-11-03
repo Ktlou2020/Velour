@@ -3,9 +3,9 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import InfiniteMembers, { MemberTile } from '@/components/InfiniteMembers';
+import InfiniteMembers from '@/components/InfiniteMembers';
 import Link from 'next/link';
-import { Lock, Navigation, Users, SlidersHorizontal, Plane, Sparkles, ChevronDown } from 'lucide-react';
+import { Lock, Navigation, Users, SlidersHorizontal, Plane, ChevronDown } from 'lucide-react';
 import { CITIES_BY_COUNTRY, COUNTRIES } from '@/lib/cities';
 import { BODY_TYPE_OPTIONS, INTENTION_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/identity';
 import PlanChip from '@/components/plans/PlanChip';
@@ -78,7 +78,7 @@ function list(v: string | undefined): string[] {
 
 export default function MembersContent({
   members, total, searchParams, canChangeCity, profileCountry, callerHasLocation = false,
-  advancedFilters = false, travel = null, canTravel = false, spotlight = [],
+  advancedFilters = false, travel = null,
   radiusKm = null, maxRadiusKm = 250, sort: appliedSort = 'active', unknownDistance = 0, homeLat = null, homeLng = null,
   inRadius, furtherAway = 0,
 }: Props) {
@@ -184,10 +184,6 @@ export default function MembersContent({
           <Plane size={13} aria-hidden="true" className="flex-shrink-0" />
           <span className="truncate">Exploring {travel.city} until {shortDate(travel.until)}</span>
           <span className="text-sky-200/70 flex-shrink-0">· Change</span>
-        </Link>
-      ) : canTravel ? (
-        <Link href="/account#travel" className="inline-flex items-center gap-1.5 text-white/60 hover:text-white text-xs mb-5">
-          <Plane size={12} aria-hidden="true" /> Travelling soon? Turn on travel mode
         </Link>
       ) : null}
 
@@ -310,6 +306,7 @@ export default function MembersContent({
             <span className="text-white/70 text-sm">Online now</span>
           </label>
 
+          {advancedFilters && (
           <button
             onClick={() => setShowAdvanced((v) => !v)}
             aria-expanded={showAdvanced}
@@ -319,9 +316,9 @@ export default function MembersContent({
             <SlidersHorizontal size={13} aria-hidden="true" />
             More filters
             {advancedCount > 0 && <span className="bg-[#DC143C] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{advancedCount}</span>}
-            {!advancedFilters && <PlanChip tier="GOLD" locked={false} />}
             <ChevronDown size={13} className={`transition-transform ${showAdvanced ? 'rotate-180' : ''}`} aria-hidden="true" />
           </button>
+          )}
 
           <button
             onClick={() => applyFilters()}
@@ -332,8 +329,8 @@ export default function MembersContent({
         </div>
       </div>
 
-      {/* Advanced filters (Gold+). Free members see them locked. Never filters by ethnicity. */}
-      {showAdvanced && (
+      {/* Advanced filters (Gold+ only). Never filters by ethnicity. */}
+      {advancedFilters && showAdvanced && (
         <div id="advanced-filters" className="relative glass rounded-2xl p-4 sm:p-5 mb-6 border border-white/10">
           <div className="flex items-center gap-2 mb-4">
             <h2 className="text-white text-sm font-semibold">Advanced filters</h2>
@@ -462,22 +459,6 @@ export default function MembersContent({
           tier="GOLD"
           onDismiss={() => setNudge(null)}
         />
-      )}
-
-      {/* Platinum spotlight */}
-      {spotlight.length > 0 && (
-        <section aria-labelledby="spotlight-title" className="mb-8">
-          <div className="flex items-center justify-between mb-3">
-            <h2 id="spotlight-title" className="flex items-center gap-1.5 text-white text-sm font-semibold">
-              <Sparkles size={14} className="text-[#D4AF37]" aria-hidden="true" />
-              Spotlight
-              <span className="text-white/50 font-normal text-xs">· Platinum members active now</span>
-            </h2>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 lg:max-w-4xl">
-            {spotlight.map((m) => <MemberTile key={m.id ?? m.username} member={m} watermark={watermark} />)}
-          </div>
-        </section>
       )}
 
       {radiusKm !== null && !searchParams.city && (inRadius ?? 0) < 12 && (maxRadiusKm === null || radiusKm < maxRadiusKm) && (

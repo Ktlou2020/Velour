@@ -4,7 +4,7 @@ import Link from 'next/link';
 import FoundingOffer from '@/components/FoundingOffer';
 import {
   ArrowRight, BadgeCheck, CalendarHeart, Check, ChevronDown, EyeOff, Flag, Heart,
-  ImageOff, MessageCircle, MoonStar, ShieldCheck, Sparkles, Star, UserPlus, Users,
+  ImageOff, MessageCircle, MoonStar, ShieldCheck, UserPlus, Users,
 } from 'lucide-react';
 import LandingNav from './LandingNav';
 import MemberShowcase from './MemberShowcase';
@@ -51,13 +51,9 @@ const PRIVACY = [
 ];
 
 const FEATURES = [
-  { icon: Sparkles, title: 'Transparent compatibility', desc: 'Scores built from mutual interest, shared interests and intentions, age and distance — and we show you why.' },
   { icon: Users, title: 'Inclusive by design', desc: 'Women, men, non-binary people and couples of every kind. Share your identity on your terms, and couples can share one profile or link two.' },
   { icon: CalendarHeart, title: 'Curated events', desc: 'Intimate member gatherings — sundowners, tastings, workshops — where introductions come naturally.' },
-  { icon: MessageCircle, title: 'Conversation, not small talk', desc: 'Profile prompts and icebreakers give you something real to reply to, plus a members-only forum.' },
-  { icon: Sparkles, title: 'A Daily Spark', desc: 'One light question a day — braai or salads, Joburg or Cape Town — answer in a tap and see what others said.' },
-  { icon: Star, title: 'Trusted by reviews', desc: 'Members who’ve met can review each other — respect, communication, authenticity and reliability. Reviews are double-blind and free for everyone.' },
-  { icon: Heart, title: 'Status, badges & a little fun', desc: 'Let people know you’re “Up for coffee” tonight, earn badges as you go, and see what would make your profile shine. All free.' },
+  { icon: MessageCircle, title: 'Conversation, not small talk', desc: 'Profile prompts give you something real to reply to, plus a members-only forum.' },
 ];
 
 const TIERS = [
@@ -73,7 +69,7 @@ const TIERS = [
   },
   {
     name: 'Platinum', price: 'R349', period: 'per month',
-    features: ['Everything in Gold', 'Incognito browsing', 'Weekly profile boost', 'Compatibility insights', 'Video profile'],
+    features: ['Everything in Gold', 'Incognito browsing', 'Weekly profile boost', 'Video profile'],
     cta: 'Start with Platinum', style: 'crimson' as const,
   },
 ];

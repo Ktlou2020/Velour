@@ -220,9 +220,7 @@ export const PLAN_FEATURES: { group: string; items: { label: string; values: Rec
     items: [
       { label: 'Browse members & discover', values: { FREE: true, GOLD: true, PLATINUM: true } },
       { label: 'Likes', values: { FREE: '50 / day', GOLD: 'Unlimited', PLATINUM: 'Unlimited' } },
-      { label: 'Super likes', values: { FREE: '1 / day', GOLD: '5 / week', PLATINUM: '10 / week' } },
       { label: "Today's picks", values: { FREE: '5', GOLD: '10', PLATINUM: '15' } },
-      { label: 'Daily Spark question & answers', values: { FREE: true, GOLD: true, PLATINUM: true } },
       { label: 'Distance search near you', values: { FREE: true, GOLD: true, PLATINUM: true } },
       { label: 'Search radius', values: { FREE: 'Up to 250 km', GOLD: 'Anywhere', PLATINUM: 'Anywhere' } },
       { label: 'Travel mode', values: { FREE: false, GOLD: true, PLATINUM: true } },
@@ -233,12 +231,10 @@ export const PLAN_FEATURES: { group: string; items: { label: string; values: Rec
   {
     group: 'Chat',
     items: [
-      { label: 'Messages you can send (text, photos, videos, voice notes)', values: { FREE: 'Unlimited for 3 days, then 5 / 24 hours', GOLD: 'Unlimited', PLATINUM: 'Unlimited' } },
+      { label: 'Messages you can send (text, photos, videos)', values: { FREE: 'Unlimited for 3 days, then 5 / 24 hours', GOLD: 'Unlimited', PLATINUM: 'Unlimited' } },
       { label: 'Reactions & receiving messages', values: { FREE: true, GOLD: true, PLATINUM: true } },
       { label: 'Video length in chat', values: { FREE: '5 sec', GOLD: '60 sec', PLATINUM: '3 min' } },
-      { label: 'Chat games & icebreakers', values: { FREE: true, GOLD: true, PLATINUM: true } },
       { label: 'Read receipts', values: { FREE: false, GOLD: true, PLATINUM: true } },
-      { label: 'Priority messages', values: { FREE: false, GOLD: '3 / week', PLATINUM: 'Unlimited' } },
     ],
   },
   {
@@ -246,17 +242,12 @@ export const PLAN_FEATURES: { group: string; items: { label: string; values: Rec
     items: [
       { label: 'Photo gallery & albums', values: { FREE: true, GOLD: true, PLATINUM: true } },
       { label: 'Private albums', values: { FREE: '1', GOLD: 'Unlimited', PLATINUM: 'Unlimited' } },
-      { label: 'Status, badges & profile strength', values: { FREE: true, GOLD: true, PLATINUM: true } },
-      { label: 'Reviews & trust score', values: { FREE: true, GOLD: true, PLATINUM: true } },
       { label: 'See who liked you', values: { FREE: false, GOLD: true, PLATINUM: true } },
-      { label: 'See who viewed you', values: { FREE: false, GOLD: true, PLATINUM: true } },
       { label: 'Profile boost', values: { FREE: false, GOLD: 'Monthly', PLATINUM: 'Weekly' } },
       { label: 'Priority in search', values: { FREE: false, GOLD: true, PLATINUM: true } },
       { label: 'Spotlight in discover', values: { FREE: false, GOLD: false, PLATINUM: true } },
       { label: 'Incognito browsing', values: { FREE: false, GOLD: false, PLATINUM: true } },
       { label: 'Video profile', values: { FREE: false, GOLD: false, PLATINUM: true } },
-      { label: 'Compatibility insights', values: { FREE: false, GOLD: false, PLATINUM: true } },
-      { label: 'Profile insights dashboard', values: { FREE: false, GOLD: false, PLATINUM: true } },
     ],
   },
   {

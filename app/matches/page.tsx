@@ -158,24 +158,13 @@ export default function MatchesPage() {
             const name = m.displayName || m.username;
             const age = m.isCouple && m.ages?.length ? m.ages.join(' & ') : m.age;
             return (
-              <div key={l.id} className={`shrink-0 w-40 glass rounded-2xl overflow-hidden ${l.type === 'SUPERLIKE' ? 'ring-1 ring-[#D4AF37]/50' : ''}`}>
+              <div key={l.id} className={`shrink-0 w-40 glass rounded-2xl overflow-hidden`}>
                 <Link href={`/members/${m.username}`} className="block aspect-[3/4] relative bg-gradient-to-br from-rose-950 to-[#0A0A0F]">
                   {m.profilePhotoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <ProtectedImage src={m.profilePhotoUrl} alt={name} className="w-full h-full" />
                   ) : (
                     <span className="absolute inset-0 flex items-center justify-center text-white/55 text-3xl font-bold font-serif">{name.slice(0, 2).toUpperCase()}</span>
-                  )}
-                  {l.type === 'SUPERLIKE' && (
-                    <span className="absolute top-2 left-2 flex items-center gap-1 bg-[#D4AF37] text-[#0A0A0F] text-[10px] font-bold px-1.5 py-0.5 rounded-md">
-                      <Star size={9} className="fill-[#0A0A0F]" aria-hidden="true" /> SUPER
-                    </span>
-                  )}
-                  {l.type === 'WINK' && <span className="absolute top-2 left-2 glass text-[11px] px-1.5 py-0.5 rounded-md" title="Winked at you">😉</span>}
-                  {typeof m.compatibility === 'number' && m.compatibility > 0 && (
-                    <span className="absolute bottom-2 left-2 flex items-center gap-0.5 glass text-[10px] font-bold px-1.5 py-0.5 rounded-md text-[#D4AF37]">
-                      <Sparkles size={9} aria-hidden="true" /> {m.compatibility}%
-                    </span>
                   )}
                 </Link>
                 <div className="p-2.5">

@@ -6,8 +6,6 @@ import { db } from '@/lib/db';
 import MemberProfileClient from './MemberProfileClient';
 import { recordProfileView } from '@/lib/views';
 import { activeStatus } from '@/components/status/status';
-import { earnedForDisplay, loadBadges } from '@/lib/badges';
-import { loadSparkAnswers } from '@/app/api/spark/data';
 import { compatibility, ageFromDob } from '@/lib/compat';
 import { distanceKm, formatDistance } from '@/lib/geo';
 import { parsePrompts } from '@/app/profile/prompts';
@@ -102,11 +100,7 @@ export default async function MemberProfilePage({ params }: PageProps) {
   // who can see their viewers are notified (all inside recordProfileView).
   // Publish any reviews whose 14-day blind period is over (cheap; also run by cron).
   await reviewMaintenance();
-  const [badges, sparkAnswers] = await Promise.all([
-    loadBadges(user.id),
-    loadSparkAnswers(user.id, 3),
-    currentUser?.id && viewer ? recordProfileView(currentUser.id, user.id) : Promise.resolve(),
-  ]);
+  if (currentUser?.id && viewer) await recordProfileView(currentUser.id, user.id);
 
   // Compatibility + coarse distance (raw coordinates never leave the server)
   const ownerInterests = user.interests.map(i => i.interest?.name ?? '').filter(Boolean);
@@ -181,9 +175,6 @@ export default async function MemberProfilePage({ params }: PageProps) {
     insightsLocked: !!compat && !insights,
     distance: distanceLabel,
     status: activeStatus(user.profile),
-    // The hero already shows the Verified pill.
-    badges: earnedForDisplay(badges).filter((b) => b.id !== 'verified'),
-    sparkAnswers,
     reviewName: firstName(user),
     rating: user.profile && user.profile.ratingCount > 0 && user.profile.ratingAvg != null
       ? { avg: Math.round(user.profile.ratingAvg * 10) / 10, count: user.profile.ratingCount }

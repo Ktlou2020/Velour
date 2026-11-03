@@ -3,24 +3,13 @@
 import { useState } from 'react';
 import ProtectedVideo from '@/components/ProtectedVideo';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import {
-  MapPin, Shield, Eye, Heart, MessageCircle, Flag, Crown, Star, Camera, X, Check,
-  Zap, Calendar, UserCheck, Flame, ChevronLeft, ChevronRight, Quote, Video, Navigation, Sparkles,
-  Ban,
-} from 'lucide-react';
-import type { ReactElement } from 'react';
+import { MapPin, Shield, Eye, Heart, MessageCircle, Flag, Camera, X, Check, Zap, Calendar, UserCheck, Flame, ChevronLeft, ChevronRight, Quote, Video, Navigation, Ban } from 'lucide-react';
 import type { Session } from 'next-auth';
 import ProtectedImage from '@/components/ProtectedImage';
 import MemberAlbums from '@/components/albums/MemberAlbums';
 import PersonCard from '@/app/profile/identity/PersonCard';
 import type { PublicIdentity } from '@/lib/identity';
-import StatusPill from '@/components/status/StatusPill';
 import type { ActiveStatus } from '@/components/status/status';
-import BadgeRow from '@/components/badges/BadgeRow';
-import SparkAnswers, { type SparkAnswerView } from '@/components/spark/SparkAnswers';
-import type { Badge } from '@/lib/badges';
-import ReviewsSection from '@/components/reviews/ReviewsSection';
 
 interface Photo {
   id: string;
@@ -55,8 +44,6 @@ interface Profile {
   videoUrl?: string;
   prompts?: { question: string; answer: string }[];
   status?: ActiveStatus | null;
-  badges?: Badge[];
-  sparkAnswers?: SparkAnswerView[];
   reviewName?: string;
   /** Review score (only when there's at least one published review). */
   rating?: { avg: number; count: number } | null;
@@ -78,24 +65,9 @@ const REPORT_REASONS = [
   'Other',
 ];
 
-const TIER_BADGE: Record<string, ReactElement> = {
-  GOLD: (
-    <span className="flex items-center gap-1 bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] text-xs font-bold px-2.5 py-1 rounded-full">
-      <Crown size={10} /> Gold
-    </span>
-  ),
-  PLATINUM: (
-    <span className="flex items-center gap-1 bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-bold px-2.5 py-1 rounded-full">
-      <Star size={10} /> Platinum
-    </span>
-  ),
-};
-
 export default function MemberProfileClient({ username, profile: raw, session }: Props) {
   const router = useRouter();
   const [liked, setLiked] = useState(false);
-  const [superLiked, setSuperLiked] = useState(false);
-  const [winked, setWinked] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [blocking, setBlocking] = useState(false);
   const [reportReason, setReportReason] = useState('');
@@ -111,9 +83,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
   const displayName = p.displayName || username.replace(/_/g, ' ');
   const initials = displayName.slice(0, 2).toUpperCase();
   const location = [p.city, p.country].filter(Boolean).join(', ') || 'Unknown location';
-  const tier = p.membershipTier ?? 'FREE';
   const heroPhoto = photos.find(ph => ph.isProfile) ?? photos[0];
-  const compatScore = p.compatibilityScore;
   const sharedSet = new Set((p.sharedInterests ?? []).map((i) => i.toLowerCase()));
   const identity = p.identity;
   const isCouple = !!identity?.isCouple;
@@ -126,21 +96,6 @@ export default function MemberProfileClient({ username, profile: raw, session }:
   async function handleLike() {
     setLiked(!liked);
     await fetch('/api/likes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUsername: username, type: 'LIKE' }) }).catch(() => {});
-  }
-
-  async function handleSuperLike() {
-    setSuperLiked(!superLiked);
-    const res = await fetch('/api/likes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUsername: username, type: 'SUPERLIKE' }) }).catch(() => null);
-    if (res && !res.ok) {
-      setSuperLiked(false);
-      const d = await res.json().catch(() => ({})) as { error?: string };
-      alert(d.error ?? 'Not enough super like credits');
-    }
-  }
-
-  async function handleWink() {
-    setWinked(!winked);
-    await fetch('/api/likes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUsername: username, type: 'WINK' }) }).catch(() => {});
   }
 
   async function handleMessage() {
@@ -219,7 +174,6 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                     {identity?.coupleBadge ?? 'Couple'}
                   </span>
                 )}
-                {tier !== 'FREE' && TIER_BADGE[tier]}
                 {p.isVerified && (
                   <span className="flex items-center gap-1 bg-blue-500/20 border border-blue-500/40 text-blue-300 text-xs font-bold px-2.5 py-1 rounded-full">
                     <Check size={10} strokeWidth={3} /> Verified
@@ -230,19 +184,11 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                 <span className="flex items-center gap-1.5"><MapPin size={13} />{location}</span>
                 {p.distance && <span className="flex items-center gap-1.5"><Navigation size={13} />{p.distance}</span>}
                 {ageText && <span className="flex items-center gap-1.5"><Calendar size={13} />{ageText}</span>}
-                {p.rating && (
-                  <a href="#reviews" className="flex items-center gap-1.5 text-[#F5D77A] hover:text-white font-semibold">
-                    <Star size={13} className="fill-[#D4AF37] text-[#D4AF37]" aria-hidden="true" />
-                    {p.rating.avg.toFixed(1)} · {p.rating.count} review{p.rating.count === 1 ? '' : 's'}
-                  </a>
-                )}
                 {p.isOnline
                   ? <span className="flex items-center gap-1.5 text-emerald-400"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Online now</span>
                   : p.memberSince && <span className="flex items-center gap-1.5"><UserCheck size={13} />Since {p.memberSince}</span>
                 }
               </div>
-              {p.status && <StatusPill status={p.status} className="mt-3" />}
-              {(p.badges?.length ?? 0) > 0 && <BadgeRow badges={p.badges ?? []} max={5} className="mt-3" />}
             </div>
           </div>
 
@@ -265,21 +211,6 @@ export default function MemberProfileClient({ username, profile: raw, session }:
               {liked ? 'Liked!' : 'Like'}
             </button>
             <button
-              onClick={handleSuperLike}
-              aria-pressed={superLiked}
-              className={`glass border px-4 sm:px-5 py-3 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all hover:scale-105 active:scale-95 ${superLiked ? 'border-[#D4AF37]/70 bg-[#D4AF37]/15 text-[#D4AF37]' : 'border-white/20 hover:border-[#D4AF37]/40 text-white'}`}
-            >
-              <Star size={16} className={superLiked ? 'fill-current' : ''} />
-              Super Like
-            </button>
-            <button
-              onClick={handleWink}
-              aria-pressed={winked}
-              className={`glass border px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2 transition-all hover:scale-105 active:scale-95 ${winked ? 'border-amber-400/60 bg-amber-500/10 text-amber-400' : 'border-white/20 text-white/70 hover:text-white'}`}
-            >
-              <span aria-hidden="true">😉</span> {winked ? 'Winked!' : 'Wink'}
-            </button>
-            <button
               onClick={handleBlock}
               disabled={blocking}
               className="glass w-11 h-11 sm:w-auto sm:h-auto sm:px-4 sm:py-3 flex items-center justify-center rounded-xl text-white/65 hover:text-red-400 text-sm transition-all ml-auto disabled:opacity-40"
@@ -297,23 +228,6 @@ export default function MemberProfileClient({ username, profile: raw, session }:
               <Flag size={16} aria-hidden="true" />
             </button>
           </div>
-        </div>
-      </div>
-
-      {/* ─── STATS BAR ────────────────────────────────────────────────── */}
-      <div className="border-y border-white/5 bg-white/[0.02]">
-        <div className="max-w-5xl mx-auto px-4 grid grid-cols-3 divide-x divide-white/5">
-          {[
-            { icon: Eye, label: 'Views', value: (p.profileViews ?? 0).toLocaleString(), color: 'text-blue-400' },
-            { icon: Heart, label: 'Likes', value: (p.likesReceived ?? 0).toLocaleString(), color: 'text-[#DC143C]' },
-            { icon: Camera, label: 'Photos', value: String(photos.length), color: 'text-purple-400' },
-          ].map(({ icon: Icon, label, value, color }) => (
-            <div key={label} className="py-4 text-center">
-              <Icon size={16} className={`${color} mx-auto mb-1`} />
-              <p className="text-white font-bold text-lg leading-none">{value}</p>
-              <p className="text-white/60 text-xs mt-0.5">{label}</p>
-            </div>
-          ))}
         </div>
       </div>
 
@@ -363,11 +277,6 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                 </div>
               ))}
             </div>
-          )}
-
-          {/* Daily Spark answers */}
-          {(p.sparkAnswers?.length ?? 0) > 0 && (
-            <SparkAnswers title="Their Spark answers" answers={p.sparkAnswers ?? []} />
           )}
 
           {/* Video profile */}
@@ -436,9 +345,6 @@ export default function MemberProfileClient({ username, profile: raw, session }:
             </div>
           )}
 
-          {/* Reviews (Airbnb-style; members who've chatted can review each other) */}
-          {session?.user && <ReviewsSection username={username} name={p.reviewName || displayName} />}
-
           {/* Photo Gallery */}
           {photos.length > 0 && (
             <div className="glass rounded-2xl p-6">
@@ -470,63 +376,6 @@ export default function MemberProfileClient({ username, profile: raw, session }:
 
         {/* ─── SIDEBAR ──────────────────────────────────────────────────── */}
         <div className="space-y-5">
-          {/* Compatibility */}
-          {compatScore !== undefined && (
-          <div className="glass rounded-2xl p-6 text-center">
-            <p className="text-white/65 text-xs font-medium uppercase tracking-wider mb-4">Compatibility</p>
-            <div className="relative w-32 h-32 mx-auto mb-3">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
-                <circle
-                  cx="50" cy="50" r="40"
-                  fill="none"
-                  stroke="url(#compGrad)"
-                  strokeWidth="10"
-                  strokeDasharray={`${compatScore * 2.51} ${100 * 2.51}`}
-                  strokeLinecap="round"
-                />
-                <defs>
-                  <linearGradient id="compGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#DC143C" />
-                    <stop offset="100%" stopColor="#D4AF37" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-bold text-white leading-none">{compatScore}</span>
-                <span className="text-white/60 text-xs mt-0.5">% match</span>
-              </div>
-            </div>
-            {p.insightsLocked ? (
-              <Link href="/upgrade" className="block mt-4 text-xs text-purple-300 hover:text-purple-200 border border-purple-500/25 bg-purple-500/10 rounded-xl px-3 py-2 transition-colors">
-                <Star size={11} className="inline -mt-0.5 mr-1" />
-                See why you match with Platinum
-              </Link>
-            ) : (p.compatibilityReasons ?? []).length > 0 ? (
-              <ul className="space-y-1.5 text-left mt-4">
-                {(p.compatibilityReasons ?? []).map((r) => (
-                  <li key={r} className="flex items-center gap-2 text-sm text-white/70">
-                    <Sparkles size={12} className="text-[#D4AF37] flex-shrink-0" />{r}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-white/60 text-xs">Add interests, who you&apos;d like to meet and what you&apos;re here for to improve your matches</p>
-            )}
-            {(p.sharedInterests ?? []).length > 0 && (
-              <div className="mt-4 text-left">
-                <p className="text-white/60 text-xs mb-2">You both like</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(p.sharedInterests ?? []).map((i) => (
-                    <span key={i} className="bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] px-2.5 py-1 rounded-full text-xs">{i}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-            <p className="text-white/55 text-[11px] mt-4">Based on mutual interest, shared interests &amp; intentions, age and distance</p>
-          </div>
-          )}
-
           {/* Profile details (individuals: their own; couples: shared bits — partner details are above) */}
           {(() => {
             const rows: { label: string; value?: string }[] = [
@@ -565,20 +414,6 @@ export default function MemberProfileClient({ username, profile: raw, session }:
             );
           })()}
 
-          {/* Upgrade CTA — only for non-premium viewer */}
-          {session && (
-            <div className="glass rounded-2xl p-6 border border-[#D4AF37]/15 bg-gradient-to-b from-[#D4AF37]/5 to-transparent">
-              <Crown size={22} className="text-[#D4AF37] mb-3" />
-              <h3 className="text-white font-bold mb-1.5">Unlock More</h3>
-              <p className="text-white/65 text-xs mb-4 leading-relaxed">See who liked you, send unlimited messages and get priority in search results.</p>
-              <Link
-                href="/upgrade"
-                className="block text-center bg-gradient-to-r from-[#D4AF37] to-[#B8960C] hover:from-[#F4D03F] hover:to-[#D4AF37] text-[#0A0A0F] py-2.5 rounded-xl text-sm font-bold transition-all"
-              >
-                View Plans
-              </Link>
-            </div>
-          )}
         </div>
       </div>
 

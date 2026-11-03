@@ -6,26 +6,26 @@ import Logo from './Logo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Menu, X, ChevronDown, LogOut, User, Crown, MessageCircle, Eye, Shield, CreditCard, ShieldCheck, BarChart3, CalendarDays, MessagesSquare, Bell , ShoppingBag, Map as MapIcon, Gift } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, Shield, CreditCard, ShieldCheck, Bell, Map as MapIcon } from 'lucide-react';
 import { startTour } from './tour/events';
+import { featureOn } from '@/lib/features';
 import NotificationBell from './NotificationBell';
 import { useUnreadCounts } from './notifications/unread-store';
 import ProfileCompletionBanner from './ProfileCompletionBanner';
 import { useSparkToday } from './spark/useSparkToday';
 
-// `wide`: only shown in the desktop bar from xl up (they move into the account menu below that).
 // `tour`: the data-tour anchor the first-run tour spotlights (components/tour).
-const NAV_LINKS: { href: string; label: string; showBadge?: boolean; sparkDot?: boolean; wide?: boolean; tour?: string }[] = [
+// The simple platform keeps the core sections; optional ones show only when switched on (lib/features.ts).
+const NAV_LINKS: { href: string; label: string; showBadge?: boolean; sparkDot?: boolean; tour?: string }[] = [
   { href: '/members', label: 'Members', tour: 'members' },
   { href: '/discover', label: 'Discover', tour: 'discover' },
-  { href: '/spark', label: 'Spark', sparkDot: true },
-  { href: '/matches', label: 'Matches' },
+  { href: '/matches', label: 'Matches', tour: 'matches' },
   { href: '/messages', label: 'Messages', showBadge: true, tour: 'messages' },
-  { href: '/gallery/explore', label: 'Explore', tour: 'explore' },
-  { href: '/gallery', label: 'Gallery' },
-  { href: '/events', label: 'Events', wide: true },
-  { href: '/forums', label: 'Forums', wide: true },
-  { href: '/store', label: STORE_NAME, wide: true },
+  { href: '/events', label: 'Events' },
+  { href: '/forums', label: 'Forums' },
+  ...(featureOn('spark') ? [{ href: '/spark', label: 'Spark', sparkDot: true }] : []),
+  ...(featureOn('explore') ? [{ href: '/gallery/explore', label: 'Explore', tour: 'explore' }] : []),
+  ...(featureOn('store') ? [{ href: '/store', label: STORE_NAME }] : []),
 ];
 
 export default function Navbar() {
@@ -33,13 +33,10 @@ export default function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const pathname = usePathname();
   const { data: session, status } = useSession();
-  const spark = useSparkToday();
+  const spark = useSparkToday(featureOn('spark'));
   const sparkPending = !!spark && !spark.answered;
 
-  const isActive = (href: string) =>
-    href === '/gallery'
-      ? pathname.startsWith('/gallery') && !pathname.startsWith('/gallery/explore')
-      : pathname.startsWith(href);
+  const isActive = (href: string) => pathname.startsWith(href);
 
   const username = (session?.user as { username?: string })?.username ?? session?.user?.email ?? '';
   const initials = username.slice(0, 2).toUpperCase() || 'U';
@@ -60,13 +57,13 @@ export default function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden lg:flex items-center gap-1">
-            {NAV_LINKS.map(({ href, label, showBadge, sparkDot, wide, tour }) => (
+            {NAV_LINKS.map(({ href, label, showBadge, sparkDot, tour }) => (
               <Link
                 key={href}
                 href={href}
                 data-tour={tour}
                 aria-label={sparkDot && sparkPending ? `${label} (today's question is waiting)` : undefined}
-                className={`relative ${wide ? 'hidden xl:inline-flex' : 'inline-flex'} px-2.5 xl:px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`relative inline-flex px-2.5 xl:px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   isActive(href) ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -123,66 +120,11 @@ export default function Navbar() {
                         <User size={14} />My Profile
                       </Link>
                       <Link
-                        href="/messages"
-                        className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <MessageCircle size={14} />
-                        Messages
-                        {unreadMessages > 0 && (
-                          <span className="ml-auto min-w-5 h-5 bg-[#DC143C] rounded-full text-white text-xs font-bold flex items-center justify-center px-1">
-                            {unreadMessages}
-                          </span>
-                        )}
-                      </Link>
-                      <Link
-                        href="/upgrade"
-                        className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <Crown size={14} />Upgrade
-                      </Link>
-                      <Link
                         href="/subscription"
                         className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
                         onClick={() => setUserMenuOpen(false)}
                       >
-                        <CreditCard size={14} />Subscription
-                      </Link>
-                      <Link
-                        href="/insights"
-                        className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <BarChart3 size={14} />Profile insights
-                      </Link>
-                      <Link
-                        href="/events"
-                        className="flex xl:hidden items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <CalendarDays size={14} />Events
-                      </Link>
-                      <Link
-                        href="/forums"
-                        className="flex xl:hidden items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <MessagesSquare size={14} />Forums
-                      </Link>
-                      <Link
-                        href="/store"
-                        className="flex xl:hidden items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <ShoppingBag size={14} />{STORE_NAME}
-                      </Link>
-                      <Link
-                        href="/views"
-                        className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <Eye size={14} />Who Viewed Me
+                        <CreditCard size={14} />Membership
                       </Link>
                       <Link
                         href="/safety"
@@ -190,13 +132,6 @@ export default function Navbar() {
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <ShieldCheck size={14} />Safety Centre
-                      </Link>
-                      <Link
-                        href="/invite"
-                        className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <Gift size={14} />Invite friends
                       </Link>
                       <button
                         type="button"
@@ -308,18 +243,11 @@ export default function Navbar() {
                   My Profile
                 </Link>
                 <Link
-                  href="/upgrade"
-                  className="block text-center glass border border-[#D4AF37]/20 px-4 py-2 rounded-lg text-[#D4AF37] text-sm"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  Upgrade
-                </Link>
-                <Link
                   href="/subscription"
                   className="flex items-center gap-2 px-4 py-2 glass border border-white/10 rounded-lg text-white/70 text-sm"
                   onClick={() => setMobileOpen(false)}
                 >
-                  <CreditCard size={14} />Subscription
+                  <CreditCard size={14} />Membership
                 </Link>
                 <Link
                   href="/notifications"
@@ -334,25 +262,11 @@ export default function Navbar() {
                   )}
                 </Link>
                 <Link
-                  href="/views"
-                  className="flex items-center gap-2 px-4 py-2 glass border border-white/10 rounded-lg text-white/70 text-sm"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <Eye size={14} />Who Viewed Me
-                </Link>
-                <Link
                   href="/safety"
                   className="flex items-center gap-2 px-4 py-2 glass border border-white/10 rounded-lg text-white/70 text-sm"
                   onClick={() => setMobileOpen(false)}
                 >
                   <ShieldCheck size={14} />Safety Centre
-                </Link>
-                <Link
-                  href="/invite"
-                  className="flex items-center gap-2 px-4 py-2 glass border border-white/10 rounded-lg text-white/70 text-sm"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <Gift size={14} />Invite friends
                 </Link>
                 <button
                   type="button"

@@ -7,7 +7,7 @@ import EmptyState from '@/components/EmptyState';
 import MatchOverlay from '@/components/MatchOverlay';
 import ProtectedImage from '@/components/ProtectedImage';
 import { useSession } from 'next-auth/react';
-import { X, Heart, Star, MapPin, Zap, Navigation, Sparkles, Undo2, Crown, Lock, Quote, Plane, MessageCircle, Moon } from 'lucide-react';
+import { X, Heart, MapPin, Zap, Navigation, Sparkles, Undo2, Crown, Lock, Quote, Plane, MessageCircle, Moon } from 'lucide-react';
 import AllowanceMeter, { resetPhrase, type Allowance } from '@/components/plans/AllowanceMeter';
 import UpgradeNudge from '@/components/plans/UpgradeNudge';
 import StatusPill from '@/components/status/StatusPill';
@@ -138,7 +138,6 @@ export default function DiscoverPage() {
     function handleKey(e: KeyboardEvent) {
       if (e.key === 'ArrowLeft') doAction('PASS', 'left');
       if (e.key === 'ArrowRight') doAction('LIKE', 'right');
-      if (e.key === 'ArrowUp') doAction('SUPER_LIKE', 'up');
     }
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
@@ -631,14 +630,6 @@ export default function DiscoverPage() {
                 </button>
 
                 <button
-                  onClick={() => doAction('WINK', null)}
-                  className="w-14 h-14 rounded-full glass border-2 border-amber-500/50 hover:border-amber-500 hover:bg-amber-500/10 flex items-center justify-center transition-all hover:scale-110 active:scale-95 text-2xl"
-                  aria-label="Wink"
-                >
-                  <span aria-hidden="true">😉</span>
-                </button>
-
-                <button
                   onClick={() => doAction('LIKE', 'right')}
                   className="w-16 h-16 rounded-full bg-[#DC143C] hover:bg-[#FF1744] flex items-center justify-center transition-all hover:scale-110 active:scale-95"
                   aria-label="Like"
@@ -646,13 +637,6 @@ export default function DiscoverPage() {
                   <Heart className="text-white fill-white" size={28} />
                 </button>
 
-                <button
-                  onClick={() => doAction('SUPER_LIKE', 'up')}
-                  className="w-14 h-14 rounded-full glass border-2 border-[#D4AF37]/50 hover:border-[#D4AF37] hover:bg-[#D4AF37]/10 flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-                  aria-label="Super Like"
-                >
-                  <Star className="text-[#D4AF37]" size={22} />
-                </button>
               </div>
 
               {/* Undo + keyboard hint */}
@@ -670,7 +654,7 @@ export default function DiscoverPage() {
                   </button>
                 )}
                 <p className="hidden md:block text-white/50 text-xs tracking-wide" aria-hidden="true">
-                  ← Pass &nbsp;&nbsp; ❤ Like → &nbsp;&nbsp; ↑ Super Like
+                  ← Pass &nbsp;&nbsp; ❤ Like →
                 </p>
                 <p className="md:hidden text-white/45 text-xs">Swipe or tap to decide</p>
               </div>

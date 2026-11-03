@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { Sparkles, Users, Compass, Images, MessageCircle, Bell, User, ShieldCheck, type LucideIcon } from 'lucide-react'
+import { Sparkles, Users, Compass, Heart, MessageCircle, Bell, User, ShieldCheck, type LucideIcon } from 'lucide-react'
 import { NEW_MEMBER_UNLIMITED_MESSAGES_DAYS, PLANS } from '@/lib/plans'
 
 export type TourStep = {
@@ -48,11 +48,11 @@ export function buildSteps(onLinkClick: () => void): TourStep[] {
       body: <>One profile at a time: like ❤️, send a wink 😉 or pass. When you both like each other, it’s a match.</>,
     },
     {
-      id: 'explore',
-      title: 'Explore',
-      icon: Images,
-      targets: ['explore', 'menu'],
-      body: <>The public photo gallery. Like photos you love and find people through their pictures.</>,
+      id: 'matches',
+      title: 'Matches',
+      icon: Heart,
+      targets: ['matches', 'menu'],
+      body: <>Everyone you’ve matched with. Say hello first — a simple “hi” is how most conversations start.</>,
     },
     {
       id: 'messages',
@@ -76,7 +76,7 @@ export function buildSteps(onLinkClick: () => void): TourStep[] {
       title: 'Notifications',
       icon: Bell,
       targets: ['notifications'],
-      body: <>Likes, winks, matches and profile views show up here, so you never miss a spark.</>,
+      body: <>Likes, winks, matches and new messages show up here.</>,
     },
     {
       id: 'profile',

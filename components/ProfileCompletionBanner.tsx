@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Star, ChevronDown, ChevronUp, X, CheckCircle, Circle, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronUp, X, CheckCircle, Circle } from 'lucide-react';
 
 interface CompletionData {
   completeness: number;
@@ -24,17 +24,11 @@ const FIELD_LABELS: Record<string, { label: string; href: string; hint: string }
   profilePhoto:       { label: 'Profile photo',        href: '/profile', hint: 'Members look for a face before saying hello' },
 };
 
-const MILESTONES = [
-  { pct: 40,  credits: 1, label: '40%',  reward: '+1 Super Like' },
-  { pct: 70,  credits: 2, label: '70%',  reward: '+2 Super Likes' },
-  { pct: 100, credits: 3, label: '100%', reward: '+3 Super Likes' },
-];
 
 export default function ProfileCompletionBanner() {
   const [data, setData] = useState<CompletionData | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [dismissed, setDismissed] = useState(false);
-  const [rewardShown, setRewardShown] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -47,7 +41,6 @@ export default function ProfileCompletionBanner() {
       .then(r => r.json())
       .then((d: CompletionData) => {
         setData(d);
-        if (d.creditsAwarded > 0) setRewardShown(true);
       })
       .catch(() => {});
   }, []);
@@ -55,33 +48,13 @@ export default function ProfileCompletionBanner() {
   if (dismissed || !data) return null;
   // Full-height app screens (chat, swipe deck) have no room for an extra strip.
   const hideStrip = pathname.startsWith('/messages') || pathname.startsWith('/discover') || pathname.startsWith('/onboarding');
-  if (data.completeness >= 100 && !rewardShown) return null;
+  if (data.completeness >= 100) return null;
 
   const pct = data.completeness;
-  const nextMilestone = MILESTONES.find(m => m.pct > pct);
-  const ptsToNext = nextMilestone ? nextMilestone.pct - pct : 0;
   const segWidth = (pct / 100) * 100;
 
   return (
     <>
-      {/* Reward toast */}
-      {rewardShown && data.creditsAwarded > 0 && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-[slideDown_0.4s_ease-out]">
-          <div className="glass border border-[#D4AF37]/40 rounded-2xl px-6 py-4 flex items-center gap-3 shadow-2xl">
-            <div className="w-10 h-10 rounded-full bg-[#D4AF37]/20 flex items-center justify-center">
-              <Sparkles size={20} className="text-[#D4AF37]" />
-            </div>
-            <div>
-              <p className="text-white font-semibold text-sm" role="status">{data.milestone}</p>
-              <p className="text-[#D4AF37] text-xs">+{data.creditsAwarded} Super Like{data.creditsAwarded > 1 ? 's' : ''} awarded!</p>
-            </div>
-            <button onClick={() => setRewardShown(false)} className="ml-2 text-white/60 hover:text-white" aria-label="Close">
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Banner — in normal page flow directly under the fixed navbar
           (mt-16 clears the bar, -mb-16 cancels the page's own pt-16), so it
           never covers page content. Collapsed by default. */}
@@ -93,18 +66,7 @@ export default function ProfileCompletionBanner() {
                 <div className="flex items-center justify-between gap-3 mb-1.5">
                   <p className="text-white/85 text-xs font-medium truncate">
                     Your profile is {pct}% complete
-                    {nextMilestone && (
-                      <span className="text-[#D4AF37] ml-1 hidden sm:inline">· {ptsToNext}% more earns {nextMilestone.reward}</span>
-                    )}
                   </p>
-                  <div className="hidden md:flex items-center gap-3">
-                    {MILESTONES.map(m => (
-                      <span key={m.pct} className={`flex items-center gap-1 text-[11px] ${pct >= m.pct ? 'text-[#D4AF37]' : 'text-white/45'}`}>
-                        <Star size={10} className={pct >= m.pct ? 'fill-current' : ''} aria-hidden="true" />
-                        {m.label}
-                      </span>
-                    ))}
-                  </div>
                 </div>
                 <div
                   className="relative h-1.5 bg-white/10 rounded-full"

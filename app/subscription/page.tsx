@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Crown, Star, CreditCard, ArrowLeft, Heart, MessageSquareText, MessageCircle, Plane, BarChart3, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
+import { Crown, Star, CreditCard, ArrowLeft, Heart, MessageCircle, Plane, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
 import BoostCard from '@/app/profile/BoostCard';
 import PlanComparison from '@/components/plans/PlanComparison';
 import { getAllowance } from '@/app/api/likes/limits';
@@ -20,9 +20,9 @@ import SubscriptionActions from './SubscriptionActions';
 export const dynamic = 'force-dynamic';
 
 const PLAN_META: Record<'FREE' | 'GOLD' | 'PLATINUM', { label: string; price: string; blurb: string }> = {
-  FREE: { label: 'Free', price: 'R0 / month', blurb: 'Matching, messaging (unlimited for your first 3 days, then 5 per 24 hours), Daily Spark, forums and events — free for good.' },
-  GOLD: { label: 'Gold', price: 'R199 / month', blurb: 'Unlimited messaging and likes, 60-second videos, see who liked and viewed you, search anywhere, travel mode and advanced filters.' },
-  PLATINUM: { label: 'Platinum', price: 'R349 / month', blurb: 'Everything in Gold plus spotlight, profile insights, incognito and a weekly boost.' },
+  FREE: { label: 'Free', price: 'R0 / month', blurb: 'Matching, messaging (unlimited for your first 3 days, then 5 per 24 hours), forums and events — free for good.' },
+  GOLD: { label: 'Gold', price: 'R199 / month', blurb: 'Unlimited messaging and likes, 60-second videos, see who liked you, search anywhere, travel mode and advanced filters.' },
+  PLATINUM: { label: 'Platinum', price: 'R349 / month', blurb: 'Everything in Gold plus spotlight, incognito, a video profile and a weekly boost.' },
 };
 
 function resets(iso: string) {
@@ -173,11 +173,6 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
                 {tier === 'FREE' ? 'See Gold & Platinum' : 'Go Platinum'}
               </Link>
             )}
-            {allowance.features.profileInsights && (
-              <Link href="/insights" className="glass border border-purple-400/30 text-purple-200 hover:bg-purple-500/10 px-5 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2">
-                <BarChart3 size={14} /> Profile insights
-              </Link>
-            )}
           </div>
 
           {sub && (
@@ -248,8 +243,8 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
               : allowance.messages.limit === null
               ? `Message as much as you like · chat videos up to ${allowance.features.chatVideoMaxSec >= 120 ? `${allowance.features.chatVideoMaxSec / 60} min` : `${allowance.features.chatVideoMaxSec} sec`}`
               : allowance.messages.resetsAt && (allowance.messages.remaining ?? 0) < allowance.messages.limit
-                ? `Text, photos, videos & voice notes · next one frees up ${new Date(allowance.messages.resetsAt).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Johannesburg' })}`
-                : 'Text, photos, videos & voice notes · unlimited with Gold'}
+                ? `Text, photos & videos · next one frees up ${new Date(allowance.messages.resetsAt).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Johannesburg' })}`
+                : 'Text, photos & videos · unlimited with Gold'}
             accent="#7DD3FC"
           />
           <Meter
@@ -259,22 +254,6 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
             limit={allowance.likes.limit}
             note={allowance.likes.limit === null ? 'Like as many people as you like' : resets(allowance.likes.resetsAt)}
             accent="#FF4D6D"
-          />
-          <Meter
-            icon={Star}
-            label={`Super likes left ${allowance.superLikes.period === 'day' ? 'today' : 'this week'}`}
-            remaining={allowance.superLikes.remaining}
-            limit={allowance.superLikes.limit}
-            note={`${resets(allowance.superLikes.resetsAt)}${allowance.superLikes.bonus > 0 ? ` · +${allowance.superLikes.bonus} bonus from your streak` : ''}`}
-            accent="#D4AF37"
-          />
-          <Meter
-            icon={MessageSquareText}
-            label="Priority messages this week"
-            remaining={allowance.priorityMessages.remaining}
-            limit={allowance.priorityMessages.limit}
-            note={allowance.priorityMessages.limit === 0 ? 'Pin a message to the top of their inbox with Gold' : allowance.priorityMessages.limit === null ? 'Send as many as you like' : resets(allowance.priorityMessages.resetsAt)}
-            accent="#B794F4"
           />
         </div>
 

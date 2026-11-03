@@ -1,5 +1,6 @@
 import { auth } from '@/auth'
 import { NextResponse } from 'next/server'
+import { hiddenRoute } from '@/lib/features'
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth
@@ -30,6 +31,11 @@ export default auth((req) => {
   if (isAuthPage && isLoggedIn && !authPassThrough.some((p) => pathname.startsWith(p))) {
     const membersUrl = new URL('/members', req.nextUrl.origin)
     return NextResponse.redirect(membersUrl)
+  }
+
+  // Sections switched off in the simple platform (lib/features.ts). Admins can still preview them.
+  if (isLoggedIn && hiddenRoute(pathname) && user?.role !== 'ADMIN') {
+    return NextResponse.redirect(new URL('/members', req.nextUrl.origin))
   }
 
   // Admin-only paths

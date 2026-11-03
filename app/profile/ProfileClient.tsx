@@ -5,27 +5,16 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProtectedImage from '@/components/ProtectedImage';
 import {
-  Camera, Eye, Heart, MessageCircle, Users, Crown, Shield,
-  Edit2, Check, X, Trash2, Lock, Star,
-  Globe, Upload
+  Camera, MessageCircle, Crown, Shield, Edit2, Check, X, Trash2, Lock, Globe, Upload,
 } from 'lucide-react';
 import type { Session } from 'next-auth';
 import { CITIES_BY_COUNTRY, COUNTRIES } from '@/lib/cities';
-import BoostCard from './BoostCard';
 import { PromptsEditor, VideoProfileCard, LocationCard, PrivacySettingsCard } from './ProfileExtras';
 import IdentityEditor, { type IdentityInitial } from './IdentityEditor';
 import CoupleLinkCard from './CoupleLinkCard';
 import type { ProfilePrompt } from './prompts';
-import ProfileStrength from './ProfileStrength';
 import type { StrengthFacts } from './strength';
-import StatusControl from '@/components/status/StatusControl';
 import type { ActiveStatus } from '@/components/status/status';
-import BadgeGrid from '@/components/badges/BadgeGrid';
-import BadgeRow from '@/components/badges/BadgeRow';
-import SparkAnswers, { type SparkAnswerView } from '@/components/spark/SparkAnswers';
-import type { Badge } from '@/lib/badges';
-import Link from 'next/link';
-import MyReviewsPanel from '@/components/reviews/MyReviewsPanel';
 import ProfilePhotoPicker from './ProfilePhotoPicker';
 
 interface Photo {
@@ -64,9 +53,7 @@ interface Profile {
   identity?: IdentityInitial;
   pronouns?: string | null;
   status?: ActiveStatus | null;
-  badges?: Badge[];
   strength?: StrengthFacts;
-  sparkAnswers?: SparkAnswerView[];
 }
 
 interface Props {
@@ -74,11 +61,6 @@ interface Props {
   initialProfile: Profile | null;
 }
 
-const TIER_COLORS = {
-  FREE: 'text-white/65 border-white/20',
-  GOLD: 'text-[#D4AF37] border-[#D4AF37]/30 bg-[#D4AF37]/10',
-  PLATINUM: 'text-purple-400 border-purple-500/30 bg-purple-500/10',
-};
 
 export default function ProfileClient({ session, initialProfile }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -101,12 +83,6 @@ export default function ProfileClient({ session, initialProfile }: Props) {
   const name = profile.displayName || displayName || user.name || username;
   const tier = profile.membershipTier || 'FREE';
   const photos: Photo[] = profile.photos || [];
-  // Earned badges for the header row (Verified already has its own pill; one Spark tier only).
-  const headerBadges = (() => {
-    const earned = (profile.badges ?? []).filter((b) => b.earned && b.id !== 'verified');
-    const top = ['spark_30', 'spark_7', 'spark_3'].find((id) => earned.some((b) => b.id === id));
-    return earned.filter((b) => !b.id.startsWith('spark_') || b.id === top);
-  })();
 
   async function saveBio() {
     setSaving(true);
@@ -237,12 +213,6 @@ export default function ProfileClient({ session, initialProfile }: Props) {
     } catch { /* ignore */ }
   }
 
-  const stats = [
-    { icon: Eye, label: 'Profile Views', value: (profile.profileViews ?? 0).toLocaleString(), color: 'text-blue-400' },
-    { icon: Heart, label: 'Likes Received', value: (profile.likesReceived ?? 0).toLocaleString(), color: 'text-[#DC143C]' },
-    { icon: Users, label: 'Matches', value: (profile.matches ?? 0).toLocaleString(), color: 'text-emerald-400' },
-    { icon: MessageCircle, label: 'Messages', value: (profile.messageCount ?? 0).toLocaleString(), color: 'text-purple-400' },
-  ];
 
   return (
     <div className="min-h-screen bg-[#0A0A0F]">
@@ -304,11 +274,6 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                     {profile.pronouns && !profile.isCouple && <span className="text-white/60 text-base font-sans font-normal ml-2">({profile.pronouns})</span>}
                   </h1>
                 )}
-                <div className={`flex items-center gap-1 border px-3 py-1 rounded-full ${TIER_COLORS[tier]}`}>
-                  {tier === 'GOLD' && <Crown size={12} />}
-                  {tier === 'PLATINUM' && <Star size={12} />}
-                  <span className="text-xs font-bold">{tier.charAt(0) + tier.slice(1).toLowerCase()} member</span>
-                </div>
                 {profile.isVerified && (
                   <div className="flex items-center gap-1 glass px-3 py-1 rounded-full">
                     <Shield size={12} className="text-emerald-400" />
@@ -356,35 +321,11 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                 )}
               </div>
 
-              {/* Status ("Free tonight 🍷") + earned badges */}
-              <StatusControl initial={profile.status ?? null} className="mb-3" />
-              {headerBadges.length > 0 && (
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                  <BadgeRow badges={headerBadges} max={4} className="justify-center sm:justify-start" />
-                  <a href="#badges" className="text-xs text-white/55 hover:text-white">All badges</a>
-                </div>
-              )}
             </div>
           </div>
         </div>
 
         <div className="max-w-4xl mx-auto px-4 py-8">
-          {/* Profile strength (identity completeness + photos, prompts & more) */}
-          {profile.strength && (
-            <ProfileStrength facts={{ ...profile.strength, publicPhotos: photos.filter((p) => !p.isPrivate).length }} />
-          )}
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            {stats.map(({ icon: Icon, label, value, color }) => (
-              <div key={label} className="glass rounded-2xl p-4 text-center">
-                <Icon className={`${color} mx-auto mb-2`} size={20} />
-                <div className="text-white text-2xl font-bold mb-0.5">{value}</div>
-                <div className="text-white/60 text-xs">{label}</div>
-              </div>
-            ))}
-          </div>
-
           {/* Bio */}
           <div id="bio" className="glass rounded-2xl p-6 mb-6 scroll-mt-24">
             <div className="flex items-center justify-between mb-4">
@@ -430,29 +371,10 @@ export default function ProfileClient({ session, initialProfile }: Props) {
             {profile.identity && <IdentityEditor initial={profile.identity} />}
           </div>
 
-          {/* Boost */}
-          <BoostCard className="mb-6" />
-
           {/* Prompts */}
           <div id="prompts" className="scroll-mt-24">
             <PromptsEditor initial={profile.prompts ?? []} />
           </div>
-
-          {/* Daily Spark answers (the last few show on your profile) */}
-          <SparkAnswers
-            className="mb-6"
-            title="Your Spark answers"
-            answers={profile.sparkAnswers ?? []}
-            emptyText="Answer today’s Spark and your latest answers show here."
-            footer={
-              <Link href="/spark" className="inline-flex items-center gap-1 mt-4 text-sm font-semibold text-[#FF4D6D] hover:text-[#FF85A1]">
-                Go to today&apos;s Spark →
-              </Link>
-            }
-          />
-
-          {/* Reviews: score, requests to answer, waiting reviews, ask someone */}
-          <MyReviewsPanel compact className="mb-6" />
 
           {/* Photos */}
           <div id="photos" className="glass rounded-2xl p-6 mb-6 scroll-mt-24">
@@ -560,7 +482,6 @@ export default function ProfileClient({ session, initialProfile }: Props) {
           </div>
 
           {/* Badges */}
-          {(profile.badges ?? []).length > 0 && <BadgeGrid badges={profile.badges ?? []} className="mb-6" />}
 
           {/* Video profile */}
           <VideoProfileCard initialUrl={profile.videoUrl ?? null} platinum={!!profile.isPlatinum} />

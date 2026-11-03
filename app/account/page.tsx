@@ -4,9 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
-import { Shield, Download, Trash2, Camera, CheckCircle, Clock, XCircle, Flame, Moon, BarChart3, CreditCard, ChevronRight, Mail } from 'lucide-react';
+import { Shield, Download, Trash2, Camera, CheckCircle, Clock, XCircle, Moon, CreditCard, ChevronRight, Mail } from 'lucide-react';
 import TravelModeCard from '@/components/plans/TravelModeCard';
-import PlanChip from '@/components/plans/PlanChip';
 import type { Allowance } from '@/components/plans/AllowanceMeter';
 import { useToast } from '@/lib/toast-context';
 
@@ -23,8 +22,6 @@ export default function AccountPage() {
 
   const [verifyStatus, setVerifyStatus] = useState<'NONE' | 'PENDING' | 'VERIFIED' | 'REJECTED'>('NONE');
   const [uploading, setUploading] = useState(false);
-  const [streak, setStreak] = useState(0);
-  const [superLikes, setSuperLikes] = useState(1);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteStep, setDeleteStep] = useState(false);
@@ -91,10 +88,6 @@ export default function AccountPage() {
 
   useEffect(() => {
     fetch('/api/verify').then(r => r.json()).then(d => setVerifyStatus(d.status ?? 'NONE')).catch(() => {});
-    fetch('/api/streak').then(r => r.json()).then(d => {
-      setStreak(d.streak ?? 0);
-      setSuperLikes(d.superLikeCredits ?? 1);
-    }).catch(() => {});
   }, []);
 
   async function handleVerifyUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -156,36 +149,8 @@ export default function AccountPage() {
           <p className="text-white/60 text-sm mt-1">@{username}</p>
         </div>
 
-        {/* Streak */}
-        <div className="glass rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Flame size={20} className="text-orange-400" />
-            <h2 className="text-white font-semibold">Daily Streak</h2>
-          </div>
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-4 sm:gap-6">
-            <div className="text-center order-1">
-              <div className="text-4xl font-bold text-orange-400">{streak}</div>
-              <div className="text-white/60 text-xs mt-1">day streak</div>
-            </div>
-            <div className="w-full sm:flex-1 order-3 sm:order-2">
-              <p className="text-white/60 text-sm mb-2">Log in every day to grow your streak. Every 7 days earns a free Super Like!</p>
-              <div className="flex gap-1">
-                {Array.from({ length: 7 }).map((_, i) => (
-                  <div key={i} className={`flex-1 h-2 rounded-full ${i < (streak % 7) ? 'bg-orange-400' : 'bg-white/10'}`} />
-                ))}
-              </div>
-              <p className="text-white/55 text-xs mt-1">{7 - (streak % 7)} days until next Super Like reward</p>
-            </div>
-            <div className="text-center glass rounded-xl p-3 order-2 sm:order-3 ml-auto sm:ml-0">
-              <div className="text-2xl font-bold text-[#D4AF37]">{allowance ? allowance.superLikes.available : superLikes}</div>
-              <div className="text-white/60 text-xs">super likes</div>
-              {allowance && allowance.superLikes.bonus > 0 && <div className="text-white/45 text-[10px]">incl. {allowance.superLikes.bonus} bonus</div>}
-            </div>
-          </div>
-        </div>
-
-        {/* Plan & insights */}
-        <div className="grid sm:grid-cols-2 gap-3">
+        {/* Plan */}
+        <div className="grid gap-3">
           <Link href="/subscription" className="glass rounded-2xl p-5 flex items-center gap-3 hover:bg-white/[0.07] transition-colors">
             <CreditCard size={20} className="text-[#D4AF37] flex-shrink-0" aria-hidden="true" />
             <span className="min-w-0">
@@ -195,16 +160,6 @@ export default function AccountPage() {
                   ? allowance.likes.limit === null ? 'Unlimited likes' : `${allowance.likes.remaining} likes left today`
                   : 'Allowances & billing'}
               </span>
-            </span>
-            <ChevronRight size={16} className="text-white/40 ml-auto flex-shrink-0" aria-hidden="true" />
-          </Link>
-          <Link href="/insights" className="glass rounded-2xl p-5 flex items-center gap-3 hover:bg-white/[0.07] transition-colors">
-            <BarChart3 size={20} className="text-purple-300 flex-shrink-0" aria-hidden="true" />
-            <span className="min-w-0">
-              <span className="flex items-center gap-2 text-white font-semibold text-sm">
-                Profile insights {allowance && !allowance.features.profileInsights && <PlanChip tier="PLATINUM" />}
-              </span>
-              <span className="block text-white/55 text-xs truncate">Views, likes & your best time to be online</span>
             </span>
             <ChevronRight size={16} className="text-white/40 ml-auto flex-shrink-0" aria-hidden="true" />
           </Link>

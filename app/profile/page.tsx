@@ -6,8 +6,6 @@ import { isPaid, isPlatinum } from '@/lib/premium';
 import { parsePrompts } from './prompts';
 import { completenessOf, effectiveInterestedIn, parseCoupleMembers, personFromProfile } from '@/lib/identity';
 import { activeStatus } from '@/components/status/status';
-import { loadBadges } from '@/lib/badges';
-import { loadSparkAnswers } from '@/app/api/spark/data';
 import type { StrengthFacts } from './strength';
 
 export default async function ProfilePage() {
@@ -33,10 +31,6 @@ export default async function ProfilePage() {
 
   if (!user) redirect('/auth/signin');
 
-  const [badges, sparkAnswers] = await Promise.all([
-    loadBadges(user.id),
-    loadSparkAnswers(user.id, 3),
-  ]);
 
   const profile = user.profile;
   const members = parseCoupleMembers(profile?.coupleMembers);
@@ -93,9 +87,7 @@ export default async function ProfilePage() {
     isPaid: isPaid(profile?.membershipTier, user.role),
     isPlatinum: isPlatinum(profile?.membershipTier, user.role),
     status: activeStatus(profile),
-    badges,
     strength,
-    sparkAnswers,
     photos: user.photos.map(p => ({
       id: p.id,
       url: p.url,

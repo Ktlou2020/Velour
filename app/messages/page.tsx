@@ -17,6 +17,11 @@ import ViewOnceViewer, { type ViewOnceOpen } from '@/components/chat/ViewOnceVie
 import type { ViewOnceInfo } from '@/lib/view-once';
 import { useVoiceRecorder } from '@/components/chat/useVoiceRecorder';
 import { useReviewAsk, ReviewAskButton, ReviewPromptCard } from '@/components/chat/ReviewAsk';
+import { featureOn } from '@/lib/features';
+
+// Games, voice notes, view-once, priority messages, expiry timers, review asks and
+// icebreakers are switched off in the simple platform (lib/features.ts).
+const CHAT_EXTRAS = featureOn('chatExtras');
 import { useSession } from 'next-auth/react';
 import { Search, Send, Heart, ArrowLeft, ImagePlus, X, Crown, Users, ChevronDown, ChevronRight, Mic, Dices, Zap, Lock } from 'lucide-react';
 import type { Reactions } from '@/lib/reactions';
@@ -283,7 +288,7 @@ export default function MessagesPage() {
   const sides = info?.conversation.sides ?? [];
   const partner = info?.conversation.partner ?? null;
   const coupleNames = info?.me.coupleNames ?? [];
-  const priority = info?.me.priority ?? null;
+  const priority = CHAT_EXTRAS ? (info?.me.priority ?? null) : null;
   const priorityLocked = !!priority && priority.limit === 0;
   const priorityUnavailable = !!priority && (priority.usedInConversationToday || (priority.remaining !== null && priority.remaining <= 0));
   const quota = info?.me.messageAllowance ?? null;
@@ -1041,7 +1046,7 @@ export default function MessagesPage() {
                   <span className="flex items-center gap-1.5 min-w-0">
                     <span className="text-white font-medium text-sm truncate">{name}</span>
                     {conv.isCouple && <CoupleBadge />}
-                    {conv.priority && (
+                    {CHAT_EXTRAS && conv.priority && (
                       <span className="flex-shrink-0 inline-flex items-center gap-0.5 text-[10px] font-semibold text-black bg-[#D4AF37] rounded-full px-1.5 py-px leading-none">
                         <Zap size={9} fill="currentColor" aria-hidden="true" /> Priority
                       </span>
@@ -1050,7 +1055,7 @@ export default function MessagesPage() {
                   <span className="text-white/55 text-xs flex-shrink-0">{fmtTime(conv.lastMessageAt)}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  {conv.matchExpiresAt && !conv.lastMessage ? (
+                  {CHAT_EXTRAS && conv.matchExpiresAt && !conv.lastMessage ? (
                     <ExpiryCountdown expiresAt={conv.matchExpiresAt} />
                   ) : (
                     <p className="text-white/65 text-xs truncate">{conv.lastMessage || 'Start a conversation'}</p>
@@ -1166,10 +1171,10 @@ export default function MessagesPage() {
             {partner && !someoneTyping && <span className="text-white/50"> · with {partner.name}</span>}
           </div>
         </div>
-        {expiresAt && (
+        {CHAT_EXTRAS && expiresAt && (
           <ExpiryCountdown expiresAt={expiresAt} nudge className="items-end text-right flex-shrink-0" />
         )}
-        {!blocked && <ReviewAskButton askable={reviewAsk.askable} onAsk={reviewAsk.ask} />}
+        {CHAT_EXTRAS && !blocked && <ReviewAskButton askable={reviewAsk.askable} onAsk={reviewAsk.ask} />}
         {messages.length > 0 && (
           <button
             type="button"
@@ -1217,7 +1222,9 @@ export default function MessagesPage() {
               <Link href="/discover" className="text-[#DC143C] hover:text-[#FF1744] text-sm mt-2 inline-block">Keep discovering</Link>
             </div>
           ) : (
-            <Icebreakers suggestions={info?.icebreakers ?? []} name={name} onPick={pickIcebreaker} />
+            CHAT_EXTRAS
+              ? <Icebreakers suggestions={info?.icebreakers ?? []} name={name} onPick={pickIcebreaker} />
+              : <p className="text-center text-white/55 text-sm py-10">Say hi to {name} 👋</p>
           )
         )}
         {messages.map((msg, i) => {
@@ -1280,7 +1287,7 @@ export default function MessagesPage() {
             {showSenders ? typingText : `${name} is typing…`}
           </div>
         )}
-        {!blocked && !loadingMsgs && reviewAsk.promptPerson && (
+        {CHAT_EXTRAS && !blocked && !loadingMsgs && reviewAsk.promptPerson && (
           <div className="pt-3">
             <ReviewPromptCard person={reviewAsk.promptPerson} onAsk={reviewAsk.ask} onDismiss={reviewAsk.dismiss} />
           </div>
@@ -1329,7 +1336,7 @@ export default function MessagesPage() {
             <span className="text-white/60 text-xs flex-1 min-w-0">
               Video attached{pendingVideo.durationSec != null ? ` · ${Math.max(1, Math.round(pendingVideo.durationSec))}s` : ''} — add a caption or send
             </span>
-            {viewOnceToggle}
+            {CHAT_EXTRAS && viewOnceToggle}
           </div>
         )}
         {(pendingImage || uploading) && (
@@ -1353,7 +1360,7 @@ export default function MessagesPage() {
               )}
             </div>
             <span className="text-white/60 text-xs flex-1 min-w-0">{uploading ? 'Uploading…' : 'Photo attached'}</span>
-            {pendingImage && !uploading && viewOnceToggle}
+            {CHAT_EXTRAS && pendingImage && !uploading && viewOnceToggle}
           </div>
         )}
         {priority && (priorityOn || priorityNudge) && (
@@ -1415,7 +1422,7 @@ export default function MessagesPage() {
             <div className="flex-1 min-w-0">
               <p className="text-sm text-white font-medium leading-snug"><span className="sm:hidden text-[#D4AF37]" aria-hidden="true">♡ </span>You&rsquo;ve used today&rsquo;s {quota!.limit} free messages</p>
               <p className="text-xs text-white/60 mt-0.5 leading-snug">
-                They refill gradually{quota!.resetsAt ? <> — your next one is ready at <span className="text-white/85 font-medium whitespace-nowrap">{refillLabel(quota!.resetsAt)}</span></> : ''}. You can still read, react and play games.
+                They refill gradually{quota!.resetsAt ? <> — your next one is ready at <span className="text-white/85 font-medium whitespace-nowrap">{refillLabel(quota!.resetsAt)}</span></> : ''}. You can still read and react.
               </p>
             </div>
             <Link href="/upgrade" className="btn-gold w-full sm:w-auto justify-center flex-shrink-0 text-xs font-semibold px-3 py-2 rounded-xl whitespace-nowrap inline-flex items-center gap-1">
@@ -1443,6 +1450,7 @@ export default function MessagesPage() {
           >
             <ImagePlus size={18} />
           </button>
+          {CHAT_EXTRAS && (
           <button
             type="button"
             onClick={() => setGameOpen(true)}
@@ -1453,6 +1461,7 @@ export default function MessagesPage() {
           >
             <Dices size={18} />
           </button>
+          )}
           <div className="relative flex-1 min-w-0">
             <textarea
               ref={textareaRef}
@@ -1482,7 +1491,7 @@ export default function MessagesPage() {
               </button>
             )}
           </div>
-          {!input.trim() && !pendingImage && !pendingVideo && !uploading ? (
+          {CHAT_EXTRAS && !input.trim() && !pendingImage && !pendingVideo && !uploading ? (
             <button
               type="button"
               onPointerDown={micPointerDown}
