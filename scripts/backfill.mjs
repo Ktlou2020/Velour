@@ -13,6 +13,11 @@ async function main() {
     if (n > 0) console.log(`[backfill] Profile.${col}: set ${n} NULL value(s) to []`)
   }
 
+  // Match expiry is switched off: clear any remaining timers so no match
+  // expires (and ones that already lapsed come back).
+  const unexpired = await db.$executeRawUnsafe(`UPDATE "Match" SET "expiresAt" = NULL WHERE "expiresAt" IS NOT NULL`)
+  if (unexpired > 0) console.log(`[backfill] Match.expiresAt: cleared ${unexpired} expiry timer(s)`)
+
   // Founding members (lib/founding.ts): give remaining spots to the oldest
   // eligible accounts (women and couples) that don't have one yet. Same lock as sign-up claims.
   const limit = Math.max(0, Number(process.env.FOUNDING_MEMBER_LIMIT ?? 30) || 0)

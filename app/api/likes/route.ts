@@ -149,8 +149,8 @@ export async function POST(req: NextRequest) {
       const existingMatch = (await findMatchesBetween(mySide, theirSide))[0] ?? null
 
       if (!existingMatch) {
-        const sevenDays = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-        await db.match.create({ data: { user1Id, user2Id, expiresAt: sevenDays } })
+        // Matches never expire (the simple platform has no "say hi within 7 days" timer).
+        await db.match.create({ data: { user1Id, user2Id, expiresAt: null } })
 
         // Notify everyone on both sides (both partners of a linked couple).
         // Deep link to the chat when one already exists between the sides.
