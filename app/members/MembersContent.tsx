@@ -79,8 +79,7 @@ function list(v: string | undefined): string[] {
 export default function MembersContent({
   members, total, searchParams, canChangeCity, profileCountry, callerHasLocation = false,
   advancedFilters = false, travel = null,
-  radiusKm = null, maxRadiusKm = 250, sort: appliedSort = 'active', unknownDistance = 0, homeLat = null, homeLng = null,
-  inRadius, furtherAway = 0,
+  radiusKm = null, maxRadiusKm = 250, sort: appliedSort = 'active', homeLat = null, homeLng = null,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -461,57 +460,11 @@ export default function MembersContent({
         />
       )}
 
-      {radiusKm !== null && !searchParams.city && (inRadius ?? 0) < 12 && (maxRadiusKm === null || radiusKm < maxRadiusKm) && (
-        <div role="note" className="glass rounded-2xl px-4 py-3 mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 border border-white/10">
-          <p className="text-white/80 text-sm flex-1 min-w-[14rem]">
-            {(inRadius ?? 0) === 0 ? `No one within ${radiusKm} km yet` : `Only ${inRadius} ${inRadius === 1 ? 'person' : 'people'} within ${radiusKm} km`}
-            {furtherAway > 0 ? ' — showing more further away.' : ' — try a wider search.'}
-          </p>
-          <div className="flex gap-2">
-            {radiusKm < 250 && (maxRadiusKm === null || maxRadiusKm >= 250) && (
-              <button type="button" onClick={() => { setRadius('250'); storeRadius('250'); applyFilters({ radius: '250' }); }} className="glass border border-white/15 hover:border-white/30 text-white/85 px-3 py-1.5 rounded-lg text-xs font-semibold">Widen to 250 km</button>
-            )}
-            {anywhereAllowed ? (
-              <button type="button" onClick={() => { setRadius('any'); storeRadius('any'); applyFilters({ radius: 'any' }); }} className="bg-[#DC143C] hover:bg-[#FF1744] text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Anywhere</button>
-            ) : (
-              <button type="button" onClick={() => setNudge('radius')} className="text-[#D4AF37] hover:underline px-1 py-1.5 text-xs font-semibold">Anywhere (Gold)</button>
-            )}
-          </div>
-        </div>
-      )}
-
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <p className="text-white/65 text-sm">
-          <span className="text-white">{total.toLocaleString()}</span> member{total === 1 ? '' : 's'}
-          {searchParams.city
-            ? <> in <span className="text-white">{searchParams.city}</span></>
-            : radiusKm !== null
-              ? <> · <span className="text-white">{(inRadius ?? total - unknownDistance - furtherAway).toLocaleString()}</span> within {radiusKm} km{unknownDistance > 0 && <span className="text-white/50"> · {unknownDistance} with distance unknown</span>}{furtherAway > 0 && <span className="text-white/50"> · {furtherAway} further away</span>}</>
-              : !callerHasLocation && !travel
-                ? <span className="text-white/50"> · turn on location to sort by distance</span>
-                : null}
-        </p>
-        <div className="flex items-center gap-1.5">
-          <span className="text-white/55 text-xs mr-1">Sort:</span>
-          {[
-            ...(callerHasLocation ? [{ value: 'nearest', label: 'Nearest' }] : []),
-            { value: 'active', label: 'Recently active' },
-            { value: 'new', label: 'Newest' },
-            { value: 'match', label: 'Best match' },
-          ].map(({ value, label }) => (
-            <button
-              key={value}
-              onClick={() => { setSortBy(value); applyFilters({ sort: value }); }}
-              aria-pressed={sortBy === value}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                sortBy === value ? 'bg-white/10 text-white' : 'text-white/65 hover:text-white'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <p className="text-white/65 text-sm mb-4">
+        <span className="text-white">{total.toLocaleString()}</span> member{total === 1 ? '' : 's'}
+        {searchParams.city && <> in <span className="text-white">{searchParams.city}</span></>}
+        {!searchParams.city && !callerHasLocation && !travel && <span className="text-white/50"> · turn on location to see who&apos;s nearby</span>}
+      </p>
 
       {/* Member Grid with Infinite Scroll */}
       {members.length === 0 ? (

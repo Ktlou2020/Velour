@@ -166,6 +166,7 @@ export default function MatchesPage() {
                   ) : (
                     <span className="absolute inset-0 flex items-center justify-center text-white/55 text-3xl font-bold font-serif">{name.slice(0, 2).toUpperCase()}</span>
                   )}
+                  {l.type === 'WINK' && <span className="absolute top-2 left-2 glass text-[11px] px-1.5 py-0.5 rounded-md" title="Winked at you">😉</span>}
                 </Link>
                 <div className="p-2.5">
                   <p className="text-white text-sm font-semibold truncate">{name}{age ? <span className="text-white/60 font-normal">, {age}</span> : null}</p>

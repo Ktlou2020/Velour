@@ -26,7 +26,7 @@ export function formatTravelUntil(until: string | Date): string {
   return new Date(until).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', timeZone: 'Africa/Johannesburg' });
 }
 
-/** Travel mode settings (Gold+). Free members see the card locked. */
+/** Travel mode settings (Gold+). Hidden for free members. */
 export default function TravelModeCard({ className = '' }: { className?: string }) {
   const { showToast } = useToast();
   const [state, setState] = useState<TravelState | null>(null);
@@ -75,6 +75,9 @@ export default function TravelModeCard({ className = '' }: { className?: string 
 
   const locked = state ? !state.entitled : false;
   const cities = CITIES_BY_COUNTRY[country] ?? [];
+
+  // Free members don't see a locked teaser — the card only appears for Gold and Platinum.
+  if (!state || locked) return null;
 
   return (
     <section id="travel" aria-labelledby="travel-title" className={`glass rounded-2xl p-6 scroll-mt-24 ${className}`}>

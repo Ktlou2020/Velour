@@ -630,6 +630,14 @@ export default function DiscoverPage() {
                 </button>
 
                 <button
+                  onClick={() => doAction('WINK', null)}
+                  className="w-14 h-14 rounded-full glass border-2 border-amber-500/50 hover:border-amber-500 hover:bg-amber-500/10 flex items-center justify-center transition-all hover:scale-110 active:scale-95 text-2xl"
+                  aria-label="Wink"
+                >
+                  <span aria-hidden="true">😉</span>
+                </button>
+
+                <button
                   onClick={() => doAction('LIKE', 'right')}
                   className="w-16 h-16 rounded-full bg-[#DC143C] hover:bg-[#FF1744] flex items-center justify-center transition-all hover:scale-110 active:scale-95"
                   aria-label="Like"

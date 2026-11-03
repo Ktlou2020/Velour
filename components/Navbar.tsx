@@ -6,7 +6,7 @@ import Logo from './Logo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Menu, X, ChevronDown, LogOut, User, Shield, CreditCard, ShieldCheck, Bell, Map as MapIcon } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, Shield, CreditCard, Settings, ShieldCheck, Bell, Map as MapIcon } from 'lucide-react';
 import { startTour } from './tour/events';
 import { featureOn } from '@/lib/features';
 import NotificationBell from './NotificationBell';
@@ -125,6 +125,13 @@ export default function Navbar() {
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <CreditCard size={14} />Membership
+                      </Link>
+                      <Link
+                        href="/account"
+                        className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Settings size={14} />Settings
                       </Link>
                       <Link
                         href="/safety"
@@ -250,6 +257,13 @@ export default function Navbar() {
                   <CreditCard size={14} />Membership
                 </Link>
                 <Link
+                  href="/account"
+                  className="flex items-center gap-2 px-4 py-2 glass border border-white/10 rounded-lg text-white/70 text-sm"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <Settings size={14} />Settings
+                </Link>
+                <Link
                   href="/notifications"
                   className="flex items-center gap-2 px-4 py-2 glass border border-white/10 rounded-lg text-white/70 text-sm"
                   onClick={() => setMobileOpen(false)}
@@ -314,7 +328,8 @@ export default function Navbar() {
       )}
     </nav>
     </div>
-    {session && <ProfileCompletionBanner />}
+    {/* Completion nudge lives on your own profile only, not on every page. */}
+    {session && pathname === '/profile' && <ProfileCompletionBanner />}
     </>
   );
 }

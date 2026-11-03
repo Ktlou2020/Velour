@@ -143,9 +143,9 @@ export default function AccountPage() {
   return (
     <div className="min-h-screen bg-[#0A0A0F]">
       <Navbar />
-      <main className="pt-24 pb-16 px-4 max-w-2xl mx-auto space-y-6">
+      <main className="pt-24 pb-16 px-4 max-w-2xl mx-auto space-y-3">
         <div>
-          <h1 className="text-white text-3xl font-bold font-serif">Account &amp; privacy</h1>
+          <h1 className="text-white text-3xl font-bold font-serif">Settings</h1>
           <p className="text-white/60 text-sm mt-1">@{username}</p>
         </div>
 
@@ -165,17 +165,19 @@ export default function AccountPage() {
           </Link>
         </div>
 
-        {/* Travel mode */}
+        {/* Travel mode (Gold+) */}
         <TravelModeCard />
 
         {/* Photo Verification */}
-        <div className="glass rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Shield size={20} className="text-[#DC143C]" />
-            <h2 className="text-white font-semibold">Profile Verification</h2>
-          </div>
+        <details className="group glass rounded-2xl">
+          <summary className="flex items-center gap-3 p-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            <Shield size={18} className="text-[#DC143C]" />
+            <span className="text-white font-semibold text-sm">Profile Verification</span>
+            <ChevronRight size={16} className="text-white/40 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
+          </summary>
+          <div className="px-5 pb-5">
           <p className="text-white/65 text-sm mb-4 leading-relaxed">
-            Get a verified badge on your profile. Upload a clear selfie and our team will review it.
+            Get a verified tick on your profile. Upload a clear selfie and our team will review it.
           </p>
           <div className={`flex items-center gap-2 mb-4 ${verifyBadge.color}`}>
             <verifyBadge.icon size={16} />
@@ -196,14 +198,17 @@ export default function AccountPage() {
               </button>
             </>
           )}
-        </div>
+          </div>
+        </details>
 
         {/* Snooze */}
-        <div className="glass rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Moon size={20} className="text-indigo-300" />
-            <h2 className="text-white font-semibold">Snooze Profile</h2>
-          </div>
+        <details className="group glass rounded-2xl">
+          <summary className="flex items-center gap-3 p-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            <Moon size={18} className="text-indigo-300" />
+            <span className="text-white font-semibold text-sm">Snooze Profile</span>
+            <ChevronRight size={16} className="text-white/40 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
+          </summary>
+          <div className="px-5 pb-5">
           <p className="text-white/65 text-sm mb-4 leading-relaxed">
             Need a break? Snoozing hides your profile from browse, search and discover. Your existing matches and chats stay exactly as they are.
           </p>
@@ -247,14 +252,17 @@ export default function AccountPage() {
               </button>
             </div>
           )}
-        </div>
+          </div>
+        </details>
 
         {/* Email preferences */}
-        <div className="glass rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Mail size={20} className="text-[#D4AF37]" />
-            <h2 className="text-white font-semibold">Email</h2>
-          </div>
+        <details className="group glass rounded-2xl">
+          <summary className="flex items-center gap-3 p-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            <Mail size={18} className="text-[#D4AF37]" />
+            <span className="text-white font-semibold text-sm">Email</span>
+            <ChevronRight size={16} className="text-white/40 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
+          </summary>
+          <div className="px-5 pb-5">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p id="marketing-emails-label" className="text-white text-sm font-medium">Emails about likes, messages and tips</p>
@@ -272,14 +280,17 @@ export default function AccountPage() {
               <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${marketingEmails ? 'translate-x-5' : ''}`} />
             </button>
           </div>
-        </div>
+          </div>
+        </details>
 
         {/* Data Export */}
-        <div className="glass rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Download size={20} className="text-blue-400" />
-            <h2 className="text-white font-semibold">Your Data (POPIA)</h2>
-          </div>
+        <details className="group glass rounded-2xl">
+          <summary className="flex items-center gap-3 p-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            <Download size={18} className="text-blue-400" />
+            <span className="text-white font-semibold text-sm">Your Data (POPIA)</span>
+            <ChevronRight size={16} className="text-white/40 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
+          </summary>
+          <div className="px-5 pb-5">
           <p className="text-white/65 text-sm mb-4 leading-relaxed">
             Download a copy of all data Unbound holds about you, including your profile, photos, messages, and activity. Your right under South African POPIA law.
           </p>
@@ -291,14 +302,17 @@ export default function AccountPage() {
             <Download size={16} />
             Download My Data
           </a>
-        </div>
+          </div>
+        </details>
 
         {/* Delete Account */}
-        <div className="glass rounded-2xl p-6 border border-red-500/20">
-          <div className="flex items-center gap-3 mb-4">
-            <Trash2 size={20} className="text-red-400" />
-            <h2 className="text-white font-semibold">Delete Account</h2>
-          </div>
+        <details className="group glass rounded-2xl border border-red-500/20">
+          <summary className="flex items-center gap-3 p-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            <Trash2 size={18} className="text-red-400" />
+            <span className="text-white font-semibold text-sm">Delete Account</span>
+            <ChevronRight size={16} className="text-white/40 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
+          </summary>
+          <div className="px-5 pb-5">
           <p className="text-white/65 text-sm mb-4 leading-relaxed">
             Permanently delete your account and all associated data. This action cannot be undone.
           </p>
@@ -335,7 +349,8 @@ export default function AccountPage() {
               </div>
             </div>
           )}
-        </div>
+          </div>
+        </details>
       </main>
     </div>
   );

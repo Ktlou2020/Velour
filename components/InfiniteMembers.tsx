@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { MapPin, Check, Navigation } from 'lucide-react';
 import { useSession } from 'next-auth/react';
@@ -198,30 +198,10 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
   return (
     <div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {members.map((member, idx) => {
-          // With a radius applied, members without a location come last under their own heading.
-          const firstUnknown = !!filters.radius && member.distanceKm === undefined && !member.visiting
-            && (idx === 0 || members[idx - 1].distanceKm !== undefined || !!members[idx - 1].visiting);
-          // Members beyond the radius come at the very end under "Further away".
-          const firstFurther = !!member.beyondRadius && (idx === 0 || !members[idx - 1].beyondRadius);
-          return (
-            <Fragment key={`${member.username}-${idx}`}>
-              {firstUnknown && (
-                <div className="col-span-full pt-4">
-                  <h3 className="text-white/80 text-sm font-semibold">Distance unknown</h3>
-                  <p className="text-white/50 text-xs">These members haven&apos;t shared a location yet, so we can&apos;t say how far away they are.</p>
-                </div>
-              )}
-              {firstFurther && (
-                <div className="col-span-full pt-4">
-                  <h3 className="text-white/80 text-sm font-semibold">Further away</h3>
-                  <p className="text-white/50 text-xs">Outside {filters.radius && filters.radius !== 'any' ? `${filters.radius} km` : 'your search radius'}, nearest first.</p>
-                </div>
-              )}
-              <MemberTile member={member} watermark={watermark} />
-            </Fragment>
-          );
-        })}
+        {members.map((member, idx) => (
+          // One grid: nearest first, then members with no location, then further away (server order).
+          <MemberTile key={`${member.username}-${idx}`} member={member} watermark={watermark} />
+        ))}
       </div>
 
       {/* Sentinel + Loading */}
