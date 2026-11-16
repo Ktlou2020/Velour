@@ -50,11 +50,11 @@ export default function ConfirmEmailPage() {
           <div className="flex justify-center mb-4">
             <MailCheck className="w-16 h-16 text-[#D4AF37]" aria-hidden="true" />
           </div>
-          <h1 className="text-2xl font-serif font-bold text-white mb-2">Confirm your email</h1>
+          <h1 className="text-2xl font-serif font-bold text-white mb-2">Last step: confirm your email</h1>
           <p className="text-gray-300 mb-1">
             We sent a confirmation link to {email ? <span className="text-white font-medium break-all">{email}</span> : 'your email address'}.
           </p>
-          <p className="text-gray-400 text-sm mb-6">Click it to unlock Unbound. The link is valid for 24 hours.</p>
+          <p className="text-gray-400 text-sm mb-6">Click it to start browsing and saying hello. The link is valid for 24 hours — can&apos;t see it? Check your spam or promotions folder.</p>
 
           {message && (
             <p role={state === 'error' ? 'alert' : 'status'} className={`text-sm mb-4 ${state === 'error' ? 'text-red-300' : 'text-emerald-300'}`}>

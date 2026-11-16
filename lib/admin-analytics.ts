@@ -1,4 +1,5 @@
 import { db } from '@/lib/db'
+import { funnelTotal } from '@/lib/funnel'
 import { MEMBERSHIP_PRICES } from '@/lib/payfast'
 
 /**
@@ -163,7 +164,7 @@ export async function getAdminAnalytics(days: AnalyticsRange, now = new Date()) 
     totalMembers, activeAccounts, banned, emailVerified, photoVerified, couples, onlineNow,
     dau, wau, mau,
     genderRows, orientationRows, tierRows, cityRows, ageRows,
-    funnelPhoto, funnelComplete, funnelMessaged, funnelMatched, funnelPaid,
+    funnelVisits, funnelSignupPage, funnelConfirmed, funnelReady, funnelMessaged, funnelMatched, funnelPaid,
     retained1, cohort1, retained7, cohort7,
     pendingOrders, topProducts, topViewed, pendingVerification, unreadReports, hiddenReviews,
     admins, chattersRows,
@@ -203,8 +204,20 @@ export async function getAdminAnalytics(days: AnalyticsRange, now = new Date()) 
         GROUP BY 1`,
     ),
 
-    db.user.count({ where: { ...cohort, ...notAdmin, profile: { profilePhoto: { not: null } } } }),
-    db.user.count({ where: { ...cohort, ...notAdmin, profile: { profileCompleteness: { gte: 70 } } } }),
+    funnelTotal('visit', from, now),
+    funnelTotal('signup_page', from, now),
+    db.user.count({ where: { ...cohort, ...notAdmin, emailVerifiedAt: { not: null } } }),
+    // Same rule as lib/profile-ready.ts: name, gender (or couple), who to meet, city and a main photo.
+    db.user.count({
+      where: {
+        ...cohort, ...notAdmin,
+        profile: {
+          displayName: { not: null }, city: { not: null }, profilePhoto: { not: null },
+          OR: [{ isCouple: true }, { gender: { not: null } }],
+          NOT: { AND: [{ interestedIn: { isEmpty: true } }, { lookingFor: { isEmpty: true } }] },
+        },
+      },
+    }),
     db.user.count({ where: { ...cohort, ...notAdmin, messagesSent: { some: {} } } }),
     db.user.count({ where: { ...cohort, ...notAdmin, OR: [{ matchesA: { some: {} } }, { matchesB: { some: {} } }] } }),
     db.user.count({ where: { ...cohort, ...notAdmin, profile: { membershipTier: { in: ['GOLD', 'PLATINUM'] }, foundingMemberNumber: null }, subscriptions: { none: { provider: 'REFERRAL', status: { in: ['ACTIVE', 'CANCELLING', 'PAST_DUE'] } } } } }),
@@ -313,9 +326,12 @@ export async function getAdminAnalytics(days: AnalyticsRange, now = new Date()) 
       tiers,
     },
     funnel: [
+      // Visits and sign-up page opens: one per browser per day (lib/funnel.ts).
+      { label: 'Visited the site', count: funnelVisits },
+      { label: 'Opened sign-up', count: funnelSignupPage },
       { label: 'Signed up', count: totals.signups },
-      { label: 'Added a photo', count: funnelPhoto },
-      { label: 'Profile 70%+ complete', count: funnelComplete },
+      { label: 'Finished profile (basics + photo)', count: funnelReady },
+      { label: 'Confirmed email', count: funnelConfirmed },
       { label: 'Sent a message', count: funnelMessaged },
       { label: 'Got a match', count: funnelMatched },
       { label: 'Upgraded (Gold/Platinum)', count: funnelPaid },

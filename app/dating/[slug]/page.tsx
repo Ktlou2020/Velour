@@ -7,6 +7,7 @@ import {
 import { DATING_PAGES, getDatingPage, linkText } from '../data'
 import { DatingShell, JsonLd, cityMemberCount, siteJsonLd } from '../shared'
 import { SITE_URL, SITE_NAME } from '../../site'
+import FunnelBeacon from '@/components/FunnelBeacon'
 
 // Static at build time, refreshed hourly so the live member figure stays current.
 export const revalidate = 3600
@@ -93,6 +94,7 @@ export default async function DatingLandingPage({ params }: Props) {
   return (
     <DatingShell>
       <JsonLd data={jsonLd} />
+      <FunnelBeacon step="visit" />
 
       {/* Hero */}
       <section className="relative overflow-hidden px-4 pt-14 pb-12 md:pt-20 md:pb-16">

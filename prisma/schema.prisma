@@ -834,3 +834,14 @@ model Referral {
 
   @@index([referrerId, status])
 }
+
+// Daily, de-duplicated top-of-funnel counts for the admin dashboard: site
+// visits and sign-up page opens (one per browser per day; bots skipped).
+// Everything after sign-up is counted from the real tables.
+model FunnelDaily {
+  day   DateTime @db.Date
+  step  String
+  count Int      @default(0)
+
+  @@id([day, step])
+}

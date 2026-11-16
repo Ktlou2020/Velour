@@ -109,21 +109,25 @@ export function HBars({ title, rows, color, empty, showShare }: { title: string;
   );
 }
 
-/** Conversion funnel: each step as a share of the first. */
+/** Conversion funnel: each step as a share of the first step that has data. */
 export function Funnel({ steps }: { steps: { label: string; count: number }[] }) {
-  const top = Math.max(1, steps[0]?.count ?? 0);
+  const top = Math.max(1, steps.find((s) => s.count > 0)?.count ?? 0);
+  const signups = steps.find((s) => s.label === 'Signed up')?.count ?? 0;
   return (
     <figure className="glass rounded-2xl p-4 sm:p-5">
       <figcaption className="text-white/80 text-sm font-medium mb-1">New-member funnel</figcaption>
-      <p className="text-white/45 text-[11px] mb-3">Members who joined in this period and what they have done since</p>
-      {steps[0]?.count === 0 ? (
-        <p className="text-white/50 text-sm">No sign-ups in this period</p>
+      <p className="text-white/45 text-[11px] mb-3">
+        Visits and sign-up page opens count once per browser per day (tracked from 16 Nov 2026). From “Signed up” on: members who joined in this period and what they have done since.
+      </p>
+      {signups === 0 && steps.every((s) => s.count === 0) ? (
+        <p className="text-white/50 text-sm">No visits or sign-ups in this period</p>
       ) : (
         <ol className="space-y-2.5">
           {steps.map((s, i) => {
-            const pct = Math.round((s.count / top) * 100);
+            // Capped: visits were only tracked from 16 Nov 2026, so older sign-ups can outnumber them.
+            const pct = Math.min(100, Math.round((s.count / top) * 100));
             const prev = i > 0 ? steps[i - 1].count : null;
-            const stepPct = prev ? Math.round((s.count / prev) * 100) : null;
+            const stepPct = prev ? Math.min(100, Math.round((s.count / prev) * 100)) : null;
             return (
               <li key={s.label}>
                 <div className="flex justify-between text-xs mb-1">

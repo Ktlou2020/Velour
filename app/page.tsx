@@ -10,6 +10,7 @@ import LandingNav from './LandingNav';
 import MemberShowcase from './MemberShowcase';
 import Footer from '@/components/Footer';
 import { SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION } from './site';
+import FunnelBeacon from '@/components/FunnelBeacon';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,6 +97,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#0A0A0F]">
       <LandingNav />
+      <FunnelBeacon step="visit" />
 
       <main>
         {/* ── Hero ─────────────────────────────────────────────── */}

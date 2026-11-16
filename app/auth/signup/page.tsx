@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { Eye, EyeOff, Check, User, Users, Circle, Gift } from 'lucide-react'
+import FunnelBeacon from '@/components/FunnelBeacon'
 
 type AccountType = 'SINGLE' | 'COUPLE'
 type Field = 'email' | 'username' | 'password' | 'dateOfBirth' | 'terms'
@@ -124,6 +125,7 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center px-4 py-10 sm:py-12">
+      <FunnelBeacon step="signup_page" />
       <div aria-hidden="true" className="fixed top-20 left-20 w-64 h-64 bg-[#DC143C]/10 rounded-full blur-3xl pointer-events-none" />
       <div aria-hidden="true" className="fixed bottom-20 right-20 w-64 h-64 bg-purple-800/10 rounded-full blur-3xl pointer-events-none" />
 

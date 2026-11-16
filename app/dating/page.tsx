@@ -4,6 +4,7 @@ import { ArrowRight, MapPin } from 'lucide-react'
 import { DATING_PAGES, linkText } from './data'
 import { DatingShell, JsonLd, siteJsonLd } from './shared'
 import { SITE_URL, SITE_NAME } from '../site'
+import FunnelBeacon from '@/components/FunnelBeacon'
 
 const TITLE = 'Dating in South Africa — Cities, Couples & Communities'
 const DESCRIPTION =
@@ -47,6 +48,7 @@ export default function DatingIndexPage() {
   return (
     <DatingShell>
       <JsonLd data={jsonLd} />
+      <FunnelBeacon step="visit" />
       <section className="px-4 pt-14 pb-10 text-center max-w-3xl mx-auto">
         <p className="text-[#D4AF37] text-xs font-medium tracking-[0.2em] uppercase mb-4">South Africa</p>
         <h1 className="font-serif text-4xl sm:text-5xl font-bold text-white mb-5 text-balance">Private, verified dating across South Africa</h1>
