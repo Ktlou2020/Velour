@@ -249,11 +249,18 @@ function welcomeEmail(u: Member): BuiltEmail {
       ]) +
       (founding ? GOLD(`As Founding Member #${founding}, you’re part of the circle that shapes Unbound. Thank you.`) : '') +
       P('Your privacy comes first — you choose what to share, and with whom.') +
-      BUTTON('Complete your profile', '/profile'),
+      BUTTON('Complete your profile', '/onboarding'),
   }
 }
 
-/** PROFILE_NUDGE: once, 2–5 days after sign-up, if there's no photo or the profile is under 60% complete. */
+/**
+ * PROFILE_NUDGE: once, from 3 hours after sign-up (up to 5 days), while the
+ * profile still isn't ready to use the site (lib/profile-ready.ts): no photo,
+ * or missing name, city or who they'd like to meet.
+ */
+// Soon enough to catch people while sign-up is fresh; after the welcome email.
+const NUDGE_AFTER = 3 * HOUR
+
 async function profileNudge(now: Date, budget: Budget): Promise<Counts> {
   const c = zero()
   if (budget.done) return c
@@ -262,13 +269,24 @@ async function profileNudge(now: Date, budget: Budget): Promise<Counts> {
       AND: [
         reachable(now),
         {
-          createdAt: { gte: new Date(now.getTime() - 5 * DAY), lte: new Date(now.getTime() - 2 * DAY) },
+          createdAt: { gte: new Date(now.getTime() - 5 * DAY), lte: new Date(now.getTime() - NUDGE_AFTER) },
           emailLogs: { none: { kind: 'PROFILE_NUDGE' } },
         },
         {
           OR: [
             { profile: { is: null } },
-            { profile: { is: { OR: [{ profilePhoto: null }, { profilePhoto: '' }, { profileCompleteness: { lt: 60 } }] } } },
+            {
+              profile: {
+                is: {
+                  OR: [
+                    { profilePhoto: null }, { profilePhoto: '' },
+                    { displayName: null }, { displayName: '' },
+                    { city: null }, { city: '' },
+                    { AND: [{ interestedIn: { isEmpty: true } }, { lookingFor: { isEmpty: true } }] },
+                  ],
+                },
+              },
+            },
           ],
         },
       ],
@@ -288,17 +306,17 @@ function nudgeEmail(u: Member): BuiltEmail {
   const noPhoto = !u.profile?.profilePhoto
   return {
     to: u.email,
-    subject: noPhoto ? 'Add a photo — let them see you' : 'Your profile is almost there',
+    subject: noPhoto ? 'One photo and you’re in' : 'Your profile is almost there',
     title: 'Your profile',
     bodyHtml:
       H(noPhoto ? 'Let them see you' : 'Almost there') +
       hi(u) +
       P(
         noPhoto
-          ? 'Members with a profile photo get noticed far more often. Add one in a minute — you can keep extras in a private album.'
-          : 'A few more details help the right people find you. Add a line about yourself and what you’re open to.',
+          ? 'Add one clear photo and you can start browsing and saying hello. It takes a minute — you can keep extras private.'
+          : 'Just a couple of basics left — your name, city and who you’d like to meet — then you can start browsing and saying hello.',
       ) +
-      BUTTON(noPhoto ? 'Add a photo' : 'Finish my profile', '/profile'),
+      BUTTON(noPhoto ? 'Add my photo' : 'Finish my profile', '/onboarding'),
   }
 }
 
