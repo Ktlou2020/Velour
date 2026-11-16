@@ -172,6 +172,8 @@ export interface PersonIdentityProps {
   idPrefix: string;
   /** "you" vs "they" wording */
   they?: boolean;
+  /** Onboarding: just gender (plus name/DOB when asked). Pronouns, orientation and visibility are set later on the profile. */
+  basic?: boolean;
 }
 
 function maxAdultDob() {
@@ -180,7 +182,7 @@ function maxAdultDob() {
   return d.toISOString().slice(0, 10);
 }
 
-export function PersonIdentityFields({ value: v, onChange, withName, nameLabel = 'First name', withDob, lockedDob, errors = {}, idPrefix, they }: PersonIdentityProps) {
+export function PersonIdentityFields({ value: v, onChange, withName, nameLabel = 'First name', withDob, lockedDob, errors = {}, idPrefix, they, basic }: PersonIdentityProps) {
   return (
     <div className="space-y-5">
       {withName && (
@@ -233,7 +235,7 @@ export function PersonIdentityFields({ value: v, onChange, withName, nameLabel =
           cols={3}
           clearable={false}
         />
-        <div className="mt-2">
+        {!basic && <div className="mt-2">
           <label htmlFor={`${idPrefix}-glabel`} className="block text-white/60 text-xs mb-1.5">
             Add more about {they ? 'their' : 'your'} gender <span className="text-white/40">· optional</span>
           </label>
@@ -250,9 +252,10 @@ export function PersonIdentityFields({ value: v, onChange, withName, nameLabel =
           <datalist id={`${idPrefix}-glabel-list`}>
             {GENDER_LABEL_SUGGESTIONS.map((s) => <option key={s} value={s} />)}
           </datalist>
-        </div>
+        </div>}
       </div>
 
+      {!basic && <>
       <ChipsWithOther
         legend="Pronouns"
         optional
@@ -291,14 +294,16 @@ export function PersonIdentityFields({ value: v, onChange, withName, nameLabel =
           Some people hide them for safety or privacy, or because they&apos;re still exploring — that&apos;s completely fine.
         </p>
       </div>
+      </>}
     </div>
   );
 }
 
-export function MeetFields({ interestedIn, intentions, onChange, error, couple }: {
+export function MeetFields({ interestedIn, intentions, onChange, error, couple, basic }: {
   interestedIn: string[]; intentions: string[];
   onChange: (patch: { interestedIn?: string[]; intentions?: string[] }) => void;
-  error?: string; couple?: boolean;
+  /** Onboarding: only who you'd like to meet ("here for" is set later on the profile). */
+  error?: string; couple?: boolean; basic?: boolean;
 }) {
   return (
     <div className="space-y-6">
@@ -311,14 +316,14 @@ export function MeetFields({ interestedIn, intentions, onChange, error, couple }
         hint="We only show you people who'd like to meet you too."
         error={error}
       />
-      <ChipGroup
+      {!basic && <ChipGroup
         legend={couple ? 'We’re here for' : 'I’m here for'}
         multiple
         optional
         options={INTENTION_OPTIONS}
         value={intentions}
         onChange={(v) => onChange({ intentions: (v as string[]) ?? [] })}
-      />
+      />}
     </div>
   );
 }

@@ -4,17 +4,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ProtectedImage from '@/components/ProtectedImage';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { ChevronLeft, ChevronRight, Check, Upload, X, Camera, User, Users, Plus, Trash2, Link2, Info } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, Upload, X, Camera, User, Users, Link2, Info } from 'lucide-react';
 import { LogoMark } from '@/components/Logo';
 import { useToast } from '@/lib/toast-context';
 import { CITIES_BY_COUNTRY, COUNTRIES } from '@/lib/cities';
 import {
-  CHILDREN_OPTIONS, COUPLE_TYPE_OPTIONS, deriveCoupleType, isAdult,
+  COUPLE_TYPE_OPTIONS, deriveCoupleType, isAdult,
   type CoupleType, type PersonDetails,
 } from '@/lib/identity';
-import { PROFILE_PROMPT_QUESTIONS, MAX_PROMPTS, MAX_PROMPT_ANSWER, type ProfilePrompt } from '@/app/profile/prompts';
+import type { ProfilePrompt } from '@/app/profile/prompts';
 import {
-  ChipGroup, FieldError, Label, MeetFields, PersonDetailsFields, PersonIdentityFields,
+  ChipGroup, FieldError, Label, MeetFields, PersonIdentityFields,
 } from '@/app/profile/identity/fields';
 
 interface UploadedPhoto { id: string; url: string }
@@ -43,13 +43,14 @@ type Errors = Partial<Record<
   string
 >>;
 
-const STEP_KEYS = ['about', 'meet', 'details', 'photos', 'bio'] as const;
-const OPTIONAL_STEPS = new Set([2, 3, 4]);
+// Two required steps; details, bio and prompts are added later from the profile page.
+const STEP_KEYS = ['about', 'photos'] as const;
+const OPTIONAL_STEPS = new Set<number>();
 
 function stepTitles(couple: boolean) {
   return couple
-    ? ['About you two', 'Who you’d like to meet', 'About you both', 'Photos', 'Your story']
-    : ['About you', 'Who you’d like to meet', 'About me', 'Photos', 'Your story'];
+    ? ['About you two', 'Add a photo']
+    : ['About you', 'Add a photo'];
 }
 
 function storageKey(uid: string) { return `hush_onboarding:${uid}`; }
@@ -148,8 +149,8 @@ export default function OnboardingPage() {
         });
         setPhotos(ph ?? []);
         // Resume: where they left off, or the first required step that's missing.
-        const firstMissing = !p.displayName || (!p.gender && !isCouple) ? 0 : !(p.interestedIn as string[])?.length ? 1 : 2;
-        const resumeAt = firstMissing < 2 ? Math.min(firstMissing, saved.step ?? firstMissing) : (saved.step ?? 2);
+        const basicsDone = !!p.displayName && !!p.city && (isCouple || !!p.gender) && !!(p.interestedIn as string[])?.length;
+        const resumeAt = basicsDone ? 1 : 0;
         setStep(Math.max(0, Math.min(STEP_KEYS.length - 1, resumeAt)));
       } catch {
         setSaveError('We couldn’t load your details. Please refresh the page.');
@@ -189,7 +190,7 @@ export default function OnboardingPage() {
         }
       } else if (!s.person.gender) e.gender = 'Please choose the option that fits best';
     }
-    if (step === 1 && s.interestedIn.length === 0) e.interestedIn = 'Choose at least one';
+    if (step === 0 && s.interestedIn.length === 0) e.interestedIn = 'Choose at least one';
     return e;
   }
 
@@ -201,28 +202,15 @@ export default function OnboardingPage() {
 
   function payloadFor(i: number): Record<string, unknown> | null {
     if (i === 0) {
-      const common = { displayName: s.displayName.trim(), country: s.country, city: s.city.trim(), isCouple: s.isCouple };
+      const common = {
+        displayName: s.displayName.trim(), country: s.country, city: s.city.trim(), isCouple: s.isCouple,
+        interestedIn: s.interestedIn, intentions: s.intentions,
+      };
       if (s.isCouple) return { ...common, coupleMembers: coupleMembersPayload(), coupleType: coupleType ?? null };
       const p = personPayload(s.person);
       return {
         ...common, gender: p.gender, genderLabel: p.genderLabel ?? null, pronouns: p.pronouns ?? null,
         orientation: p.orientation ?? null, showGender: p.showGender, showOrientation: p.showOrientation,
-      };
-    }
-    if (i === 1) return { interestedIn: s.interestedIn, intentions: s.intentions };
-    if (i === 2) {
-      if (s.isCouple) return { coupleMembers: coupleMembersPayload(), coupleType: coupleType ?? null, hasChildren: s.hasChildren ?? null };
-      const p = personPayload(s.person);
-      return {
-        heightCm: p.heightCm ?? null, bodyType: p.bodyType ?? null, languages: p.languages,
-        drinking: p.drinking ?? null, smoking: p.smoking ?? null, ethnicity: p.ethnicity ?? null,
-        showEthnicity: p.showEthnicity, hasChildren: s.hasChildren ?? null,
-      };
-    }
-    if (i === 4) {
-      return {
-        bio: s.bio.trim() || null,
-        prompts: s.prompts.filter((p) => p.answer.trim()).map((p) => ({ question: p.question, answer: p.answer.trim() })),
       };
     }
     return null;
@@ -262,8 +250,8 @@ export default function OnboardingPage() {
   function finish() {
     if (uid) clearSaved(uid);
     const first = s.isCouple ? s.displayName.trim() : (s.displayName.trim().split(' ')[0] || '');
-    showToast(`Welcome to Unbound${first ? `, ${first}` : ''}! Here are people who'd like to meet you too.`, 'success');
-    router.push('/discover');
+    showToast(`Welcome to Unbound${first ? `, ${first}` : ''}! Say hi to someone who catches your eye.`, 'success');
+    router.push('/members');
     router.refresh();
   }
 
@@ -274,6 +262,10 @@ export default function OnboardingPage() {
     if (Object.keys(errs).length) {
       const firstKey = Object.keys(errs)[0];
       document.querySelector<HTMLElement>(`[data-err="${firstKey}"] input, [data-err="${firstKey}"] button, [data-err="${firstKey}"] select`)?.focus();
+      return;
+    }
+    if (STEP_KEYS[step] === 'photos' && photos.length === 0) {
+      setSaveError(s.isCouple ? 'Add a photo of you both to continue — members look for a face before saying hello.' : 'Add a photo to continue — members look for a face before saying hello.');
       return;
     }
     setSaveError('');
@@ -288,13 +280,6 @@ export default function OnboardingPage() {
     } finally {
       setSaving(false);
     }
-  }
-
-  function skip() {
-    setErrors({});
-    setSaveError('');
-    if (step < STEP_KEYS.length - 1) setStep(step + 1);
-    else finish();
   }
 
   // ── Photos (request contract unchanged: /api/upload then /api/photos) ────
@@ -374,10 +359,7 @@ export default function OnboardingPage() {
           <h1 ref={headingRef} tabIndex={-1} className="font-serif text-2xl font-bold text-white mb-1 focus:outline-none">{titles[step]}</h1>
           <p className="text-white/65 text-sm mb-7">
             {step === 0 && (s.isCouple ? 'Tell members a little about each of you.' : 'Just the basics to get you started.')}
-            {step === 1 && 'We’ll only show you people who’d like to meet you too.'}
-            {step === 2 && 'All optional — share what you’re comfortable with.'}
-            {step === 3 && (s.isCouple ? 'A clear photo of you both makes saying hello easier.' : 'A clear photo makes saying hello easier.')}
-            {step === 4 && 'Say hello in your own words. Optional — you can add this later.'}
+            {step === 1 && (s.isCouple ? 'One clear photo of you both — you can add more later.' : 'One clear photo of you — you can add more later.')}
           </p>
 
           {/* ── Step 1: About you / About you two ── */}
@@ -435,6 +417,7 @@ export default function OnboardingPage() {
               {!s.isCouple ? (
                 <div data-err="gender">
                   <PersonIdentityFields
+                    basic
                     idPrefix="ob-me"
                     value={s.person}
                     onChange={(patch) => { set({ person: { ...s.person, ...patch } }); setErrors((p) => ({ ...p, gender: undefined })); }}
@@ -446,6 +429,7 @@ export default function OnboardingPage() {
                   <section className="rounded-2xl border border-white/10 p-4 sm:p-5" aria-labelledby="ob-p1-h" data-err="p1name">
                     <h2 id="ob-p1-h" className="text-white font-semibold mb-4 flex items-center gap-2"><User size={16} className="text-[#FF4D6D]" aria-hidden="true" />Partner 1 <span className="text-white/45 font-normal text-sm">(you)</span></h2>
                     <PersonIdentityFields
+                      basic
                       idPrefix="ob-p1"
                       value={s.person}
                       onChange={(patch) => { set({ person: { ...s.person, ...patch } }); setErrors((p) => ({ ...p, p1name: undefined, p1gender: undefined })); }}
@@ -497,6 +481,7 @@ export default function OnboardingPage() {
                         ) : (
                           <div data-err="p2gender">
                             <PersonIdentityFields
+                              basic
                               idPrefix="ob-p2"
                               value={s.partner2}
                               onChange={(patch) => { set({ partner2: { ...s.partner2, ...patch } }); setErrors((p) => ({ ...p, p2name: undefined, p2gender: undefined, p2dob: undefined })); }}
@@ -531,9 +516,10 @@ export default function OnboardingPage() {
           )}
 
           {/* ── Step 2: Who you'd like to meet ── */}
-          {step === 1 && (
+          {step === 0 && (
             <div data-err="interestedIn">
               <MeetFields
+                basic
                 couple={s.isCouple}
                 interestedIn={s.interestedIn}
                 intentions={s.intentions}
@@ -543,38 +529,9 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* ── Step 3: About me details ── */}
-          {step === 2 && (
-            <div className="space-y-6">
-              {s.isCouple ? (
-                <>
-                  <section className="rounded-2xl border border-white/10 p-4 sm:p-5" aria-labelledby="ob-d1-h">
-                    <h2 id="ob-d1-h" className="text-white font-semibold mb-4">{s.person.name || 'Partner 1'}</h2>
-                    <PersonDetailsFields idPrefix="ob-d1" value={s.person} onChange={(patch) => set({ person: { ...s.person, ...patch } })} />
-                  </section>
-                  {!s.partnerOwnAccount && (
-                    <section className="rounded-2xl border border-white/10 p-4 sm:p-5" aria-labelledby="ob-d2-h">
-                      <h2 id="ob-d2-h" className="text-white font-semibold mb-4">{s.partner2.name || 'Partner 2'}</h2>
-                      <PersonDetailsFields idPrefix="ob-d2" they value={s.partner2} onChange={(patch) => set({ partner2: { ...s.partner2, ...patch } })} />
-                    </section>
-                  )}
-                </>
-              ) : (
-                <PersonDetailsFields idPrefix="ob-d" value={s.person} onChange={(patch) => set({ person: { ...s.person, ...patch } })} />
-              )}
-              <ChipGroup
-                legend="Children"
-                optional
-                cols={2}
-                options={CHILDREN_OPTIONS}
-                value={s.hasChildren}
-                onChange={(v) => set({ hasChildren: v as string | undefined })}
-              />
-            </div>
-          )}
 
           {/* ── Step 4: Photos ── */}
-          {step === 3 && (
+          {step === 1 && (
             <div className="space-y-6">
               <div className="grid grid-cols-3 gap-3">
                 {photos.map((photo) => (
@@ -613,80 +570,6 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* ── Step 5: Bio + prompts ── */}
-          {step === 4 && (
-            <div className="space-y-6">
-              <div>
-                <Label htmlFor="ob-bio" optional>{s.isCouple ? 'About us' : 'About me'}</Label>
-                <textarea
-                  id="ob-bio"
-                  value={s.bio}
-                  onChange={(e) => set({ bio: e.target.value.slice(0, 500) })}
-                  placeholder={s.isCouple ? 'Who are you two, and what are you hoping to find here?' : 'A little about you, your lifestyle and what you’re hoping to find…'}
-                  className="input-dark w-full resize-none"
-                  rows={5}
-                  aria-describedby="ob-bio-count"
-                />
-                <p id="ob-bio-count" className="text-white/50 text-xs mt-1 text-right">{s.bio.length}/500</p>
-              </div>
-
-              <div>
-                <p className="text-white/80 text-sm font-medium mb-1">Prompts <span className="text-white/45 font-normal">· optional</span></p>
-                <p className="text-white/55 text-xs mb-3">Answer up to {MAX_PROMPTS} — they make great conversation starters.</p>
-                <div className="space-y-3">
-                  {s.prompts.map((pr, i) => {
-                    const used = new Set(s.prompts.map((x) => x.question));
-                    return (
-                      <div key={i} className="rounded-xl border border-white/10 p-3 space-y-2">
-                        <div className="flex gap-2">
-                          <label htmlFor={`ob-pq-${i}`} className="sr-only">Prompt {i + 1}</label>
-                          <select
-                            id={`ob-pq-${i}`}
-                            value={pr.question}
-                            onChange={(e) => set({ prompts: s.prompts.map((x, j) => (j === i ? { ...x, question: e.target.value } : x)) })}
-                            className="input-dark flex-1 min-w-0 text-sm"
-                          >
-                            {PROFILE_PROMPT_QUESTIONS.filter((q) => q === pr.question || !used.has(q)).map((q) => <option key={q} value={q}>{q}</option>)}
-                          </select>
-                          <button
-                            type="button"
-                            onClick={() => set({ prompts: s.prompts.filter((_, j) => j !== i) })}
-                            className="w-11 h-11 flex-shrink-0 rounded-xl border border-white/10 flex items-center justify-center text-white/55 hover:text-red-400"
-                            aria-label={`Remove prompt ${i + 1}`}
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                        <label htmlFor={`ob-pa-${i}`} className="sr-only">Your answer</label>
-                        <textarea
-                          id={`ob-pa-${i}`}
-                          value={pr.answer}
-                          maxLength={MAX_PROMPT_ANSWER}
-                          onChange={(e) => set({ prompts: s.prompts.map((x, j) => (j === i ? { ...x, answer: e.target.value } : x)) })}
-                          className="input-dark w-full resize-none text-sm"
-                          rows={2}
-                          placeholder="Your answer"
-                        />
-                      </div>
-                    );
-                  })}
-                  {s.prompts.length < MAX_PROMPTS && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const used = new Set(s.prompts.map((x) => x.question));
-                        const q = PROFILE_PROMPT_QUESTIONS.find((x) => !used.has(x));
-                        if (q) set({ prompts: [...s.prompts, { question: q, answer: '' }] });
-                      }}
-                      className="w-full min-h-[44px] rounded-xl border border-dashed border-white/20 text-white/70 hover:text-white hover:border-white/40 text-sm flex items-center justify-center gap-2"
-                    >
-                      <Plus size={15} aria-hidden="true" /> Add a prompt
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
 
           {saveError && (
             <div role="alert" className="mt-5 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-300 text-sm">{saveError}</div>
@@ -704,11 +587,6 @@ export default function OnboardingPage() {
               </button>
             ) : <span />}
             <div className="flex items-center gap-2 sm:gap-3">
-              {OPTIONAL_STEPS.has(step) && (
-                <button type="button" onClick={skip} className="min-h-[44px] text-white/60 hover:text-white text-sm px-2">
-                  {step === 3 ? 'Add photos later' : 'Skip for now'}
-                </button>
-              )}
               <button
                 type="submit"
                 disabled={saving || uploadingPhoto}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { EMAIL_UNVERIFIED_ERROR, hasConfirmedEmail } from '@/lib/email-verification'
+import { PROFILE_NOT_READY_ERROR, userProfileReady } from '@/lib/profile-ready'
 import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
@@ -236,6 +237,9 @@ export async function POST(
     }
     if (!(await hasConfirmedEmail(session.user.id))) {
       return NextResponse.json({ error: EMAIL_UNVERIFIED_ERROR, code: 'EMAIL_UNVERIFIED' }, { status: 403 })
+    }
+    if (!(await userProfileReady(session.user.id))) {
+      return NextResponse.json({ error: PROFILE_NOT_READY_ERROR, code: 'PROFILE_INCOMPLETE' }, { status: 403 })
     }
     const userId = session.user.id
 

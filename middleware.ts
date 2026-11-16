@@ -17,12 +17,21 @@ export default auth((req) => {
     return NextResponse.redirect(signinUrl)
   }
   // New members confirm their email before using the site (REQUIRE_EMAIL_VERIFICATION=true).
-  const user = req.auth?.user as { role?: string; emailConfirmed?: boolean } | undefined
+  const user = req.auth?.user as { role?: string; emailConfirmed?: boolean; profileReady?: boolean } | undefined
   if (
     isLoggedIn && isProtected && process.env.REQUIRE_EMAIL_VERIFICATION === 'true' &&
     user?.emailConfirmed === false && user?.role !== 'ADMIN'
   ) {
     return NextResponse.redirect(new URL('/auth/confirm-email', req.nextUrl.origin))
+  }
+  // Members finish the basics and add a photo before browsing or messaging
+  // (lib/profile-ready.ts). Profile, settings, plans and safety stay reachable.
+  const needsProfile = ['/members', '/discover', '/matches', '/messages', '/events', '/forums', '/notifications', '/gallery']
+  if (
+    isLoggedIn && user?.profileReady === false && user?.role !== 'ADMIN' &&
+    (pathname === '/' || needsProfile.some((p) => pathname === p || pathname.startsWith(p + '/')))
+  ) {
+    return NextResponse.redirect(new URL('/onboarding', req.nextUrl.origin))
   }
   // The logo / home links point at "/" — signed-in members belong on their home feed, not the public landing.
   if (pathname === '/' && isLoggedIn) {
