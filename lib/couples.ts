@@ -268,13 +268,19 @@ export async function getConversationAccess(conversationId: string, userId: stri
 export type FindOrCreateResult =
   | { ok: true; conversationId: string; created: boolean }
   | { ok: false; reason: 'blocked' }
+  | { ok: false; reason: 'policy'; message: string }
 
 /**
  * Find the conversation between `meId`'s side and `otherId`'s side (each side
  * being a person plus their linked partner), syncing it; or create it with
  * everyone on both sides. Principals (me, other) are inserted first.
  */
-export async function findOrCreateConversation(meId: string, otherId: string): Promise<FindOrCreateResult> {
+export async function findOrCreateConversation(
+  meId: string,
+  otherId: string,
+  /** Checked only when a NEW conversation would be created (e.g. lib/message-policy.ts); returns why not, or null. */
+  canStart?: () => Promise<string | null>,
+): Promise<FindOrCreateResult> {
   const partnerMap = await getPartnerMap([meId, otherId])
   const mySide = sideOf(meId, partnerMap)
   const otherSide = sideOf(otherId, partnerMap)
@@ -348,6 +354,11 @@ export async function findOrCreateConversation(meId: string, otherId: string): P
       }
       return { ok: true, conversationId: best.id, created: false }
     }
+  }
+
+  if (canStart) {
+    const reason = await canStart()
+    if (reason) return { ok: false, reason: 'policy', message: reason }
   }
 
   // Create: principals first, partners in a second statement (see unlink rule).

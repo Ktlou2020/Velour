@@ -76,6 +76,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [messagingLoading, setMessagingLoading] = useState(false);
+  const [messageError, setMessageError] = useState('');
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
   const p: Profile = raw ?? {};
@@ -107,16 +108,21 @@ export default function MemberProfileClient({ username, profile: raw, session }:
   async function handleMessage() {
     if (!session) { router.push('/auth/signin'); return; }
     setMessagingLoading(true);
+    setMessageError('');
     try {
       const res = await fetch('/api/conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetUsername: username }),
       });
+      const data = await res.json().catch(() => ({})) as { conversation?: { id: string }; error?: string };
       if (res.ok) {
-        const data = await res.json() as { conversation?: { id: string } };
         router.push(data.conversation?.id ? `/messages?conv=${data.conversation.id}` : '/messages');
+      } else {
+        setMessageError(data.error || 'Couldn’t start a chat — please try again');
       }
+    } catch {
+      setMessageError('Couldn’t start a chat — please try again');
     } finally { setMessagingLoading(false); }
   }
 
@@ -241,6 +247,9 @@ export default function MemberProfileClient({ username, profile: raw, session }:
               <Flag size={16} aria-hidden="true" />
             </button>
           </div>
+          {messageError && (
+            <p role="alert" className="mt-3 text-sm text-[#FFB3C1] max-w-xl">{messageError}</p>
+          )}
         </div>
       </div>
 

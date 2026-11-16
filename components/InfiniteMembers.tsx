@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { MapPin, Check, Navigation } from 'lucide-react';
+import { MapPin, Check, Navigation, MessageCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import ProtectedImage from '@/components/ProtectedImage';
 import type { MemberData } from '@/app/members/page';
@@ -22,7 +23,7 @@ type FilterState = Record<string, string | undefined> & {
 };
 
 // Pass-through params (advanced filters are applied server-side for Gold+ only)
-const PASS_KEYS = ['radius', 'anyCity', 'heightMin', 'heightMax', 'bodyType', 'intentions', 'languages', 'verified', 'photos', 'active'] as const;
+const PASS_KEYS = ['radius', 'anyCity', 'widen', 'heightMin', 'heightMax', 'bodyType', 'intentions', 'languages', 'verified', 'photos', 'active'] as const;
 
 interface Props {
   initialMembers: MemberData[];
@@ -48,12 +49,11 @@ export function MemberTile({ member, watermark }: { member: MemberData; watermar
   const initials = (member.displayName || member.username || '?').slice(0, 2).toUpperCase();
 
   const isVerified = (member as MemberData & { isVerified?: boolean }).isVerified;
+  const name = member.displayName || member.username;
 
   return (
-    <Link
-      href={`/members/${member.username}`}
-      className="glass rounded-2xl overflow-hidden hover:bg-white/5 transition-all hover:scale-[1.02] group"
-    >
+    <div className="glass rounded-2xl overflow-hidden hover:bg-white/5 transition-all hover:scale-[1.02] group flex flex-col">
+    <Link href={`/members/${member.username}`} className="block">
       {/* Photo */}
       <div className="aspect-[3/4] relative bg-gradient-to-br from-rose-950 to-[#0A0A0F] flex items-center justify-center overflow-hidden">
         {member.profilePhotoUrl ? (
@@ -67,14 +67,9 @@ export function MemberTile({ member, watermark }: { member: MemberData; watermar
           <span className="text-white/55 text-4xl font-bold font-serif">{initials}</span>
         )}
 
-        {/* Online dot */}
-        {member.isOnline && (
-          <div className="absolute top-2 right-2 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#0A0A0F] animate-pulse" />
-        )}
-
         {/* Couple badge */}
         {member.isCouple && (
-          <div className="absolute top-2 right-7 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded-md glass text-[#D4AF37]" title="Couple profile">
+          <div className="absolute top-2 right-2 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded-md glass text-[#D4AF37]" title="Couple profile">
             {member.coupleBadge ?? 'Couple'}
           </div>
         )}
@@ -111,8 +106,63 @@ export function MemberTile({ member, watermark }: { member: MemberData; watermar
             <span className="truncate">{member.distance}</span>
           </div>
         )}
+        {member.isOnline ? (
+          <p className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-medium mt-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" aria-hidden="true" /> Online now
+          </p>
+        ) : member.activeToday ? (
+          <p className="flex items-center gap-1.5 text-emerald-300/80 text-[11px] mt-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-300/70" aria-hidden="true" /> Active today
+          </p>
+        ) : null}
       </div>
     </Link>
+    <div className="px-3 pb-3 mt-auto">
+      <MessageButton username={member.username} name={name} />
+    </div>
+    </div>
+  );
+}
+
+/** One tap from a member card into a conversation (or a clear reason why not). */
+function MessageButton({ username, name }: { username: string; name: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function start() {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const res = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUsername: username }),
+      });
+      const data = await res.json().catch(() => ({})) as { conversation?: { id: string }; error?: string };
+      if (res.ok && data.conversation?.id) router.push(`/messages?conv=${data.conversation.id}`);
+      else setError(data.error || 'Couldn’t start a chat — try again');
+    } catch {
+      setError('Couldn’t start a chat — try again');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={start}
+        disabled={busy}
+        aria-label={`Message ${name}`}
+        className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#DC143C]/90 hover:bg-[#FF1744] text-white text-xs font-semibold py-2 transition-colors disabled:opacity-60"
+      >
+        <MessageCircle size={13} aria-hidden="true" /> {busy ? 'Opening…' : 'Message'}
+      </button>
+      {error && <p role="alert" className="text-[11px] text-[#FFB3C1] mt-1.5 leading-snug">{error}</p>}
+    </>
   );
 }
 

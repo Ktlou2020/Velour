@@ -6,6 +6,7 @@ import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { Shield, Download, Trash2, Camera, CheckCircle, Clock, XCircle, Moon, CreditCard, ChevronRight, Mail } from 'lucide-react';
 import TravelModeCard from '@/components/plans/TravelModeCard';
+import MessagePolicyRow from '@/components/settings/MessagePolicyRow';
 import type { Allowance } from '@/components/plans/AllowanceMeter';
 import { useToast } from '@/lib/toast-context';
 
@@ -200,6 +201,9 @@ export default function AccountPage() {
           )}
           </div>
         </details>
+
+        {/* Who can message me */}
+        <MessagePolicyRow />
 
         {/* Snooze */}
         <details className="group glass rounded-2xl">

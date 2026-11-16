@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { getCallerContext, searchMembers } from './search'
+import { getCallerContext, searchMembersWithFallback } from './search'
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const callerRole = (session.user as { role?: string }).role
     const caller = await getCallerContext(session.user.id, callerRole)
 
-    const result = await searchMembers(caller, {
+    const result = await searchMembersWithFallback(caller, {
       page: searchParams.get('page'),
       limit: searchParams.get('limit'),
       gender: searchParams.get('gender'),
@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
       coupleType: searchParams.get('coupleType'),
       anyCity: searchParams.get('anyCity'),
       radius: searchParams.get('radius'),
+      widen: searchParams.get('widen'),
       heightMin: searchParams.get('heightMin'),
       heightMax: searchParams.get('heightMax'),
       bodyType: searchParams.get('bodyType'),
@@ -42,6 +43,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       members: result.members,
+      widened: !!result.widened,
       callerHasLocation: result.callerHasLocation,
       effectiveCity: result.effectiveCity,
       radiusKm: result.radiusKm,

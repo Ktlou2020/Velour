@@ -30,6 +30,8 @@ export interface MemberResult {
   interests: string[]
   profilePhotoUrl?: string
   isOnline?: boolean
+  /** Seen on the site in the last 24 hours (and not online right now). */
+  activeToday?: boolean
   membershipTier?: 'FREE' | 'GOLD' | 'PLATINUM'
   isBoosted: boolean
   compatibility: number
@@ -338,6 +340,9 @@ export function toMemberResult(u: SelectedUser, caller: CallerContext, promptLim
     longitude: p?.longitude ?? null,
   })
 
+  const seenAgo = p?.lastSeen ? Date.now() - p.lastSeen.getTime() : null
+  const onlineNow = !!p?.isOnline && seenAgo !== null && seenAgo < 15 * 60 * 1000
+
   let km: number | undefined
   if (
     caller.latitude != null && caller.longitude != null &&
@@ -357,7 +362,9 @@ export function toMemberResult(u: SelectedUser, caller: CallerContext, promptLim
     bio: p?.bio ?? undefined,
     interests,
     profilePhotoUrl: u.photos[0]?.url ?? p?.profilePhoto ?? undefined,
-    isOnline: p?.isOnline ?? undefined,
+    // "Online now" needs a recent heartbeat too, so a stale flag doesn't mislead.
+    isOnline: onlineNow || undefined,
+    activeToday: !onlineNow && seenAgo !== null && seenAgo < 24 * 60 * 60 * 1000 ? true : undefined,
     membershipTier: p?.membershipTier,
     isBoosted: isBoosted(p?.boostedUntil),
     compatibility: compat.score,
@@ -394,6 +401,8 @@ export interface SearchParamsInput {
   anyCity?: string | null
   /** Search radius in km (10/25/50/100/250) or "any" (Anywhere, Gold+). Default 50. */
   radius?: string | null
+  /** "1" = no one matched nearby, so search everywhere (any plan). Set by searchMembersWithFallback. */
+  widen?: string | null
   // ── Advanced filters (Gold+; ignored for plans without advancedFilters) ──
   heightMin?: string | null
   heightMax?: string | null
@@ -426,6 +435,8 @@ function csv(v: string | null | undefined, max = 12): string[] {
 }
 
 export interface SearchResult {
+  /** Nothing matched nearby, so these results are from everywhere (searchMembersWithFallback). */
+  widened?: boolean
   members: MemberResult[]
   total: number
   page: number
@@ -498,7 +509,8 @@ export async function searchMembers(caller: CallerContext, params: SearchParamsI
   // Legacy maxKm param still works as a radius
   // Admins (support) default to Anywhere.
   const radiusParam = params.radius ?? params.maxKm ?? (caller.role === 'ADMIN' ? 'any' : null)
-  const radiusKm = callerHasLocation ? resolveRadius(radiusParam, caller.ent) : null
+  const widen = params.widen === '1' && !params.city
+  const radiusKm = callerHasLocation && !widen ? resolveRadius(radiusParam, caller.ent) : null
 
   // City: an explicit city filter (Gold+), or the travel destination when the
   // traveller has no destination coordinates.
@@ -793,4 +805,22 @@ function localFirst<T extends { u: SelectedUser; k: number }>(caller: CallerCont
     return (p.city?.toLowerCase() === city || (p.travelCity?.toLowerCase() === city && !!p.travelUntil && p.travelUntil.getTime() > Date.now())) ? 1 : 0
   }
   return (a: T, b: T) => local(b) - local(a) || a.k - b.k
+}
+
+/**
+ * searchMembers, but never an empty first page just because no one is nearby:
+ * when the caller searched by distance (not a chosen city) and nobody with a
+ * known location matched,
+ * search everywhere with the same filters and flag the result as widened.
+ * Later pages pass widen=1 through, so infinite scroll stays consistent.
+ */
+export async function searchMembersWithFallback(caller: CallerContext, params: SearchParamsInput): Promise<SearchResult> {
+  const result = await searchMembers(caller, params)
+  if (params.widen === '1') return { ...result, widened: true }
+  const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1)
+  // "Nobody nearby" = no one with a known distance in range (members without a location don't count).
+  const nobodyNearby = result.inRadius === 0 && result.furtherAway === 0
+  if (page !== 1 || !nobodyNearby || params.city || result.radiusKm === null) return result
+  const wide = await searchMembers(caller, { ...params, widen: '1' })
+  return wide.total > result.total ? { ...wide, widened: true } : result
 }

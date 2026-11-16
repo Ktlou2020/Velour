@@ -411,14 +411,19 @@ async function likesEmail(u: Member, now: Date, windowStart: Date): Promise<Buil
 }
 
 /**
- * UNREAD_MESSAGES (key = SAST date): unread messages older than 6h, member not
- * seen in 12h, at most once per 24h, and only when something arrived since the
- * last reminder (so a stale unread inbox isn't nagged daily). Count only.
+ * UNREAD_MESSAGES (key = SAST date + hour): a message has waited unread for
+ * 15 minutes and the member hasn't been on the site since it arrived. At most
+ * once every 4 hours, and only when something arrived since the last reminder
+ * (so a stale unread inbox isn't nagged). Count only, never message contents.
  */
+const UNREAD_AFTER = 15 * MIN
+const UNREAD_EVERY = 4 * HOUR
+
 async function unreadMessages(now: Date, budget: Budget): Promise<Counts> {
   const c = zero()
   if (budget.done) return c
-  const olderThan = new Date(now.getTime() - 6 * HOUR)
+  // Soon after a message arrives (if it's still unread and they haven't been back), at most every few hours.
+  const olderThan = new Date(now.getTime() - UNREAD_AFTER)
   const notBefore = new Date(now.getTime() - 30 * DAY)
   const rows = await db.$queryRaw<{ userId: string; n: number; latest: Date; oldest: Date }[]>`
     SELECT cp."userId", COUNT(*)::int AS n, MAX(m."createdAt") AS latest, MIN(m."createdAt") AS oldest
@@ -431,15 +436,16 @@ async function unreadMessages(now: Date, budget: Budget): Promise<Counts> {
      GROUP BY cp."userId"`
   if (rows.length === 0) return c
   const byUser = new Map(rows.map((r) => [r.userId, r]))
-  const { date } = sast(now)
+  const { date, hour } = sast(now)
+  const slot = `${date}T${String(hour).padStart(2, '0')}`
   const users = await db.user.findMany({
     where: {
       AND: [
         reachable(now),
         {
           id: { in: [...byUser.keys()] },
-          profile: { is: { lastSeen: { lt: new Date(now.getTime() - 12 * HOUR) } } },
-          emailLogs: { none: { kind: 'UNREAD_MESSAGES', OR: [{ createdAt: { gte: new Date(now.getTime() - DAY) } }, { key: date }] } },
+          profile: { is: { lastSeen: { lt: olderThan } } },
+          emailLogs: { none: { kind: 'UNREAD_MESSAGES', createdAt: { gte: new Date(now.getTime() - UNREAD_EVERY) } } },
         },
       ],
     },
@@ -448,13 +454,16 @@ async function unreadMessages(now: Date, budget: Budget): Promise<Counts> {
   const due = users
     .filter((u) => {
       const last = u.emailLogs[0]?.createdAt
-      return !last || byUser.get(u.id)!.latest > last
+      const r = byUser.get(u.id)!
+      // Not back on the site since the waiting messages arrived, and something new since the last email.
+      const seen = u.profile?.lastSeen
+      return (!seen || seen < r.oldest) && (!last || r.latest > last)
     })
     .sort((a, b) => byUser.get(a.id)!.oldest.getTime() - byUser.get(b.id)!.oldest.getTime())
   for (const u of due) {
     if (budget.done) break
     const n = byUser.get(u.id)!.n
-    await tally(c, budget, sendOnce(u.id, 'UNREAD_MESSAGES', date, () => unreadEmail(u, n), now))
+    await tally(c, budget, sendOnce(u.id, 'UNREAD_MESSAGES', slot, () => unreadEmail(u, n), now))
   }
   return c
 }

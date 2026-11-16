@@ -8,7 +8,7 @@ interface Props {
   className?: string;
   /**
    * Show the on-screen viewer watermark. Any non-empty value turns it on and
-   * renders "@<your username> · hush" (an email is never shown on screen);
+   * renders "@<your username> · unbound" (an email is never shown on screen);
    * "" or undefined leaves it off. The server burns its own per-viewer mark
    * into the image file regardless.
    */
@@ -43,7 +43,7 @@ export function useViewerMark(requested?: string | boolean): string | null {
   const { data } = useSession();
   if (!requested) return null;
   const username = (data?.user as { username?: string } | undefined)?.username;
-  if (username) return `@${username} · hush`;
+  if (username) return `@${username} · unbound`;
   if (typeof requested === 'string' && !requested.includes('@')) return requested;
   return 'unbound';
 }

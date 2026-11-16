@@ -28,6 +28,8 @@ interface Props {
   travel?: { city: string; until: string } | null;
   canTravel?: boolean;
   spotlight?: MemberData[];
+  /** No one matched nearby, so the grid shows members from everywhere. */
+  widened?: boolean;
   /** Radius applied by the server (null = Anywhere / no location). */
   radiusKm?: number | null;
   /** Plan's largest radius (null = Anywhere allowed). */
@@ -78,7 +80,7 @@ function list(v: string | undefined): string[] {
 
 export default function MembersContent({
   members, total, searchParams, canChangeCity, profileCountry, callerHasLocation = false,
-  advancedFilters = false, travel = null,
+  advancedFilters = false, travel = null, widened = false,
   radiusKm = null, maxRadiusKm = 250, sort: appliedSort = 'active', homeLat = null, homeLng = null,
 }: Props) {
   const router = useRouter();
@@ -460,6 +462,11 @@ export default function MembersContent({
         />
       )}
 
+      {widened && (
+        <p role="note" className="glass rounded-2xl px-4 py-3 mb-4 text-white/80 text-sm border border-white/10">
+          No one nearby matches yet — showing members across South Africa.
+        </p>
+      )}
       <p className="text-white/65 text-sm mb-4">
         <span className="text-white">{total.toLocaleString()}</span> member{total === 1 ? '' : 's'}
         {searchParams.city && <> in <span className="text-white">{searchParams.city}</span></>}
@@ -499,6 +506,7 @@ export default function MembersContent({
             sort: searchParams.sort,
             radius: callerHasLocation ? (searchParams.radius ?? (radiusKm === null ? 'any' : String(radiusKm))) : undefined,
             anyCity: searchParams.anyCity,
+            widen: widened ? '1' : undefined,
             ...(advancedFilters ? Object.fromEntries(ADV_KEYS.map((k) => [k, searchParams[k]])) : {}),
           }}
         />

@@ -187,7 +187,7 @@ export default function ViewOnceViewer({ open, onClose }: Props) {
             src={blobUrl}
             alt="View-once photo"
             loading="eager"
-            watermark="hush"
+            watermark="unbound"
             className="w-full h-full flex items-center justify-center"
             imgClassName="max-w-full max-h-full object-contain pointer-events-none"
             onLoad={() => setReady(true)}
@@ -235,7 +235,7 @@ export default function ViewOnceViewer({ open, onClose }: Props) {
       {/* Notice */}
       <div className="absolute bottom-0 inset-x-0 z-20 px-4 pb-[max(env(safe-area-inset-bottom),14px)] pt-6 bg-gradient-to-t from-black/85 to-transparent pointer-events-none">
         <p className="text-center text-[11px] leading-snug text-white/60">
-          View once · {mark ? mark.replace(' · hush', '') : 'your'} watermark · Screenshots of members’ content aren’t allowed
+          View once · {mark ? mark.replace(' · unbound', '') : 'your'} watermark · Screenshots of members’ content aren’t allowed
         </p>
         {open.kind === 'video' && ready && (
           <p className="text-center text-[11px] text-white/40 mt-0.5">Tap to pause · plays once</p>

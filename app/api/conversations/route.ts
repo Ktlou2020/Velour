@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { EMAIL_UNVERIFIED_ERROR, hasConfirmedEmail } from '@/lib/email-verification'
 import { PROFILE_NOT_READY_ERROR, userProfileReady } from '@/lib/profile-ready'
+import { messagePolicyBlock } from '@/lib/message-policy'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import {
@@ -211,9 +212,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Block check covers both partners on either side
-    const result = await findOrCreateConversation(session.user.id, otherUserId)
+    const meId = session.user.id
+    const targetId = otherUserId
+    const result = await findOrCreateConversation(meId, targetId, () => messagePolicyBlock(meId, targetId))
     if (!result.ok) {
-      return NextResponse.json({ error: 'Cannot start a conversation with this user' }, { status: 403 })
+      const message = result.reason === 'policy' ? result.message : 'Cannot start a conversation with this user'
+      return NextResponse.json({ error: message, code: result.reason === 'policy' ? 'MESSAGE_POLICY' : 'BLOCKED' }, { status: 403 })
     }
 
     const conversation = await db.conversation.findUnique({

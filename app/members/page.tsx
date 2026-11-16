@@ -5,7 +5,7 @@ import MemberCardSkeleton from '@/components/MemberCardSkeleton';
 import MembersContent from './MembersContent';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { getCallerContext, getSpotlight, searchMembers, type MemberResult } from '@/app/api/members/search';
+import { getCallerContext, getSpotlight, searchMembersWithFallback, type MemberResult } from '@/app/api/members/search';
 
 type SearchParams = Record<string, string | undefined> & {
   gender?: string;
@@ -40,7 +40,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const canChangeCity = caller.ent.searchAnyCity;
 
   // Location-first: radius from the member's location (lib/plans maxSearchRadiusKm caps it)
-  const result = await searchMembers(caller, {
+  const result = await searchMembersWithFallback(caller, {
     page: String(page),
     limit: String(limit),
     gender: params.gender,
@@ -53,6 +53,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
     sort: params.sort,
     maxKm: params.maxKm,
     radius: params.radius,
+    widen: params.widen,
     anyCity: params.anyCity,
     heightMin: params.heightMin,
     heightMax: params.heightMax,
@@ -105,6 +106,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             profileCity={profileCity}
             profileCountry={profileCountry}
             callerHasLocation={result.callerHasLocation}
+            widened={!!result.widened}
           />
         </Suspense>
       </main>

@@ -231,6 +231,9 @@ model Profile {
   boostedUntil DateTime?
   lastBoostAt  DateTime?
   incognito    Boolean   @default(false)
+  // Who can start a new conversation with this member (lib/message-policy.ts):
+  // EVERYONE, VERIFIED (photo-verified members) or LIKED (people they've liked).
+  messagePolicy String   @default("EVERYONE")
   videoUrl     String?
 
   // Profile prompts: [{ question: string, answer: string }]
