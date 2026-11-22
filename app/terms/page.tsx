@@ -11,7 +11,7 @@ export const metadata = {
 }
 
 export default function TermsPage() {
-  const lastUpdated = '15 October 2026'
+  const lastUpdated = '22 November 2026'
   const email = BUSINESS.email
   const vat = !!BUSINESS.vatNumber
 
@@ -137,6 +137,7 @@ export default function TermsPage() {
               <p>You retain ownership of the content you post (&quot;User Content&quot;). By submitting User Content to the Service, you grant Unbound a non-exclusive, worldwide, royalty-free, sublicensable licence to use, reproduce, modify, display, and distribute that content solely for the purpose of operating and improving the Service.</p>
               <p>You represent and warrant that you own or have the necessary rights to all User Content you post, and that your User Content does not infringe any third-party intellectual property, privacy, or other rights.</p>
               <p>We reserve the right (but not the obligation) to review, remove, or edit any User Content at our sole discretion.</p>
+              <p>This includes private messages: to keep members safe, messages are automatically screened and authorised staff may review conversations for safety and moderation, as described in our Privacy Policy. Every staff review is logged.</p>
             </div>
           </section>
 

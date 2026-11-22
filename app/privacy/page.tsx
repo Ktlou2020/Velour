@@ -10,7 +10,7 @@ export const metadata = {
 }
 
 export default function PrivacyPage() {
-  const lastUpdated = '15 October 2026'
+  const lastUpdated = '22 November 2026'
   const email = BUSINESS.email
 
   return (
@@ -109,6 +109,7 @@ export default function PrivacyPage() {
                 <li>Comply with our legal obligations under South African law</li>
                 <li>Resolve disputes and enforce our Terms of Service</li>
               </ul>
+              <p className="mt-4"><strong className="text-white">Safety review of messages.</strong> To protect members from harassment, threats, scams and contact with minors, messages are automatically screened for signs of harm, and authorised Unbound staff may read conversations. Staff must record a reason each time they open a conversation, every access is logged and audited, and what they see is used only for safety, moderation, and legal compliance &mdash; never for marketing and never shared with other members. View-once photos and videos are not shown to staff.</p>
             </div>
           </section>
 

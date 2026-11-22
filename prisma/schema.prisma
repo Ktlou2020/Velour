@@ -389,6 +389,7 @@ model Message {
   createdAt         DateTime      @default(now())
   conversation      Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender            User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  flag              MessageFlag?
 }
 
 model Event {
@@ -847,4 +848,24 @@ model FunnelDaily {
   count Int      @default(0)
 
   @@id([day, step])
+}
+
+// A message the automatic screening (lib/message-screen.ts) thinks may be
+// harmful, waiting for an admin to review it at /admin/messages.
+model MessageFlag {
+  id             String    @id @default(cuid())
+  messageId      String    @unique
+  conversationId String
+  senderId       String
+  // UNDERAGE | THREAT | SCAM | HARASSMENT | CONTACT (most serious first)
+  categories     String[]
+  // Short excerpt around the first match, for the review queue
+  excerpt        String
+  createdAt      DateTime  @default(now())
+  reviewedAt     DateTime?
+  reviewedById   String?
+  message        Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([reviewedAt, createdAt])
+  @@index([senderId])
 }

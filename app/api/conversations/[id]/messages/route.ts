@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { sendPushToUser } from '@/lib/push'
+import { screenAndFlag } from '@/lib/message-screen'
 import { markConversationNotificationsRead, upsertMessageNotification } from '@/lib/notifications'
 import { isPaid } from '@/lib/premium'
 import { chatVideoRules, checkPriority, getMessageAllowance, messageLimitError } from '@/lib/chat-priority'
@@ -409,6 +410,8 @@ export async function POST(
         },
       },
     })
+    // Automatic safety screening for admin review (lib/message-screen.ts); never blocks sending.
+    await screenAndFlag({ id: message.id, conversationId, senderId: userId, content })
 
     const videoLen = videoMeta?.durationSec != null ? ` (${fmtDuration(videoMeta.durationSec)})` : ''
     // View once: never the caption, never "photo"/"video" details beyond the label
