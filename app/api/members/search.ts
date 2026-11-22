@@ -12,6 +12,7 @@ import {
   parseCoupleMembers, LEGACY_WHO_VALUES, type Category, type CoupleType,
 } from '@/lib/identity'
 import { trustAdjustedCompat, trustAdjustedKm, trustScore } from '@/lib/reviews'
+import { rankScore, replyStats } from '@/lib/ranking'
 
 export interface ProfilePrompt {
   question: string
@@ -649,7 +650,37 @@ export async function searchMembers(caller: CallerContext, params: SearchParamsI
   const DAY_MS = 24 * 60 * 60 * 1000
   const dayBucket = (x: Row) => Math.floor((now.getTime() - lastSeen(x)) / DAY_MS)
 
+  // Default order: one "best for you" score (lib/ranking.ts) — activity,
+  // distance, mutual fit, reply rate, a complete profile and promotion.
+  const scores = new Map<string, number>()
+  if (isDefaultSort) {
+    const replies = await replyStats(inRange.map((x) => x.r.id))
+    for (const x of inRange) {
+      scores.set(x.r.id, rankScore({
+        onlineNow: !!x.member.isOnline,
+        lastSeenMs: x.r.profile?.lastSeen?.getTime() ?? null,
+        km: x.km,
+        radiusKm,
+        callerHasLocation,
+        compatibility: x.member.compatibility,
+        reply: replies.get(x.r.id),
+        hasPhoto: !!x.member.profilePhotoUrl,
+        hasBio: !!x.r.profile?.bio?.trim(),
+        boosted: x.member.isBoosted,
+        tierRank: TIER_RANK[x.member.membershipTier ?? 'FREE'],
+        now: now.getTime(),
+      }))
+    }
+  }
+
   inRange.sort((x, y) => {
+    if (isDefaultSort) {
+      // Members with a distance still come before "Distance unknown" when a radius applies.
+      if (radiusKm !== null && known(x) !== known(y)) return known(y) - known(x)
+      const d = (scores.get(y.r.id) ?? 0) - (scores.get(x.r.id) ?? 0)
+      if (Math.abs(d) > 0.01) return d
+      return lastSeen(y) - lastSeen(x)
+    }
     // Members with a distance always come before "Distance unknown" when a radius applies
     if ((radiusKm !== null || sort === 'nearest') && known(x) !== known(y)) return known(y) - known(x)
     switch (sort) {
