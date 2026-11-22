@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
         orderBy: { createdAt: 'asc' },
         take: 1000,
         select: {
-          id: true, senderId: true, content: true, kind: true, imageUrl: true, audioUrl: true, viewOnce: true,
+          id: true, senderId: true, content: true, kind: true, imageUrl: true, audioUrl: true, viewOnce: true, meta: true,
           senderPartnerName: true, createdAt: true, flag: { select: { categories: true, reviewedAt: true } },
         },
       },
@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
         content: m.content,
         kind: m.kind,
         imageUrl: m.viewOnce ? null : m.imageUrl,
+        videoUrl: !m.viewOnce && m.meta && typeof m.meta === 'object' && 'videoUrl' in m.meta ? String((m.meta as { videoUrl?: unknown }).videoUrl ?? '') || null : null,
         hasAudio: !!m.audioUrl,
         viewOnce: m.viewOnce,
         createdAt: m.createdAt,

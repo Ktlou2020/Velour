@@ -1,14 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { MessageSquareWarning, Search, ShieldAlert, ScrollText, CheckCircle, X, Lock, Image as ImageIcon, Mic } from 'lucide-react';
+import { MessageSquareWarning, Search, ShieldAlert, ScrollText, CheckCircle, X, Lock, Mic, Inbox } from 'lucide-react';
 import { FLAG_LABELS, type FlagCategory } from '@/lib/message-flags';
 
 type Person = { id: string; username: string; displayName: string | null };
 type Flag = { id: string; conversationId: string; senderId: string; categories: string[]; excerpt: string; createdAt: string; sender: Person | null };
 type Member = { id: string; username: string; email: string; isActive: boolean; displayName: string | null; conversations: number; messagesSent: number; flagged: number };
 type Conv = { id: string; lastMessageAt: string; messages: number; flagged: number; with: Person[] };
-type Msg = { id: string; sender: string; senderId: string; content: string | null; kind: string; imageUrl: string | null; hasAudio: boolean; viewOnce: boolean; createdAt: string; flag: { categories: string[]; reviewedAt: string | null } | null };
+type Msg = { id: string; sender: string; senderId: string; content: string | null; kind: string; imageUrl: string | null; videoUrl?: string | null; hasAudio: boolean; viewOnce: boolean; createdAt: string; flag: { categories: string[]; reviewedAt: string | null } | null };
+type FeedMsg = { id: string; conversationId: string; createdAt: string; from: Person; fromPartner: string | null; to: Person[]; content: string | null; kind: string; imageUrl: string | null; videoUrl: string | null; hasAudio: boolean; viewOnce: boolean; flag: { categories: string[] } | null };
 type Opened = { id: string; participants: Person[]; messages: Msg[] };
 type LogRow = { id: string; action: string; createdAt: string; actor: string; meta: { conversationId?: string; reason?: string; participants?: string[] } | null };
 
@@ -37,8 +38,16 @@ function Chips({ cats }: { cats: string[] }) {
   );
 }
 
+/** Photo or video sent in a chat (view-once media is never sent to this page). */
+function Media({ imageUrl, videoUrl }: { imageUrl: string | null; videoUrl?: string | null }) {
+  if (videoUrl) return <video src={videoUrl} controls preload="none" className="mt-2 max-h-64 rounded-lg bg-black" />;
+  if (!imageUrl) return null;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <a href={imageUrl} target="_blank" rel="noreferrer"><img src={imageUrl} alt="Photo sent in chat" loading="lazy" className="mt-2 max-h-64 rounded-lg object-contain bg-black/40" /></a>;
+}
+
 export default function MessagesReviewClient({ isSuperAdmin }: { isSuperAdmin: boolean }) {
-  const [tab, setTab] = useState<'flags' | 'search' | 'log'>('flags');
+  const [tab, setTab] = useState<'latest' | 'flags' | 'search' | 'log'>(isSuperAdmin ? 'latest' : 'flags');
   const [flags, setFlags] = useState<Flag[] | null>(null);
   const [q, setQ] = useState('');
   const [members, setMembers] = useState<Member[] | null>(null);
@@ -47,6 +56,11 @@ export default function MessagesReviewClient({ isSuperAdmin }: { isSuperAdmin: b
   const [log, setLog] = useState<LogRow[] | null>(null);
   // Opening a conversation: pick → reason → transcript
   const [pending, setPending] = useState<{ conversationId: string; label: string; defaultReason: string } | null>(null);
+  // Super admin: newest messages across the site (one reason per viewing, logged)
+  const [feedReason, setFeedReason] = useState('');
+  const [feed, setFeed] = useState<FeedMsg[] | null>(null);
+  const [feedNext, setFeedNext] = useState<string | null>(null);
+  const [feedAsk, setFeedAsk] = useState(false);
   const [reason, setReason] = useState('');
   const [opened, setOpened] = useState<Opened | null>(null);
   const [error, setError] = useState('');
@@ -97,12 +111,41 @@ export default function MessagesReviewClient({ isSuperAdmin }: { isSuperAdmin: b
     } finally { setBusy(false); }
   }
 
+  async function loadFeed(e?: React.FormEvent, before?: string) {
+    e?.preventDefault();
+    setBusy(true); setError('');
+    try {
+      const res = await fetch('/api/admin/messages/latest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: feedReason, ...(before ? { before } : {}) }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(d.error || 'Couldn’t load messages'); return; }
+      setFeed((prev) => (before ? [...(prev ?? []), ...d.messages] : d.messages));
+      setFeedNext(d.nextBefore);
+      setFeedAsk(false);
+      if (!before) setLog(null);
+    } finally { setBusy(false); }
+  }
+
+  async function openFromFeed(conversationId: string) {
+    const res = await fetch('/api/admin/messages/conversation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversationId, reason: `From the latest messages feed: ${feedReason}` }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok) { setOpened(d.conversation); setLog(null); }
+  }
+
   async function markReviewed(id: string) {
     await fetch('/api/admin/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ flagId: id, action: 'reviewed' }) });
     setFlags((f) => (f ?? []).filter((x) => x.id !== id));
   }
 
   const tabs = [
+    ...(isSuperAdmin ? [{ key: 'latest' as const, label: 'Latest', icon: Inbox }] : []),
     { key: 'flags' as const, label: `Flagged${flags && flags.length ? ` (${flags.length})` : ''}`, icon: ShieldAlert },
     { key: 'search' as const, label: 'Search members', icon: Search },
     ...(isSuperAdmin ? [{ key: 'log' as const, label: 'Access log', icon: ScrollText }] : []),
@@ -126,6 +169,45 @@ export default function MessagesReviewClient({ isSuperAdmin }: { isSuperAdmin: b
           </button>
         ))}
       </div>
+
+      {tab === 'latest' && isSuperAdmin && (
+        <div>
+          {feed === null ? (
+            <div className="glass rounded-2xl p-6">
+              <p className="text-white/80 text-sm mb-3">The newest messages across Unbound, with photos and videos (view-once media is never shown). Your reason is saved in the access log.</p>
+              <button onClick={() => { setError(''); setFeedAsk(true); }} className="bg-[#DC143C] hover:bg-[#FF1744] text-white text-sm font-semibold px-4 py-2 rounded-xl">Show latest messages</button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-white/50 text-xs">Reason: {feedReason}</p>
+                <button onClick={() => loadFeed()} disabled={busy} className="glass text-white/70 hover:text-white text-xs px-3 py-1.5 rounded-lg">Refresh</button>
+              </div>
+              {feed.length === 0 && <p className="text-white/50 text-sm">No messages yet</p>}
+              {feed.map((m) => (
+                <div key={m.id} className={`glass rounded-2xl p-4 ${m.flag ? 'border border-amber-500/30' : ''}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs mb-1.5">
+                    <span className="text-white/85">
+                      <span className="font-semibold">{nameOf(m.from)}</span>{m.fromPartner ? ` (${m.fromPartner})` : ''} <span className="text-white/40">@{m.from.username}</span>
+                      <span className="text-white/40"> → </span>{m.to.map(nameOf).join(', ') || 'former member'}
+                    </span>
+                    <span className="text-white/45">{fmt(m.createdAt)}</span>
+                  </div>
+                  {m.flag && <div className="mb-1.5"><Chips cats={m.flag.categories} /></div>}
+                  {m.content && <p className="text-white/90 text-sm whitespace-pre-wrap break-words">{m.content}</p>}
+                  {m.viewOnce ? <p className="text-white/45 text-xs flex items-center gap-1"><Lock size={11} /> View-once media (not shown)</p> : <Media imageUrl={m.imageUrl} videoUrl={m.videoUrl} />}
+                  {m.hasAudio && <p className="text-white/45 text-xs flex items-center gap-1 mt-1"><Mic size={11} /> Voice note</p>}
+                  {m.kind === 'GAME' && !m.content && <p className="text-white/45 text-xs">Chat game</p>}
+                  <button onClick={() => openFromFeed(m.conversationId)} className="mt-2 text-[#FF85A1] hover:text-white text-xs">Open conversation</button>
+                </div>
+              ))}
+              {feedNext && (
+                <button onClick={() => loadFeed(undefined, feedNext)} disabled={busy} className="w-full glass text-white/70 hover:text-white text-sm py-2.5 rounded-xl">{busy ? 'Loading…' : 'Load older'}</button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {tab === 'flags' && (
         <div className="space-y-3">
@@ -191,12 +273,28 @@ export default function MessagesReviewClient({ isSuperAdmin }: { isSuperAdmin: b
           {log === null ? <p className="text-white/50 text-sm">Loading…</p> : log.length === 0 ? <p className="text-white/50 text-sm">No conversations opened yet</p> : log.map((l) => (
             <div key={l.id} className="glass rounded-xl px-4 py-3 text-sm">
               <div className="flex flex-wrap justify-between gap-2">
-                <span className="text-white">{l.actor} <span className="text-white/50">{l.action === 'MESSAGES_VIEWED' ? 'opened a conversation' : 'cleared a flag'}</span>{l.meta?.participants?.length ? <span className="text-white/70"> — {l.meta.participants.map((p) => '@' + p).join(' ↔ ')}</span> : null}</span>
+                <span className="text-white">{l.actor} <span className="text-white/50">{l.action === 'MESSAGES_VIEWED' ? 'opened a conversation' : l.action === 'LATEST_MESSAGES_VIEWED' ? 'viewed the latest messages' : 'cleared a flag'}</span>{l.meta?.participants?.length ? <span className="text-white/70"> — {l.meta.participants.map((p) => '@' + p).join(' ↔ ')}</span> : null}</span>
                 <span className="text-white/45 text-xs">{fmt(l.createdAt)}</span>
               </div>
               {l.meta?.reason && <p className="text-white/60 text-xs mt-1">Reason: {l.meta.reason}</p>}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Reason prompt for the latest-messages feed */}
+      {feedAsk && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="feed-reason-title">
+          <form onSubmit={loadFeed} className="glass-dark rounded-2xl p-6 w-full max-w-md border border-white/10">
+            <h2 id="feed-reason-title" className="text-white font-semibold mb-1">Why are you viewing recent messages?</h2>
+            <p className="text-white/55 text-xs mb-4">Saved in the access log.</p>
+            <textarea value={feedReason} onChange={(e) => setFeedReason(e.target.value)} rows={3} maxLength={300} autoFocus placeholder="e.g. Daily safety check of new conversations" className="input-dark w-full px-3 py-2 rounded-xl text-sm resize-none" aria-label="Reason" />
+            {error && <p role="alert" className="text-red-300 text-xs mt-2">{error}</p>}
+            <div className="flex justify-end gap-2 mt-4">
+              <button type="button" onClick={() => setFeedAsk(false)} className="glass text-white/70 px-4 py-2 rounded-lg text-sm">Cancel</button>
+              <button disabled={busy || feedReason.trim().length < 10} className="bg-[#DC143C] hover:bg-[#FF1744] text-white px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50">{busy ? 'Loading…' : 'Show messages'}</button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -235,7 +333,7 @@ export default function MessagesReviewClient({ isSuperAdmin }: { isSuperAdmin: b
                   {m.flag && <div className="mb-1"><Chips cats={m.flag.categories} /></div>}
                   {m.content && <p className="text-white/90 text-sm whitespace-pre-wrap break-words">{m.content}</p>}
                   {m.viewOnce ? <p className="text-white/45 text-xs flex items-center gap-1"><Lock size={11} /> View-once media (not shown)</p>
-                    : m.imageUrl ? <a href={m.imageUrl} target="_blank" rel="noreferrer" className="text-[#FF85A1] text-xs flex items-center gap-1"><ImageIcon size={12} /> Photo/video</a> : null}
+                    : <Media imageUrl={m.imageUrl} videoUrl={m.videoUrl} />}
                   {m.hasAudio && <p className="text-white/45 text-xs flex items-center gap-1"><Mic size={11} /> Voice note</p>}
                 </div>
               ))}

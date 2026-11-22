@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
   if (view === 'log') {
     if (!me.isSuperAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     const logs = await db.adminAuditLog.findMany({
-      where: { action: { in: ['MESSAGES_VIEWED', 'MESSAGE_FLAG_REVIEWED'] } },
+      where: { action: { in: ['MESSAGES_VIEWED', 'LATEST_MESSAGES_VIEWED', 'MESSAGE_FLAG_REVIEWED'] } },
       orderBy: { createdAt: 'desc' },
       take: 200,
     })
