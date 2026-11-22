@@ -70,6 +70,14 @@ export default function MessagesReviewClient({ isSuperAdmin }: { isSuperAdmin: b
     fetch('/api/admin/messages?view=flags').then((r) => r.json()).then((d) => setFlags(d.flags ?? [])).catch(() => setFlags([]));
   }, []);
   useEffect(() => { loadFlags(); }, [loadFlags]);
+  // Linked from a member's admin page: /admin/messages?q=username
+  useEffect(() => {
+    const preset = new URLSearchParams(window.location.search).get('q');
+    if (!preset) return;
+    setTab('search');
+    setQ(preset);
+    fetch(`/api/admin/messages?view=search&q=${encodeURIComponent(preset)}`).then((r) => r.json()).then((d) => setMembers(d.members ?? [])).catch(() => {});
+  }, []);
   useEffect(() => {
     if (tab === 'log' && isSuperAdmin && log === null) {
       fetch('/api/admin/messages?view=log').then((r) => r.json()).then((d) => setLog(d.log ?? [])).catch(() => setLog([]));

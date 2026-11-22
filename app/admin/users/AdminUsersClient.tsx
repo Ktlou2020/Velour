@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import ProtectedImage from '@/components/ProtectedImage';
 import { Search, Shield, Ban, UserCheck, Crown, ShieldOff } from 'lucide-react';
 
@@ -169,12 +170,12 @@ export default function AdminUsersClient({ initialUsers, viewerId, viewerIsSuper
                             <span className="text-white text-xs font-bold">{u.username.slice(0, 2).toUpperCase()}</span>
                           )}
                         </div>
-                        <div>
-                          <div className="text-white font-medium">{u.username}</div>
+                        <Link href={`/admin/users/${u.id}`} className="group/name">
+                          <div className="text-white font-medium group-hover/name:text-[#FF85A1] group-hover/name:underline">{u.username}</div>
                           {u.profile?.displayName && (
                             <div className="text-white/30 text-xs">{u.profile.displayName}</div>
                           )}
-                        </div>
+                        </Link>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-white/50 truncate max-w-[180px]">{u.email}</td>
