@@ -3,7 +3,7 @@ import { requireAdmin } from '@/auth'
 import { db } from '@/lib/db'
 import { distanceKm } from '@/lib/geo'
 import { categoryOf, effectiveInterestedIn } from '@/lib/identity'
-import { DEFAULT_RADIUS_KM, getCallerContext, mutualInterestWhere, notSnoozed } from '@/app/api/members/search'
+import { DEFAULT_RADIUS_KM, getCallerContext, mutualInterestWhere, wantsCategoryWhere, notSnoozed } from '@/app/api/members/search'
 
 export const dynamic = 'force-dynamic'
 
@@ -81,9 +81,9 @@ export async function GET(req: NextRequest) {
         const [half] = mutualInterestWhere({ category: null, interestedIn: caller.interestedIn })
         viewerWantsTarget = (await db.profile.count({ where: { userId: target.id, AND: [half] } })) > 0
       }
-      if (caller.category) {
-        const [half] = mutualInterestWhere({ category: caller.category, interestedIn: [] })
-        targetWantsViewer = (await db.profile.count({ where: { userId: target.id, AND: [half] } })) > 0
+      // Couples see members whatever those members prefer (one-way), so only singles need this half.
+      if (caller.category && caller.category !== 'COUPLE') {
+        targetWantsViewer = (await db.profile.count({ where: { userId: target.id, AND: [wantsCategoryWhere(caller.category)] } })) > 0
       }
     }
     add('viewer_wants_target', viewerWantsTarget,

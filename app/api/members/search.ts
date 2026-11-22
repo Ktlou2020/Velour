@@ -181,9 +181,24 @@ export function categoryWhere(cat: Category, coupleTypes?: CoupleType[]): Prisma
   return { isCouple: false, gender: cat }
 }
 
+/** Candidates who would like to meet `category` (or have no preference). */
+export function wantsCategoryWhere(category: Category): Prisma.ProfileWhereInput {
+  return {
+    OR: [
+      { interestedIn: { has: category } },
+      // Legacy members who only have lookingFor (MAN/WOMAN/COUPLE/ANY)
+      { interestedIn: { isEmpty: true }, lookingFor: { hasSome: legacyValuesWanting(category) } },
+      // No preference at all
+      { interestedIn: { isEmpty: true }, NOT: { lookingFor: { hasSome: LEGACY_WHO_VALUES } } },
+    ],
+  }
+}
+
 /**
- * Mutual-interest filter: the caller would like to meet the candidate's
- * category AND the candidate would like to meet the caller's category.
+ * Who the caller sees: the caller would like to meet the candidate's category
+ * AND (for singles) the candidate would like to meet the caller's category.
+ * Couples see everyone in the categories they chose, whatever those members
+ * prefer; members who chose couples too are listed first (searchMembers).
  * Permissive when either side has no preference (or no known category).
  * Hidden gender/orientation still count here; they are just never displayed.
  */
@@ -197,17 +212,7 @@ export function mutualInterestWhere(caller: Pick<CallerContext, 'category' | 'in
       ],
     })
   }
-  if (caller.category) {
-    out.push({
-      OR: [
-        { interestedIn: { has: caller.category } },
-        // Legacy members who only have lookingFor (MAN/WOMAN/COUPLE/ANY)
-        { interestedIn: { isEmpty: true }, lookingFor: { hasSome: legacyValuesWanting(caller.category) } },
-        // No preference at all
-        { interestedIn: { isEmpty: true }, NOT: { lookingFor: { hasSome: LEGACY_WHO_VALUES } } },
-      ],
-    })
-  }
+  if (caller.category && caller.category !== 'COUPLE') out.push(wantsCategoryWhere(caller.category))
   return out
 }
 
@@ -673,7 +678,18 @@ export async function searchMembers(caller: CallerContext, params: SearchParamsI
     }
   }
 
+  // Couples see one-way matches too; members who also chose couples come first.
+  const coupleCaller = caller.category === 'COUPLE'
+  const wantsCouples = (x: Row) => {
+    const who = effectiveInterestedIn({ interestedIn: x.r.profile?.interestedIn, lookingFor: x.r.profile?.lookingFor })
+    return who.length === 0 || who.includes('COUPLE') ? 1 : 0
+  }
+
   inRange.sort((x, y) => {
+    if (coupleCaller) {
+      const m = wantsCouples(y) - wantsCouples(x)
+      if (m) return m
+    }
     if (isDefaultSort) {
       // Members with a distance still come before "Distance unknown" when a radius applies.
       if (radiusKm !== null && known(x) !== known(y)) return known(y) - known(x)
