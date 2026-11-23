@@ -88,7 +88,7 @@ export default function NotificationBell() {
         type="button"
         className="relative w-9 h-9 glass rounded-lg flex items-center justify-center text-white/60 hover:text-white transition-colors"
         onClick={() => setOpen((o) => !o)}
-        aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+        aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
         aria-expanded={open}
         aria-haspopup="dialog"
       >
@@ -126,7 +126,7 @@ export default function NotificationBell() {
               <div className="text-center py-8 px-4">
                 <Bell size={24} className="text-white/15 mx-auto mb-2" aria-hidden="true" />
                 <p className="text-white/60 text-sm">Nothing new yet</p>
-                <p className="text-white/45 text-xs mt-1">Likes, matches and views show up here.</p>
+                <p className="text-white/60 text-xs mt-1">Likes, matches and views show up here.</p>
               </div>
             ) : (
               <ul>
@@ -146,7 +146,7 @@ export default function NotificationBell() {
                         <span className="flex-1 min-w-0">
                           <span className={`block text-xs leading-snug ${n.isRead ? 'text-white/75' : 'text-white font-semibold'}`}>{n.title}</span>
                           {n.body && <span className="block text-white/60 text-xs leading-relaxed mt-0.5 line-clamp-2">{n.body}</span>}
-                          <span className="block text-white/45 text-[11px] mt-1">{timeAgo(n.createdAt)}</span>
+                          <span className="block text-white/60 text-[11px] mt-1">{timeAgo(n.createdAt)}</span>
                         </span>
                         {!n.isRead && <span className="w-2 h-2 bg-[#DC143C] rounded-full flex-shrink-0 mt-1.5" aria-label="Unread" role="img" />}
                       </button>

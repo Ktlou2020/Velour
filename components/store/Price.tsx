@@ -16,11 +16,11 @@ export default function Price({ cents, compareAtCents, size = 'md', showVat = tr
     <div className={`flex flex-wrap items-baseline gap-x-2 gap-y-0.5 ${className}`}>
       <span className={`${main} font-semibold tabular-nums ${sale ? 'text-[#F5D77A]' : 'text-white'}`}>{formatRand(cents)}</span>
       {sale && (
-        <span className={`${size === 'lg' ? 'text-base' : 'text-xs'} text-white/45 line-through tabular-nums`}>
+        <span className={`${size === 'lg' ? 'text-base' : 'text-xs'} text-white/60 line-through tabular-nums`}>
           <span className="sr-only">Was </span>{formatRand(compareAtCents!)}
         </span>
       )}
-      {showVat && <span className={`${size === 'lg' ? 'text-xs' : 'text-[10px]'} text-white/45 uppercase tracking-wide`}>incl. VAT</span>}
+      {showVat && <span className={`${size === 'lg' ? 'text-xs' : 'text-[10px]'} text-white/60 uppercase tracking-wide`}>incl. VAT</span>}
     </div>
   );
 }

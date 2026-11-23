@@ -242,7 +242,7 @@ export default function MessageBubble({
               <Zap size={10} fill="currentColor" aria-hidden="true" /> Priority
             </span>
           )}
-          {time && <span className="text-white/25 text-xs whitespace-nowrap">{time}</span>}
+          {time && <span className="text-white/60 text-xs whitespace-nowrap">{time}</span>}
           {footer}
         </div>
       </div>

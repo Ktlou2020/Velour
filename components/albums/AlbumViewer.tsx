@@ -176,7 +176,7 @@ export default function AlbumViewer({ albumId, onClose, onLeft, onRequested }: P
             <ProtectedImage src={current.url} alt={current.caption || `Photo ${index + 1}`} className="max-h-[78dvh] max-w-[88vw] rounded-2xl [&_img]:object-contain" watermark={watermark} loading="eager" />
             <figcaption className="text-white/70 text-sm text-center">
               {current.caption && <span className="block text-white/85">{current.caption}</span>}
-              <span className="text-white/40 text-xs">{index + 1} / {photos.length}</span>
+              <span className="text-white/60 text-xs">{index + 1} / {photos.length}</span>
             </figcaption>
           </figure>
           {index < photos.length - 1 && (

@@ -41,14 +41,14 @@ function Meter({ icon: Icon, label, remaining, limit, note, accent }: {
     <div className="glass rounded-2xl p-4">
       <p className="text-white/60 text-xs flex items-center gap-1.5"><Icon size={12} aria-hidden="true" /> {label}</p>
       <p className="text-white text-2xl font-bold mt-1 tabular-nums">
-        {unlimited ? 'Unlimited' : none ? '—' : <>{remaining}<span className="text-white/45 text-sm font-normal"> / {limit}</span></>}
+        {unlimited ? 'Unlimited' : none ? '—' : <>{remaining}<span className="text-white/60 text-sm font-normal"> / {limit}</span></>}
       </p>
       {!unlimited && !none && (
         <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mt-2" role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={limit} aria-valuenow={remaining ?? 0}>
           <div className="h-full rounded-full" style={{ width: `${pct}%`, background: accent }} />
         </div>
       )}
-      <p className="text-white/45 text-[11px] mt-2">{note}</p>
+      <p className="text-white/60 text-[11px] mt-2">{note}</p>
     </div>
   );
 }
@@ -181,15 +181,15 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
                 {STATUS_CHIP[sub.status] && (
                   <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_CHIP[sub.status].cls}`}>{STATUS_CHIP[sub.status].label}</span>
                 )}
-                <span className="text-white/45 text-xs">{tierLabel(sub.tier)} · {sub.provider === 'REFERRAL' ? '1 week · Invite reward' : <>{sub.period === 'annual' ? 'Annual' : 'Monthly'} · {paymentProviderLabel(sub.provider === 'ADMIN' ? null : sub.provider)}</>}</span>
+                <span className="text-white/60 text-xs">{tierLabel(sub.tier)} · {sub.provider === 'REFERRAL' ? '1 week · Invite reward' : <>{sub.period === 'annual' ? 'Annual' : 'Monthly'} · {paymentProviderLabel(sub.provider === 'ADMIN' ? null : sub.provider)}</>}</span>
               </div>
               <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div>
-                  <dt className="text-white/45 text-xs">{sub.cancelAtPeriodEnd ? 'Ends on' : sub.status === 'PAST_DUE' ? 'Was due on' : 'Renews on'}</dt>
+                  <dt className="text-white/60 text-xs">{sub.cancelAtPeriodEnd ? 'Ends on' : sub.status === 'PAST_DUE' ? 'Was due on' : 'Renews on'}</dt>
                   <dd className="text-white">{endsOn}</dd>
                 </div>
                 <div>
-                  <dt className="text-white/45 text-xs">Last payment</dt>
+                  <dt className="text-white/60 text-xs">Last payment</dt>
                   <dd className="text-white">
                     {sub.lastPaymentAt && sub.lastPaymentCents !== null
                       ? <>{formatRand(sub.lastPaymentCents)} on {formatDate(sub.lastPaymentAt)}</>
@@ -297,9 +297,9 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
                           ? order ? <Link href={`/store/orders/${encodeURIComponent(order)}`} className="hover:underline">Store order {order}</Link> : 'Store order'
                           : `Unbound ${tierLabel(p.tier ?? 'FREE')}${p.period ? ` (${p.period === 'annual' ? 'annual' : 'monthly'})` : ''}`}
                       </p>
-                      <p className="text-white/45 text-xs truncate">{formatDate(p.createdAt)} · {paymentProviderLabel(p.provider)} · Ref {p.reference}</p>
+                      <p className="text-white/60 text-xs truncate">{formatDate(p.createdAt)} · {paymentProviderLabel(p.provider)} · Ref {p.reference}</p>
                     </div>
-                    <p className={`tabular-nums shrink-0 ${p.status === 'REFUNDED' ? 'text-white/45 line-through' : 'text-white'}`}>{formatRand(p.amountCents)}</p>
+                    <p className={`tabular-nums shrink-0 ${p.status === 'REFUNDED' ? 'text-white/60 line-through' : 'text-white'}`}>{formatRand(p.amountCents)}</p>
                   </li>
                 );
               })}

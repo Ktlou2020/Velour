@@ -242,7 +242,7 @@ export default function PhotoViewer({ photos, index, watermark, hasMore, onIndex
                 <span className="flex items-center gap-1 text-white font-semibold">
                   <span className="truncate">{photo.isOwn ? `${p.name} (you)` : p.name}</span>
                   {p.isVerified && <BadgeCheck size={15} className="text-sky-400 shrink-0" aria-label="Verified" />}
-                  {p.isCouple && <Users size={13} className="text-white/45 shrink-0" aria-label="Couple" />}
+                  {p.isCouple && <Users size={13} className="text-white/60 shrink-0" aria-label="Couple" />}
                 </span>
                 <span className="flex items-center gap-1 text-white/55 text-xs truncate">
                   {p.travelling && <Plane size={11} className="shrink-0" aria-label="Visiting" />}
@@ -253,7 +253,7 @@ export default function PhotoViewer({ photos, index, watermark, hasMore, onIndex
             <button
               type="button"
               onClick={() => setCommentsOpen(true)}
-              aria-label={`Comments (${photo.commentCount})`}
+              aria-label={`Comments, ${compactCount(photo.commentCount)}`}
               className="flex items-center gap-1.5 rounded-full border border-white/20 px-4 h-11 text-sm font-semibold text-white hover:border-white/40"
             >
               <MessageCircle size={17} aria-hidden="true" />
@@ -270,7 +270,7 @@ export default function PhotoViewer({ photos, index, watermark, hasMore, onIndex
                 type="button"
                 onClick={() => onLike(photo, !photo.liked)}
                 aria-pressed={photo.liked}
-                aria-label={photo.liked ? 'Unlike photo' : 'Like photo'}
+                aria-label={`${photo.liked ? "Unlike" : "Like"} photo, ${compactCount(photo.likeCount)} likes`}
                 className={`flex items-center gap-1.5 rounded-full px-4 h-11 text-sm font-semibold transition-colors ${photo.liked ? 'bg-[#DC143C] text-white shadow-lg shadow-[#DC143C]/30' : 'border border-white/20 text-white hover:border-white/40'}`}
               >
                 <Heart size={17} className={photo.liked ? 'fill-white' : ''} aria-hidden="true" />
@@ -298,7 +298,7 @@ export default function PhotoViewer({ photos, index, watermark, hasMore, onIndex
               </button>
             )}
           </div>
-          <p className="hidden sm:block text-center text-white/30 text-[11px] mt-3">← → to browse · double-click or L to like · Esc to close</p>
+          <p className="hidden sm:block text-center text-white/60 text-[11px] mt-3">← → to browse · double-click or L to like · Esc to close</p>
         </div>
       </div>
       {commentsOpen && (

@@ -88,7 +88,7 @@ export default function MemberAlbums({ username, title = 'Albums', className = '
       <div className="flex items-center justify-between mb-3">
         <h2 id={`albums-${username}`} className="text-white font-semibold flex items-center gap-2">
           <Images size={16} className="text-[#FF4D6D]" aria-hidden="true" /> {title}
-          <span className="text-white/40 text-sm font-normal">({albums.length})</span>
+          <span className="text-white/60 text-sm font-normal">({albums.length})</span>
         </h2>
         {isOwner && <Link href="/gallery?tab=albums" className="text-sm text-[#D4AF37] hover:text-[#e8c547]">Manage</Link>}
       </div>
@@ -118,7 +118,7 @@ export default function MemberAlbums({ username, title = 'Albums', className = '
             <div className="mt-2 flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-white text-sm font-medium truncate">{a.name}</p>
-                <p className="text-white/45 text-xs">{a.photoCount} photo{a.photoCount === 1 ? '' : 's'}{a.isPrivate ? ' · private' : ''}</p>
+                <p className="text-white/60 text-xs">{a.photoCount} photo{a.photoCount === 1 ? '' : 's'}{a.isPrivate ? ' · private' : ''}</p>
               </div>
             </div>
             {a.locked && (

@@ -96,7 +96,7 @@ export default function SparkClient({ initial }: { initial: SparkInitial }) {
             <p className="eyebrow text-[#D4AF37] flex items-center gap-1.5">
               <Sparkles size={13} aria-hidden="true" /> Daily Spark
             </p>
-            <span className="text-white/45 text-xs">{dateLabel}</span>
+            <span className="text-white/60 text-xs">{dateLabel}</span>
           </div>
           <h1 id="spark-question" className="font-serif text-2xl sm:text-4xl font-bold text-white leading-tight text-balance mb-6">
             {q.text}
@@ -134,7 +134,7 @@ export default function SparkClient({ initial }: { initial: SparkInitial }) {
                   className="input-dark w-full resize-none text-base"
                 />
                 <div className="flex items-center justify-between mt-3 gap-3">
-                  <span className="text-white/45 text-xs" aria-hidden="true">{draft.length}/{SPARK_TEXT_MAX}</span>
+                  <span className="text-white/60 text-xs" aria-hidden="true">{draft.length}/{SPARK_TEXT_MAX}</span>
                   <div className="flex gap-2">
                     {myAnswer && (
                       <button type="button" onClick={() => { setDraft(myAnswer); setEditing(false); }} className="glass px-4 py-2.5 rounded-xl text-sm text-white/70 hover:text-white">
@@ -168,7 +168,7 @@ export default function SparkClient({ initial }: { initial: SparkInitial }) {
             </div>
           )}
 
-          <p className="text-white/45 text-xs mt-5">A new question every day.</p>
+          <p className="text-white/60 text-xs mt-5">A new question every day.</p>
         </div>
       </section>
 

@@ -53,7 +53,7 @@ export default function MessagePolicyRow() {
           <span className="block text-white font-semibold text-sm">Who can message me</span>
           {current && <span className="block text-white/55 text-xs">{current.label}</span>}
         </span>
-        <ChevronRight size={16} className="text-white/40 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
+        <ChevronRight size={16} className="text-white/60 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
       </summary>
       <div className="px-5 pb-5">
         <fieldset disabled={policy === null || saving} className="space-y-2">

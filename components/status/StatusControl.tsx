@@ -29,7 +29,7 @@ export default function StatusControl({ initial, className = '' }: { initial: Ac
       {status ? (
         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
           <StatusPill status={status} />
-          {left && <span className="text-white/45 text-xs">{left}</span>}
+          {left && <span className="text-white/60 text-xs">{left}</span>}
           <button type="button" onClick={() => setOpen(true)} className="text-xs text-white/60 hover:text-white underline-offset-2 hover:underline">
             Change
           </button>

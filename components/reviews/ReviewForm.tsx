@@ -22,7 +22,7 @@ function StarInput({ name, label, hint, value, onChange, invalid }: {
           <p className="text-white font-semibold text-sm">{label}</p>
           <p className="text-white/55 text-xs">{hint}</p>
         </div>
-        <span className={`text-xs font-semibold flex-shrink-0 mt-0.5 ${shown ? 'text-[#F5D77A]' : 'text-white/35'}`}>{shown ? WORDS[shown] : 'Tap to rate'}</span>
+        <span className={`text-xs font-semibold flex-shrink-0 mt-0.5 ${shown ? 'text-[#F5D77A]' : 'text-white/60'}`}>{shown ? WORDS[shown] : 'Tap to rate'}</span>
       </div>
       <div className="flex gap-1.5" onMouseLeave={() => setHover(0)}>
         {[1, 2, 3, 4, 5].map((n) => (
@@ -165,7 +165,7 @@ export default function ReviewForm({ requestId, reviewee, existing, canAskBack }
           <span className={len < COMMENT_MIN ? 'text-white/50' : 'text-emerald-300/80'}>
             {len < COMMENT_MIN ? `${COMMENT_MIN - len} more character${COMMENT_MIN - len === 1 ? '' : 's'} needed` : 'Looks good'}
           </span>
-          <span className={comment.length >= COMMENT_MAX - 20 ? 'text-[#F5D77A]' : 'text-white/45'}>{comment.length}/{COMMENT_MAX}</span>
+          <span className={comment.length >= COMMENT_MAX - 20 ? 'text-[#F5D77A]' : 'text-white/60'}>{comment.length}/{COMMENT_MAX}</span>
         </p>
       </div>
 
@@ -196,7 +196,7 @@ export default function ReviewForm({ requestId, reviewee, existing, canAskBack }
       >
         {submitting ? 'Saving…' : existing ? 'Save changes' : 'Submit review'}
       </button>
-      <p className="text-white/45 text-xs text-center flex items-center justify-center gap-1.5">
+      <p className="text-white/60 text-xs text-center flex items-center justify-center gap-1.5">
         <ShieldCheck size={12} aria-hidden="true" /> Hidden until {name} reviews you or {BLIND_DAYS} days pass.
       </p>
     </form>

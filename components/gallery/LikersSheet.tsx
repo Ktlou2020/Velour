@@ -72,9 +72,9 @@ export default function LikersSheet({ photoId, onClose }: { photoId: string | nu
                       <span className="truncate">{l.name}</span>
                       {l.isVerified && <BadgeCheck size={14} className="text-sky-400 shrink-0" aria-label="Verified" />}
                     </span>
-                    <span className="block text-white/45 text-xs truncate">@{l.username}</span>
+                    <span className="block text-white/60 text-xs truncate">@{l.username}</span>
                   </span>
-                  <span className="text-white/40 text-xs shrink-0">{ago(l.likedAt)}</span>
+                  <span className="text-white/60 text-xs shrink-0">{ago(l.likedAt)}</span>
                 </Link>
               </li>
             ))}

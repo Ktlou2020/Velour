@@ -24,7 +24,7 @@ export default function StoreLegalNote({ discreetSender }: { discreetSender: str
             </li>
           ))}
         </ul>
-        <p className="text-white/40 text-xs mt-8">
+        <p className="text-white/60 text-xs mt-8">
           Full details in the <Link href={STORE_TERMS_HREF} className="text-[#FF4D6D] hover:underline">{STORE_NAME} store terms</Link>.
         </p>
       </div>

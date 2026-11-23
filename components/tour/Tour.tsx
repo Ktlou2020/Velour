@@ -219,7 +219,7 @@ export default function Tour({ onClose }: { onClose: (reason: 'finished' | 'skip
             <Icon size={20} className="text-[#D4AF37]" aria-hidden="true" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] uppercase tracking-wider text-white/45 font-semibold">
+            <p className="text-[11px] uppercase tracking-wider text-white/60 font-semibold">
               Step {index + 1} of {steps.length}
             </p>
             <h2 id={titleId} className="font-serif text-lg font-semibold text-white leading-snug">

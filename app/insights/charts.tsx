@@ -46,7 +46,7 @@ export function DailyBars({
         <text x="0" y={H + 12} fill="rgba(255,255,255,0.45)" fontSize="9">{shortDay(series[0].date)}</text>
         <text x={W} y={H + 12} fill="rgba(255,255,255,0.45)" fontSize="9" textAnchor="end">Today</text>
       </svg>
-      <p className="text-white/45 text-[11px] mt-1">
+      <p className="text-white/60 text-[11px] mt-1">
         {total === 0
           ? 'Nothing yet this month'
           : <>Busiest day: <span className="text-white/70">{values[peak]}</span> on {shortDay(series[peak].date)}</>}
@@ -88,7 +88,7 @@ export function StatTile({ label, value, previous }: { label: string; value: num
     <div className="glass rounded-2xl p-4">
       <p className="text-white/60 text-xs">{label}</p>
       <p className="text-white text-2xl sm:text-3xl font-bold tabular-nums mt-1">{value.toLocaleString('en-ZA')}</p>
-      <p className={`text-[11px] mt-1 ${diff > 0 ? 'text-emerald-300' : diff < 0 ? 'text-white/50' : 'text-white/45'}`}>
+      <p className={`text-[11px] mt-1 ${diff > 0 ? 'text-emerald-300' : diff < 0 ? 'text-white/50' : 'text-white/60'}`}>
         {previous === 0 && value === 0 ? 'No activity yet'
           : pct === null ? 'New this month'
           : diff === 0 ? 'Same as the 30 days before'

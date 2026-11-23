@@ -152,7 +152,7 @@ export default function GameBubble({ meta, senderId, myId, mySide, sent, nameOf,
                       : 'bg-white/5 border-white/10 text-white/80'
                 } disabled:cursor-default`}
               >
-                <span className="text-[11px] font-bold text-white/45 mt-0.5 flex-shrink-0">{STAMP[i]}</span>
+                <span className="text-[11px] font-bold text-white/60 mt-0.5 flex-shrink-0">{STAMP[i]}</span>
                 <span className="flex-1 min-w-0">
                   <span className="block break-words">{o}</span>
                   {revealed && (

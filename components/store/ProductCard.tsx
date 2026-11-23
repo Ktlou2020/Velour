@@ -26,7 +26,7 @@ export default function ProductCard({ product, priority = false }: { product: Pr
         <StockBadge stock={product.stock} className="absolute bottom-2 left-2 backdrop-blur" />
       </div>
       <div className="p-3 sm:p-4">
-        {product.categoryName && <p className="text-[10px] uppercase tracking-[0.18em] text-white/45 mb-1 truncate">{product.categoryName}</p>}
+        {product.categoryName && <p className="text-[10px] uppercase tracking-[0.18em] text-white/60 mb-1 truncate">{product.categoryName}</p>}
         <h3 className="text-white text-sm sm:text-[15px] font-medium leading-snug line-clamp-2 min-h-[2.5em]">{product.name}</h3>
         <Price cents={product.priceCents} compareAtCents={product.compareAtCents} size="sm" className="mt-2" />
       </div>

@@ -79,8 +79,8 @@ export default function GetAppClient({ qrSvg }: { qrSvg: string }) {
         ))}
       </ul>
 
-      <p className="text-center text-white/45 text-sm mt-8">
-        Questions? See the <Link href="/help" className="text-[#FF4D6D] hover:underline">Help Centre</Link>.
+      <p className="text-center text-white/60 text-sm mt-8">
+        Questions? See the <Link href="/help" className="text-[#FF4D6D] underline">Help Centre</Link>.
       </p>
     </div>
   );

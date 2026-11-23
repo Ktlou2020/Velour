@@ -131,11 +131,12 @@ export default function SignupPage() {
 
       <div className="w-full max-w-md relative">
         <div className="text-center mb-7">
-          <Link href="/" aria-label="Unbound — home" className="inline-flex items-center gap-2 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center">
+          <Link href="/" className="inline-flex items-center gap-2 mb-5">
+            <div aria-hidden="true" className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center">
               <span className="text-white font-serif font-bold text-xl">U</span>
             </div>
-            <span className="text-2xl font-serif font-bold tracking-wide text-white">UNBOUND</span>
+            <span className="text-2xl font-serif font-bold tracking-wide text-white uppercase">Unbound</span>
+            <span className="sr-only"> home</span>
           </Link>
           <h1 className="text-3xl font-serif font-bold text-white mb-2">Join Unbound</h1>
           <p className="text-gray-400">Free to join. Discreet by design. For singles and couples of every kind.</p>
@@ -313,8 +314,8 @@ export default function SignupPage() {
                 </div>
                 <span className="text-sm text-gray-400 leading-relaxed">
                   {accountType === 'COUPLE' ? 'We are both' : 'I am'} at least <span className="text-white font-semibold">18 years old</span> and agree to the{' '}
-                  <Link href="/terms" className="text-[#FF4D6D] hover:underline">Terms</Link> and{' '}
-                  <Link href="/privacy" className="text-[#FF4D6D] hover:underline">Privacy Policy</Link>
+                  <Link href="/terms" className="text-[#FF4D6D] underline">Terms</Link> and{' '}
+                  <Link href="/privacy" className="text-[#FF4D6D] underline">Privacy Policy</Link>
                 </span>
               </label>
               {errText('terms')}
@@ -336,7 +337,7 @@ export default function SignupPage() {
 
           <p className="text-center text-gray-400 text-sm mt-6">
             Already a member?{' '}
-            <Link href="/auth/signin" className="text-[#DC143C] hover:underline font-medium">Sign in</Link>
+            <Link href="/auth/signin" className="text-[#FF4D6D] hover:underline font-medium">Sign in</Link>
           </p>
         </div>
       </div>

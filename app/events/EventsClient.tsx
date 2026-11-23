@@ -354,7 +354,7 @@ export default function EventsClient({ events, featured, pastEvents = [], active
                       See who went
                     </button>
                   ) : (
-                    <span className="text-white/25 text-xs">Ended</span>
+                    <span className="text-white/60 text-xs">Ended</span>
                   )}
                 </div>
               </div>

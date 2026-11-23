@@ -38,7 +38,7 @@ export default function PersonCard({ person: p, fallbackTitle, className = '' }:
           ))}
         </dl>
       ) : (
-        <p className="text-white/45 text-xs italic">No details shared yet</p>
+        <p className="text-white/60 text-xs italic">No details shared yet</p>
       )}
       {p.username && (
         <Link href={`/members/${p.username}`} className="inline-block mt-3 text-xs text-[#FF4D6D] hover:underline">

@@ -1133,7 +1133,7 @@ export default function MessagesPage() {
         {username
           ? <Link href={`/members/${username}`} className="text-white/75 font-medium hover:text-white hover:underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#D4AF37] rounded-sm">{n}</Link>
           : <span className="text-white/75 font-medium">{n}</span>}
-        {suffix && <span className={p?.isMyPartner ? 'text-[#D4AF37]/75' : 'text-white/45'}> · {suffix}</span>}
+        {suffix && <span className={p?.isMyPartner ? 'text-[#D4AF37]/75' : 'text-white/60'}> · {suffix}</span>}
       </>
     );
   }
@@ -1165,7 +1165,7 @@ export default function MessagesPage() {
               ))}
             </span>
             {headerPeople.length === 1 && headerPeople[0].length === 1 && (
-              <Link href={`/members/${headerPeople[0][0].username}`} className="flex-shrink-0 text-white/40 hover:text-white -ml-0.5" aria-label={`View ${headerPeople[0][0].label}'s profile`} tabIndex={-1}>
+              <Link href={`/members/${headerPeople[0][0].username}`} className="flex-shrink-0 p-1.5 -my-1.5 -mr-1.5 -ml-2 rounded-md text-white/60 hover:text-white" aria-label={`View ${headerPeople[0][0].label}'s profile`} tabIndex={-1}>
                 <ChevronRight size={14} aria-hidden="true" />
               </Link>
             )}
@@ -1214,7 +1214,7 @@ export default function MessagesPage() {
       </div>
       {msgSearchOpen && (
         <div className="glass-dark border-b border-white/5 px-4 py-2 flex items-center gap-2">
-          <Search size={14} className="text-white/45 flex-shrink-0" aria-hidden="true" />
+          <Search size={14} className="text-white/60 flex-shrink-0" aria-hidden="true" />
           <input
             type="search"
             autoFocus
@@ -1223,7 +1223,7 @@ export default function MessagesPage() {
             onKeyDown={e => { if (e.key === 'Escape') { setMsgSearchOpen(false); setMsgQuery(''); } }}
             placeholder="Search this conversation…"
             aria-label="Search this conversation"
-            className="flex-1 min-w-0 bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none"
+            className="flex-1 min-w-0 bg-transparent text-sm text-white placeholder:text-white/60 focus:outline-none"
           />
           {msgQuery.trim() && (
             <span className="text-xs text-white/55 flex-shrink-0" aria-live="polite">
@@ -1244,7 +1244,7 @@ export default function MessagesPage() {
           expired ? (
             <div className="text-center py-10">
               <p className="text-white/65 text-sm">This match expired before anyone said hi.</p>
-              <Link href="/discover" className="text-[#DC143C] hover:text-[#FF1744] text-sm mt-2 inline-block">Keep discovering</Link>
+              <Link href="/discover" className="text-[#FF4D6D] hover:text-[#FF1744] text-sm mt-2 inline-block">Keep discovering</Link>
             </div>
           ) : (
             CHAT_EXTRAS
@@ -1411,7 +1411,7 @@ export default function MessagesPage() {
                 </span>
               )}
             </div>
-            <button type="button" onClick={() => { setPriorityNudge(false); setPriorityOn(false); }} className="text-white/45 hover:text-white flex-shrink-0" aria-label="Dismiss">
+            <button type="button" onClick={() => { setPriorityNudge(false); setPriorityOn(false); }} className="p-1.5 -m-1.5 rounded-md text-white/60 hover:text-white flex-shrink-0" aria-label="Dismiss">
               <X size={13} />
             </button>
           </div>
@@ -1426,13 +1426,13 @@ export default function MessagesPage() {
               {' '}· then {PLANS.FREE.messagesPer24h} per 24 hours on Free ·{' '}
               <Link href="/upgrade" className="text-[#D4AF37] font-medium hover:underline whitespace-nowrap">Go Gold for unlimited</Link>
             </p>
-            <button type="button" onClick={dismissWelcome} className="text-white/45 hover:text-white flex-shrink-0" aria-label="Dismiss welcome note">
+            <button type="button" onClick={dismissWelcome} className="p-1.5 -m-1.5 rounded-md text-white/60 hover:text-white flex-shrink-0" aria-label="Dismiss welcome note">
               <X size={13} />
             </button>
           </div>
         )}
         {quotaLimited && !quotaLocked && !blocked && !expired && (
-          <p className="mb-1.5 text-[11px] text-white/45 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+          <p className="mb-1.5 text-[11px] text-white/60 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
             <span className={`whitespace-nowrap ${quota!.remaining === 1 ? 'text-[#D4AF37]/80' : ''}`}>
               {quota!.remaining} of {quota!.limit} free messages left
             </span>
@@ -1550,7 +1550,7 @@ export default function MessagesPage() {
     <div className="hidden md:flex flex-1 items-center justify-center">
       <div className="text-center">
         <div className="w-16 h-16 rounded-full glass flex items-center justify-center mx-auto mb-4">
-          <Send size={24} className="text-white/45" />
+          <Send size={24} className="text-white/60" />
         </div>
         <p className="text-white/80 font-medium">Pick up where you left off</p>
         <p className="text-white/60 text-sm mt-1">Choose a conversation to start chatting.</p>

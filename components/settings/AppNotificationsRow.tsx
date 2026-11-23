@@ -102,7 +102,7 @@ export default function AppNotificationsRow() {
           <span className="block text-white font-semibold text-sm">App &amp; notifications</span>
           <span className="block text-white/55 text-xs">{status}</span>
         </span>
-        <ChevronRight size={16} className="text-white/40 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
+        <ChevronRight size={16} className="text-white/60 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
       </summary>
 
       <div className="px-5 pb-5 space-y-5">
@@ -136,7 +136,7 @@ export default function AppNotificationsRow() {
         <section aria-labelledby="app-push-h">
           <h3 id="app-push-h" className="text-white/85 text-sm font-semibold mb-1.5">Notifications on this device</h3>
           {push === 'loading' ? (
-            <p className="text-white/40 text-sm">Checking…</p>
+            <p className="text-white/60 text-sm">Checking…</p>
           ) : push === 'on' ? (
             <>
               <p className="text-emerald-300 text-sm flex items-center gap-2 mb-3"><Bell size={15} aria-hidden="true" /> On — you&apos;ll get alerts for new messages and matches.</p>

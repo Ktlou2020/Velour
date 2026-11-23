@@ -69,8 +69,8 @@ export function PromptsEditor({ initial }: { initial: ProfilePrompt[] }) {
           <span className="text-white/55 text-xs font-normal">({prompts.length}/{MAX_PROMPTS})</span>
         </h2>
         {!editing && (
-          <button onClick={startEdit} className="text-white/55 hover:text-white/60 transition-colors" aria-label="Edit prompts">
-            <Edit2 size={14} />
+          <button onClick={startEdit} className="p-1.5 -m-1.5 rounded-md text-white/55 hover:text-white/60 transition-colors" aria-label="Edit prompts">
+            <Edit2 size={14} aria-hidden="true" />
           </button>
         )}
       </div>
@@ -111,7 +111,7 @@ export function PromptsEditor({ initial }: { initial: ProfilePrompt[] }) {
           ))}
           <div className="flex items-center justify-between">
             {draft.length < MAX_PROMPTS ? (
-              <button onClick={addPrompt} className="flex items-center gap-1.5 text-[#DC143C] text-sm hover:underline">
+              <button onClick={addPrompt} className="flex items-center gap-1.5 text-[#FF4D6D] text-sm hover:underline">
                 <Plus size={14} /> Add prompt
               </button>
             ) : <span />}
@@ -302,7 +302,7 @@ export function LocationCard({ initialHasLocation }: { initialHasLocation: boole
         <button
           onClick={useCurrent}
           disabled={busy}
-          className="flex items-center gap-2 bg-[#DC143C]/20 hover:bg-[#DC143C]/30 border border-[#DC143C]/30 text-[#DC143C] px-4 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-60"
+          className="flex items-center gap-2 bg-[#DC143C]/20 hover:bg-[#DC143C]/30 border border-[#DC143C]/30 text-[#FF4D6D] px-4 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-60"
         >
           {busy ? <div className="w-4 h-4 border-2 border-[#DC143C] border-t-transparent rounded-full animate-spin" /> : <LocateFixed size={14} />}
           {hasLocation ? 'Update to my current location' : 'Use my current location'}

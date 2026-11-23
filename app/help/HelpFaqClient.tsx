@@ -15,7 +15,7 @@ function renderAnswer(text: string): ReactNode {
     const i = m.index ?? 0
     if (i > last) out.push(text.slice(last, i))
     out.push(
-      <Link key={i} href={m[2]} className="text-[#DC143C] hover:underline">
+      <Link key={i} href={m[2]} className="text-[#FF4D6D] underline">
         {m[1]}
       </Link>,
     )
@@ -52,7 +52,7 @@ export default function HelpFaqClient({ sections }: { sections: FaqSection[] }) 
       <div>
         <label htmlFor="help-search" className="sr-only">Search the Help Centre</label>
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" aria-hidden="true" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" aria-hidden="true" />
           <input
             id="help-search"
             type="search"
@@ -67,13 +67,13 @@ export default function HelpFaqClient({ sections }: { sections: FaqSection[] }) 
               type="button"
               onClick={() => setQuery('')}
               aria-label="Clear search"
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-white/40 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-white/60 hover:text-white"
             >
               <X className="w-4 h-4" />
             </button>
           )}
         </div>
-        <p className="text-white/40 text-xs mt-2" aria-live="polite">
+        <p className="text-white/60 text-xs mt-2" aria-live="polite">
           {searching ? `${total} ${total === 1 ? 'answer' : 'answers'} found` : ''}
         </p>
         {!searching && (
@@ -95,7 +95,7 @@ export default function HelpFaqClient({ sections }: { sections: FaqSection[] }) 
         <div className="glass rounded-2xl p-8 text-center">
           <p className="text-white font-medium mb-1">No answers match “{query.trim()}”.</p>
           <p className="text-gray-400 text-sm">
-            Try a different word, or <Link href="/help/contact" className="text-[#DC143C] hover:underline">contact support</Link>.
+            Try a different word, or <Link href="/help/contact" className="text-[#FF4D6D] underline">contact support</Link>.
           </p>
         </div>
       ) : (
@@ -107,7 +107,7 @@ export default function HelpFaqClient({ sections }: { sections: FaqSection[] }) 
                 <details key={f.q} className="group glass rounded-2xl" open={searching}>
                   <summary className="flex items-center gap-3 p-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                     <span className="text-white font-semibold text-sm flex-1">{f.q}</span>
-                    <ChevronRight size={16} className="text-white/40 flex-shrink-0 transition-transform group-open:rotate-90" aria-hidden="true" />
+                    <ChevronRight size={16} className="text-white/60 flex-shrink-0 transition-transform group-open:rotate-90" aria-hidden="true" />
                   </summary>
                   <p className="px-5 pb-5 -mt-1 text-gray-300 text-sm leading-relaxed">{renderAnswer(f.a)}</p>
                 </details>

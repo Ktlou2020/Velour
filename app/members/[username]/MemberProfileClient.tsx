@@ -431,7 +431,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                     ))}
                   </dl>
                 ) : (
-                  <p className="text-white/45 text-xs text-center italic">No details shared yet</p>
+                  <p className="text-white/60 text-xs text-center italic">No details shared yet</p>
                 )}
               </div>
             );

@@ -429,7 +429,7 @@ export default function OnboardingPage() {
               ) : (
                 <>
                   <section className="rounded-2xl border border-white/10 p-4 sm:p-5" aria-labelledby="ob-p1-h" data-err="p1name">
-                    <h2 id="ob-p1-h" className="text-white font-semibold mb-4 flex items-center gap-2"><User size={16} className="text-[#FF4D6D]" aria-hidden="true" />Partner 1 <span className="text-white/45 font-normal text-sm">(you)</span></h2>
+                    <h2 id="ob-p1-h" className="text-white font-semibold mb-4 flex items-center gap-2"><User size={16} className="text-[#FF4D6D]" aria-hidden="true" />Partner 1 <span className="text-white/60 font-normal text-sm">(you)</span></h2>
                     <PersonIdentityFields
                       basic
                       idPrefix="ob-p1"
@@ -578,7 +578,7 @@ export default function OnboardingPage() {
           )}
 
           {step === 0 && (
-            <p className="mt-6 text-white/45 text-xs flex gap-2"><Info size={13} className="flex-shrink-0 mt-0.5" aria-hidden="true" />Women, men, non-binary people and couples of every kind are welcome on Unbound.</p>
+            <p className="mt-6 text-white/60 text-xs flex gap-2"><Info size={13} className="flex-shrink-0 mt-0.5" aria-hidden="true" />Women, men, non-binary people and couples of every kind are welcome on Unbound.</p>
           )}
 
           {/* Navigation */}

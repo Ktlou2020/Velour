@@ -68,7 +68,7 @@ export default function ProfilePhotoPicker({
             <><Upload size={16} aria-hidden="true" /> Upload a new photo</>
           )}
         </button>
-        <p className="text-white/45 text-xs mt-2 text-center">A clear, recent photo of your face (or both of you) gets the most attention.</p>
+        <p className="text-white/60 text-xs mt-2 text-center">A clear, recent photo of your face (or both of you) gets the most attention.</p>
 
         {error && <p role="alert" className="mt-3 text-sm text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{error}</p>}
 
@@ -98,7 +98,7 @@ export default function ProfilePhotoPicker({
           </>
         )}
         {photos.some((p) => p.isPrivate) && (
-          <p className="text-white/40 text-xs mt-3">Private photos can&apos;t be used as your profile photo.</p>
+          <p className="text-white/60 text-xs mt-3">Private photos can&apos;t be used as your profile photo.</p>
         )}
       </div>
     </div>,

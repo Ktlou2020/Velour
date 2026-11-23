@@ -177,7 +177,7 @@ export default async function DatingLandingPage({ params }: Props) {
           </ul>
           <p className="text-center mt-6 text-sm">
             <Link href="/safety" className="text-[#FF4D6D] hover:text-white underline underline-offset-4">Visit the Safety Centre</Link>
-            <span className="text-white/40 mx-2">·</span>
+            <span className="text-white/60 mx-2">·</span>
             <Link href="/pricing" className="text-[#FF4D6D] hover:text-white underline underline-offset-4">Compare memberships</Link>
           </p>
         </section>

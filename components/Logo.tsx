@@ -35,15 +35,16 @@ export default function Logo({
   const inner = (
     <>
       <LogoMark size={size} />
-      <span className={`text-white font-bold tracking-[0.14em] font-serif ${s.word}`}>UNBOUND</span>
+      <span className={`text-white font-bold tracking-[0.14em] font-serif uppercase ${s.word}`}>Unbound</span>
     </>
   );
   if (href === null) {
     return <span className={`inline-flex items-center gap-2 ${className}`}>{inner}</span>;
   }
   return (
-    <Link href={href} aria-label="Unbound — home" className={`inline-flex items-center gap-2 ${className}`}>
+    <Link href={href} className={`inline-flex items-center gap-2 ${className}`}>
       {inner}
+      <span className="sr-only"> home</span>
     </Link>
   );
 }

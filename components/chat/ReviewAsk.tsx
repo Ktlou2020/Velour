@@ -108,7 +108,7 @@ export function ReviewPromptCard({ person, onAsk, onDismiss }: { person: Eligibl
   const [busy, setBusy] = useState(false);
   return (
     <div role="note" className="relative mx-auto max-w-sm glass rounded-2xl border border-[#D4AF37]/20 px-4 py-3.5 pr-9 text-center">
-      <button type="button" onClick={onDismiss} className="absolute top-2 right-2 p-1 text-white/40 hover:text-white/80" aria-label="Dismiss">
+      <button type="button" onClick={onDismiss} className="absolute top-2 right-2 p-1 text-white/60 hover:text-white/80" aria-label="Dismiss">
         <X size={14} />
       </button>
       <p className="text-white text-sm font-semibold flex items-center justify-center gap-1.5">

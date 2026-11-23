@@ -22,7 +22,7 @@ export default function TopStrip({ photos, period, watermark, onOpen }: Props) {
             <Trophy size={16} className="text-[#D4AF37]" aria-hidden="true" />
             {period === 'week' ? 'Top photos this week' : 'Top photos (last 7 days)'}
           </h2>
-          <p className="text-white/45 text-xs mt-0.5">{period === 'week' ? 'Most liked since Monday' : 'Most liked over the past week'}</p>
+          <p className="text-white/60 text-xs mt-0.5">{period === 'week' ? 'Most liked since Monday' : 'Most liked over the past week'}</p>
         </div>
       </div>
       <ol className="hush-no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1" aria-label="Top photos">

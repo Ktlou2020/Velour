@@ -127,7 +127,7 @@ export default function CommentsSheet({ photoId, ownerName, count, onCount, onCl
       <button type="button" aria-label="Close comments" className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className="relative w-full sm:max-w-lg max-h-[80vh] sm:max-h-[75vh] flex flex-col glass-dark border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-white/5">
-          <h2 id="comments-title" className="text-white font-semibold">Comments{count ? <span className="text-white/45 font-normal"> · {count}</span> : null}</h2>
+          <h2 id="comments-title" className="text-white font-semibold">Comments{count ? <span className="text-white/60 font-normal"> · {count}</span> : null}</h2>
           <button type="button" onClick={onClose} aria-label="Close" className="p-2 -mr-2 rounded-full text-white/60 hover:text-white hover:bg-white/10"><X size={18} /></button>
         </div>
 
@@ -149,7 +149,7 @@ export default function CommentsSheet({ photoId, ownerName, count, onCount, onCl
                   <Link href={`/members/${encodeURIComponent(c.author.username)}`} className="text-white font-semibold hover:underline">{c.author.name}</Link>
                   {c.author.isVerified && <BadgeCheck size={13} className="inline ml-1 -mt-0.5 text-sky-400" aria-label="Verified" />}
                   {c.author.isPhotoOwner && <span className="ml-1.5 text-[10px] uppercase tracking-wide text-[#FF4D6D]">Owner</span>}
-                  <span className="text-white/35 text-xs ml-2">{ago(c.createdAt)}</span>
+                  <span className="text-white/60 text-xs ml-2">{ago(c.createdAt)}</span>
                 </p>
                 <p className="text-white/85 text-sm mt-0.5 whitespace-pre-wrap break-words">{c.body}</p>
               </div>
@@ -183,7 +183,7 @@ export default function CommentsSheet({ photoId, ownerName, count, onCount, onCl
               {sending ? <Spinner /> : <Send size={16} />}
             </button>
           </div>
-          <p className="text-white/30 text-[11px] mt-1.5">Comments are public to members. No phone numbers or contact details.</p>
+          <p className="text-white/60 text-[11px] mt-1.5">Comments are public to members. No phone numbers or contact details.</p>
         </div>
 
         {reporting && (

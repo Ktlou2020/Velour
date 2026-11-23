@@ -95,7 +95,7 @@ export default function ContactFormClient({ memberEmail }: { memberEmail: string
             placeholder="you@example.com"
           />
         )}
-        <p id="support-email-hint" className="text-white/40 text-xs mt-1.5">
+        <p id="support-email-hint" className="text-white/60 text-xs mt-1.5">
           {memberEmail ? 'We’ll reply to the email on your account.' : 'We’ll reply here. If you have an account, use the email you signed up with.'}
         </p>
       </div>
@@ -126,7 +126,7 @@ export default function ContactFormClient({ memberEmail }: { memberEmail: string
           className={`${field} resize-y`}
           placeholder="Tell us what happened. For a member issue, include their username. Please don’t share passwords or card numbers."
         />
-        <p className={`text-xs mt-1.5 text-right ${message.length > MESSAGE_MAX - 200 ? 'text-[#D4AF37]' : 'text-white/40'}`}>
+        <p className={`text-xs mt-1.5 text-right ${message.length > MESSAGE_MAX - 200 ? 'text-[#D4AF37]' : 'text-white/60'}`}>
           {message.length}/{MESSAGE_MAX}
         </p>
       </div>

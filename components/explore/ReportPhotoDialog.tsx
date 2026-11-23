@@ -64,7 +64,7 @@ export default function ReportPhotoDialog({ photo, onClose }: { photo: ExplorePh
           </div>
         </fieldset>
         <div>
-          <label htmlFor="report-details" className="block text-white/70 text-xs font-medium mb-1.5">Anything else? <span className="text-white/40">(optional)</span></label>
+          <label htmlFor="report-details" className="block text-white/70 text-xs font-medium mb-1.5">Anything else? <span className="text-white/60">(optional)</span></label>
           <textarea id="report-details" value={details} onChange={(e) => setDetails(e.target.value.slice(0, 600))} rows={2} className="input-dark w-full resize-none" />
         </div>
         <div className="flex justify-end gap-2 pt-1">

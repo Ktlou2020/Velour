@@ -58,7 +58,7 @@ export default function ViewOnceBubble({ info, sent, pending = false, multi = fa
   const done = info.state === 'opened' || info.state === 'expired';
   const body = (
     <>
-      <span className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${done ? 'bg-white/5 text-white/40' : sent ? 'bg-white/15 text-white' : 'bg-[#DC143C]/15 text-[#FF4D6D]'}`}>
+      <span className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${done ? 'bg-white/5 text-white/60' : sent ? 'bg-white/15 text-white' : 'bg-[#DC143C]/15 text-[#FF4D6D]'}`}>
         <ViewOnceIcon size={22} filled={!done} />
       </span>
       <span className="min-w-0 flex-1 text-left">

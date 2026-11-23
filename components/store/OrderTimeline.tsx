@@ -49,8 +49,8 @@ export default function OrderTimeline({ status, createdAt, paidAt, shippedAt, de
             <span className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center border ${done ? `bg-[#DC143C] border-[#DC143C] text-white ${current ? 'ring-4 ring-[#DC143C]/25' : ''}` : 'bg-[#0A0A0F] border-white/15 text-white/35'}`}>
               <Icon size={15} aria-hidden="true" />
             </span>
-            <span className={`mt-2 text-[10px] sm:text-xs leading-tight ${done ? 'text-white' : 'text-white/40'}`}>{s.label}</span>
-            {when[s.key] && done && <span className="hidden sm:block text-[10px] text-white/40 mt-0.5">{formatDateTime(when[s.key]!)}</span>}
+            <span className={`mt-2 text-[10px] sm:text-xs leading-tight ${done ? 'text-white' : 'text-white/60'}`}>{s.label}</span>
+            {when[s.key] && done && <span className="hidden sm:block text-[10px] text-white/60 mt-0.5">{formatDateTime(when[s.key]!)}</span>}
           </li>
         );
       })}

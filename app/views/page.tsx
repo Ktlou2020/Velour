@@ -153,7 +153,7 @@ export default async function ViewsPage() {
                           {v.isVerified && <Check size={12} className="text-blue-400 flex-shrink-0" aria-label="Verified" />}
                         </p>
                         {v.profile?.city && <p className="text-white/60 text-xs text-center truncate mt-0.5">{v.profile.city}</p>}
-                        <p className="text-white/45 text-xs text-center mt-1">
+                        <p className="text-white/60 text-xs text-center mt-1">
                           {timeAgo(r.last)}{r.count > 1 && <> · {r.count} visits</>}
                         </p>
                       </Link>

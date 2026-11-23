@@ -29,7 +29,7 @@ export function ReviewSummaryBlock({ summary, compact = false }: { summary: Revi
         <span className={`font-serif font-bold text-white ${compact ? 'text-2xl' : 'text-3xl sm:text-4xl'}`}>
           {summary.avg?.toFixed(1)}
         </span>
-        <span className="text-white/40" aria-hidden="true">·</span>
+        <span className="text-white/60" aria-hidden="true">·</span>
         <span className={`text-white/85 font-semibold ${compact ? 'text-sm' : 'text-base sm:text-lg'}`}>
           {summary.count} review{summary.count === 1 ? '' : 's'}
         </span>
@@ -99,8 +99,8 @@ export function ReviewCardView({ review, isOwner, showExplicit, revieweeName, on
   if (review.hidden) {
     return (
       <li className="glass rounded-2xl p-5 border border-white/5">
-        <p className="text-white/60 text-sm flex items-center gap-2"><Shield size={14} className="text-white/45" aria-hidden="true" />A review from {r.name} was hidden by moderators.</p>
-        <p className="text-white/45 text-xs mt-1">It doesn&apos;t count toward your score.</p>
+        <p className="text-white/60 text-sm flex items-center gap-2"><Shield size={14} className="text-white/60" aria-hidden="true" />A review from {r.name} was hidden by moderators.</p>
+        <p className="text-white/60 text-xs mt-1">It doesn&apos;t count toward your score.</p>
       </li>
     );
   }
@@ -186,7 +186,7 @@ export function ReviewCardView({ review, isOwner, showExplicit, revieweeName, on
           />
           {err && <p className="text-red-300 text-xs mt-1" role="alert">{err}</p>}
           <div className="flex items-center justify-between mt-2 gap-2">
-            <span className="text-white/45 text-xs tabular-nums">{draft.length}/{RESPONSE_MAX}</span>
+            <span className="text-white/60 text-xs tabular-nums">{draft.length}/{RESPONSE_MAX}</span>
             <div className="flex gap-2">
               <button type="button" onClick={() => { setEditing(false); setDraft(review.response ?? ''); setErr(null); }} className="glass px-3 py-1.5 rounded-lg text-white/70 text-xs">Cancel</button>
               <button type="button" onClick={saveResponse} disabled={saving} className="bg-[#DC143C] hover:bg-[#FF1744] text-white px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 disabled:opacity-50">
@@ -353,7 +353,7 @@ export default function ReviewsSection({ username, name, ownerView = false, clas
           {loadingMore ? 'Loading…' : page === 1 ? `Show all ${data.total} reviews` : 'Show more reviews'}
         </button>
       )}
-      <p className="text-white/40 text-[11px] mt-4 flex items-center gap-1.5">
+      <p className="text-white/60 text-[11px] mt-4 flex items-center gap-1.5">
         <Shield size={11} aria-hidden="true" /> Only members who&apos;ve chatted on Unbound can review each other. Reviews stay hidden until both have written one, or for 14 days.
       </p>
     </section>

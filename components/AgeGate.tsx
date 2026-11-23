@@ -111,9 +111,9 @@ export default function AgeGate() {
 
         <p className="text-gray-400 text-xs leading-relaxed">
           By entering, you confirm you are at least 18 years old and agree to our{' '}
-          <a href="/terms" className="text-[#DC143C] hover:underline">Terms of Service</a>
+          <a href="/terms" className="text-[#FF4D6D] underline">Terms of Service</a>
           {' '}and{' '}
-          <a href="/privacy" className="text-[#DC143C] hover:underline">Privacy Policy</a>.
+          <a href="/privacy" className="text-[#FF4D6D] underline">Privacy Policy</a>.
         </p>
       </div>
     </div>
