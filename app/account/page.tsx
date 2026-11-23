@@ -22,6 +22,9 @@ export default function AccountPage() {
   const username = (session?.user as { username?: string })?.username ?? '';
 
   const [verifyStatus, setVerifyStatus] = useState<'NONE' | 'PENDING' | 'VERIFIED' | 'REJECTED'>('NONE');
+  const [verifyPose, setVerifyPose] = useState('');
+  const [verifyNotes, setVerifyNotes] = useState<string | null>(null);
+  const [verifyError, setVerifyError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
@@ -88,32 +91,37 @@ export default function AccountPage() {
   }
 
   useEffect(() => {
-    fetch('/api/verify').then(r => r.json()).then(d => setVerifyStatus(d.status ?? 'NONE')).catch(() => {});
+    fetch('/api/verify').then(r => r.json()).then(d => {
+      setVerifyStatus(d.status ?? 'NONE');
+      setVerifyPose(d.pose ?? '');
+      setVerifyNotes(d.notes ?? null);
+    }).catch(() => {});
   }, []);
 
   async function handleVerifyUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    setVerifyError('');
     try {
-      // Upload to Cloudinary
+      // Stored privately — only admins reviewing the request can see it.
       const fd = new FormData();
       fd.append('file', file);
-      fd.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? 'velour_unsigned');
-      fd.append('folder', 'velour/verification');
-      const cloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? '';
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloud}/image/upload`, { method: 'POST', body: fd });
-      if (!res.ok) throw new Error('Upload failed');
-      const data = await res.json() as { secure_url: string };
-      // Submit for review
+      fd.append('purpose', 'verification');
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({})) as { url?: string; error?: string };
+      if (!res.ok || !data.url) throw new Error(data.error || 'Upload failed — please try again');
       const verRes = await fetch('/api/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ photoUrl: data.secure_url }),
+        body: JSON.stringify({ photoUrl: data.url, pose: verifyPose }),
       });
-      if (verRes.ok) setVerifyStatus('PENDING');
-    } catch { alert('Upload failed. Please try again.'); }
-    finally { setUploading(false); }
+      const v = await verRes.json().catch(() => ({})) as { error?: string };
+      if (!verRes.ok) throw new Error(v.error || 'Could not submit — please try again');
+      setVerifyStatus('PENDING');
+    } catch (err) {
+      setVerifyError(err instanceof Error ? err.message : 'Upload failed — please try again');
+    } finally { setUploading(false); if (fileRef.current) fileRef.current.value = ''; }
   }
 
   async function handleDelete() {
@@ -178,14 +186,25 @@ export default function AccountPage() {
           </summary>
           <div className="px-5 pb-5">
           <p className="text-white/65 text-sm mb-4 leading-relaxed">
-            Get a verified tick on your profile. Upload a clear selfie and our team will review it.
+            Get a verified tick on your profile. Take a selfie copying the pose below — our team compares it with your profile photos. The selfie is private and never shown on your profile.
           </p>
           <div className={`flex items-center gap-2 mb-4 ${verifyBadge.color}`}>
             <verifyBadge.icon size={16} />
             <span className="text-sm font-medium">{verifyBadge.text}</span>
           </div>
+          {verifyStatus === 'REJECTED' && verifyNotes && (
+            <p className="text-red-300/90 text-xs mb-3">Reviewer note: {verifyNotes}</p>
+          )}
           {(verifyStatus === 'NONE' || verifyStatus === 'REJECTED') && (
             <>
+              {verifyPose && (
+                <div className="rounded-xl border border-[#DC143C]/30 bg-[#DC143C]/10 px-4 py-3 mb-4">
+                  <p className="text-white/50 text-[11px] uppercase tracking-wide mb-0.5">Your pose</p>
+                  <p className="text-white text-sm font-medium">{verifyPose}</p>
+                  <p className="text-white/50 text-xs mt-1">Face the camera in good light, no sunglasses or filters.</p>
+                </div>
+              )}
+              {verifyError && <p role="alert" className="text-red-300 text-xs mb-3">{verifyError}</p>}
               <input ref={fileRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleVerifyUpload} />
               <button
                 onClick={() => fileRef.current?.click()}
@@ -195,7 +214,7 @@ export default function AccountPage() {
                 {uploading
                   ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   : <Camera size={16} />}
-                {uploading ? 'Uploading...' : 'Upload Selfie'}
+                {uploading ? 'Uploading...' : 'Take selfie'}
               </button>
             </>
           )}

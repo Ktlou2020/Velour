@@ -240,8 +240,8 @@ const DECODE_CACHE_BYTES = Number(process.env.WM_DECODE_CACHE_BYTES) || 96 * 102
 const decoded = new Map<string, { data: Buffer; width: number; height: number; channels: number }>()
 let decodedBytes = 0
 
-async function decode(inputKey: string, fileTag: string) {
-  const key = `${inputKey}|${fileTag}`
+async function decode(inputKey: string, fileTag: string, maxEdge?: number) {
+  const key = `${inputKey}|${fileTag}|${maxEdge ?? 0}`
   const hit = decoded.get(key)
   if (hit) {
     decoded.delete(key)
@@ -251,7 +251,9 @@ async function decode(inputKey: string, fileTag: string) {
   // Read through lib/storage (bucket or UPLOAD_DIR); images are ≤ 10 MB
   const input = await readObject(inputKey)
   if (!input) throw new Error('Stored image is missing')
-  const { data, info } = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS }).raw().toBuffer({ resolveWithObject: true })
+  let img = sharp(input, { limitInputPixels: MAX_INPUT_PIXELS })
+  if (maxEdge) img = img.resize({ width: maxEdge, height: maxEdge, fit: 'inside', withoutEnlargement: true })
+  const { data, info } = await img.raw().toBuffer({ resolveWithObject: true })
   const entry = { data, width: info.width, height: info.height, channels: info.channels }
   if (data.length <= DECODE_CACHE_BYTES / 4) {
     decoded.set(key, { ...entry, data: Buffer.from(data) })
@@ -266,8 +268,8 @@ async function decode(inputKey: string, fileTag: string) {
 }
 
 /** Watermark the stored image `inputKey` (a lib/storage key); returns WebP bytes. */
-export async function renderWatermarked(inputKey: string, spec: WatermarkSpec, date = sastDate(), fileTag = ''): Promise<Buffer> {
-  const { data, width, height, channels } = await decode(inputKey, fileTag)
+export async function renderWatermarked(inputKey: string, spec: WatermarkSpec, date = sastDate(), fileTag = '', maxEdge?: number): Promise<Buffer> {
+  const { data, width, height, channels } = await decode(inputKey, fileTag, maxEdge)
   if (!width || !height || (channels !== 3 && channels !== 4)) throw new Error('Unreadable image')
   await burnIn(data, width, height, channels, layoutFor(width, height, spec, date))
   return sharp(data, { raw: { width, height, channels: channels as 3 | 4 } })
@@ -280,6 +282,9 @@ export async function renderWatermarked(inputKey: string, spec: WatermarkSpec, d
  * (default 4) at the same quality setting; files are ~35% larger.
  */
 const WEBP_EFFORT = 0
+
+/** Longest edge of the 'medium' variant: sharp on a phone, a fraction of the 2048 px original. */
+export const MEDIUM_EDGE = 1080
 
 function clamp(n: number, lo: number, hi: number) {
   return Math.min(hi, Math.max(lo, n))
@@ -309,7 +314,8 @@ const inflight = new Map<string, Promise<Buffer>>()
  */
 export async function getWatermarked(opts: {
   photoId: string
-  variant: 'full' | 'thumb'
+  /** 'medium' = the full image scaled to MEDIUM_EDGE (big cards on phones). */
+  variant: 'full' | 'medium' | 'thumb'
   /** lib/storage key of the source image */
   inputKey: string
   /** Changes when the stored file changes (e.g. its size + mtime) */
@@ -333,7 +339,7 @@ export async function getWatermarked(opts: {
   let job = inflight.get(file)
   if (!job) {
     job = (async () => {
-      const data = await renderWatermarked(opts.inputKey, opts.spec, opts.date, opts.fileTag)
+      const data = await renderWatermarked(opts.inputKey, opts.spec, opts.date, opts.fileTag, opts.variant === 'medium' ? MEDIUM_EDGE : undefined)
       // Best effort: a full disk must never break image serving
       try {
         await fsp.mkdir(dir, { recursive: true })

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, BarChart3, UserCog, Images, Users, Flag, MessageSquareWarning, ArrowLeft, Star, Store, Boxes, Tags, ReceiptText } from 'lucide-react';
+import { LayoutDashboard, BarChart3, UserCog, Images, Users, Flag, MessageSquareWarning, ArrowLeft, Star, ImageUp, BadgeCheck, Store, Boxes, Tags, ReceiptText } from 'lucide-react';
 import { STORE_NAME } from '@/lib/store/config';
 
 const navItems = [
@@ -12,6 +12,8 @@ const navItems = [
   { href: '/admin/team', label: 'Admin team', icon: UserCog },
   { href: '/admin/demo', label: 'Demo profiles', icon: Images },
   { href: '/admin/reports', label: 'Reports', icon: Flag },
+  { href: '/admin/photos', label: 'Photo review', icon: ImageUp },
+  { href: '/admin/verification', label: 'Verification', icon: BadgeCheck },
   { href: '/admin/messages', label: 'Message review', icon: MessageSquareWarning },
   { href: '/admin/reviews', label: 'Reviews', icon: Star },
   { href: '/admin/store', label: STORE_NAME, icon: Store },

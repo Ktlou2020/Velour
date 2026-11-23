@@ -30,3 +30,4 @@ tsconfig.tsbuildinfo
 
 # local media storage (UPLOAD_DIR default)
 /.uploads/
+.claude/worktrees/

@@ -10,6 +10,7 @@ import MemberAlbums from '@/components/albums/MemberAlbums';
 import PersonCard from '@/app/profile/identity/PersonCard';
 import type { PublicIdentity } from '@/lib/identity';
 import type { ActiveStatus } from '@/components/status/status';
+import { sizedMediaUrl } from '@/lib/media';
 
 interface Photo {
   id: string;
@@ -151,7 +152,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
         {/* Background blurred photo */}
         {heroPhoto ? (
           <div className="absolute inset-0">
-            <ProtectedImage src={heroPhoto.url} alt="" className="w-full h-full object-cover" watermark="" loading="eager" />
+            <ProtectedImage src={sizedMediaUrl(heroPhoto.url, 'thumb')} alt="" className="w-full h-full object-cover" watermark="" loading="eager" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0F] via-[#0A0A0F]/70 to-black/20" />
           </div>
         ) : (
@@ -166,7 +167,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
             <div className="relative flex-shrink-0 -mb-2">
               <div className="w-28 h-28 sm:w-40 sm:h-40 rounded-3xl overflow-hidden border-4 border-[#0A0A0F] shadow-2xl bg-gradient-to-br from-rose-900 to-red-700 flex items-center justify-center">
                 {heroPhoto ? (
-                  <ProtectedImage src={heroPhoto.url} alt={`${displayName}'s profile photo`} className="w-full h-full" watermark={session?.user?.email ?? 'unbound'} loading="eager" />
+                  <ProtectedImage src={sizedMediaUrl(heroPhoto.url, 'medium')} alt={`${displayName}'s profile photo`} className="w-full h-full" watermark={session?.user?.email ?? 'unbound'} loading="eager" />
                 ) : (
                   <span className="text-white text-5xl font-bold font-serif">{initials}</span>
                 )}
@@ -382,7 +383,7 @@ export default function MemberProfileClient({ username, profile: raw, session }:
                     onClick={() => setLightboxIdx(i)}
                     className={`relative overflow-hidden rounded-xl group ${i === 0 ? 'col-span-2 sm:col-span-2 row-span-2 aspect-[4/3]' : 'aspect-square'}`}
                   >
-                    <ProtectedImage src={photo.url} alt={`${displayName} — photo ${i + 1}`} className="w-full h-full" watermark={session?.user?.email ?? 'unbound'} />
+                    <ProtectedImage src={sizedMediaUrl(photo.url, i === 0 ? 'medium' : 'thumb')} alt={`${displayName} — photo ${i + 1}`} className="w-full h-full" watermark={session?.user?.email ?? 'unbound'} />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                       <Eye size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
                     </div>

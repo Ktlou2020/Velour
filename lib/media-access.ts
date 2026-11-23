@@ -19,7 +19,7 @@
  */
 import { db } from '@/lib/db'
 import { sendPushToUser } from '@/lib/push'
-import { CHAT_ALBUM_NAME, STORE_ALBUM_NAME, VIDEO_ALBUM_NAME, isOwnMediaUrl, isSystemAlbumName, mediaIdFromUrl, mediaUrl } from '@/lib/media'
+import { CHAT_ALBUM_NAME, STORE_ALBUM_NAME, VIDEO_ALBUM_NAME, isOwnMediaUrl, isSystemAlbumName, mediaIdFromUrl, mediaUrl, VERIFY_ALBUM_NAME } from '@/lib/media'
 
 export const ACCESS = {
   INVITED: 'INVITED',
@@ -127,7 +127,7 @@ export function isStoreMedia(photo: { album: { name: string } | null }): boolean
 }
 
 /** Get (or create) one of the user's hidden system albums. */
-export async function systemAlbumId(userId: string, name: typeof CHAT_ALBUM_NAME | typeof VIDEO_ALBUM_NAME | typeof STORE_ALBUM_NAME): Promise<string> {
+export async function systemAlbumId(userId: string, name: typeof CHAT_ALBUM_NAME | typeof VIDEO_ALBUM_NAME | typeof STORE_ALBUM_NAME | typeof VERIFY_ALBUM_NAME): Promise<string> {
   const existing = await db.album.findFirst({ where: { ownerId: userId, name }, select: { id: true } })
   if (existing) return existing.id
   const created = await db.album.create({

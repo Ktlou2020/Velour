@@ -13,6 +13,7 @@ import UpgradeNudge from '@/components/plans/UpgradeNudge';
 import StatusPill from '@/components/status/StatusPill';
 import LocationPrompt from '@/components/plans/LocationPrompt';
 import { RatingChip } from '@/components/reviews/Stars';
+import { sizedMediaUrl } from '@/lib/media';
 
 function savedRadius(): string | null {
   try { return localStorage.getItem('hush_search_radius'); } catch { return null; }
@@ -379,7 +380,7 @@ export default function DiscoverPage() {
                     >
                       <div className="relative w-24 h-32 rounded-2xl overflow-hidden bg-gradient-to-br from-rose-950 to-[#0A0A0F] flex items-center justify-center border border-white/10 group-hover:border-[#D4AF37]/50 transition-colors">
                         {pick.profilePhotoUrl ? (
-                          <ProtectedImage src={pick.profilePhotoUrl} alt={pick.username} className="w-full h-full" watermark={watermark} />
+                          <ProtectedImage src={sizedMediaUrl(pick.profilePhotoUrl, 'thumb')} alt={pick.username} className="w-full h-full" watermark={watermark} />
                         ) : (
                           <span className="text-white/60 text-2xl font-bold font-serif">{pickInitials}</span>
                         )}
@@ -500,7 +501,7 @@ export default function DiscoverPage() {
                   {/* Photo Area */}
                   <div className="h-[min(24rem,50vh)] flex items-center justify-center relative bg-gradient-to-br from-rose-900 via-red-900 to-[#0A0A0F] overflow-hidden">
                     {current.profilePhotoUrl ? (
-                      <ProtectedImage src={current.profilePhotoUrl} alt={current.username} className="w-full h-full" watermark={watermark} loading="eager" />
+                      <ProtectedImage src={sizedMediaUrl(current.profilePhotoUrl, 'medium')} alt={current.username} className="w-full h-full" watermark={watermark} loading="eager" />
                     ) : (
                       <span className="text-white text-8xl font-bold font-serif opacity-60">{initials}</span>
                     )}

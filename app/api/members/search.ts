@@ -427,7 +427,7 @@ export interface SearchParamsInput {
   active?: string | null
 }
 
-export const ADVANCED_FILTER_KEYS = ['heightMin', 'heightMax', 'bodyType', 'intentions', 'languages', 'verified', 'photos', 'active'] as const
+export const ADVANCED_FILTER_KEYS = ['heightMin', 'heightMax', 'bodyType', 'intentions', 'languages', 'photos', 'active'] as const
 
 /** Advanced filter params the caller asked for (non-empty values). */
 export function requestedAdvancedFilters(params: SearchParamsInput): string[] {
@@ -532,6 +532,8 @@ export async function searchMembers(caller: CallerContext, params: SearchParamsI
   const userAnd: Prisma.UserWhereInput[] = []
 
   // Advanced filters (Gold+). Never filters on ethnicity.
+  // Verified-only is free for everyone (a safety filter, not a paid extra).
+  if (params.verified === '1') userAnd.push({ isVerified: true })
   const wantedAdvanced = requestedAdvancedFilters(params)
   const ignoredFilters = caller.ent.advancedFilters ? [] : wantedAdvanced
   if (caller.ent.advancedFilters && wantedAdvanced.length) {
@@ -545,7 +547,6 @@ export async function searchMembers(caller: CallerContext, params: SearchParamsI
     if (intentions.length) and.push({ intentions: { hasSome: intentions } })
     const languages = csv(params.languages)
     if (languages.length) and.push({ languages: { hasSome: languages } })
-    if (params.verified === '1') userAnd.push({ isVerified: true })
     if (params.photos === '1') {
       userAnd.push({ OR: [{ profile: { profilePhoto: { not: null } } }, { photos: { some: { isPrivate: false } } }] })
     }

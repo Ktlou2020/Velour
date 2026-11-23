@@ -61,7 +61,9 @@ export const CHAT_ALBUM_NAME = '__chat'
 export const VIDEO_ALBUM_NAME = '__video'
 /** Store product photos (uploaded by admins, purpose=product). */
 export const STORE_ALBUM_NAME = '__store'
-export const SYSTEM_ALBUM_NAMES = [CHAT_ALBUM_NAME, VIDEO_ALBUM_NAME, STORE_ALBUM_NAME]
+/** Verification selfies (purpose=verification): private, seen only by the member and admins. */
+export const VERIFY_ALBUM_NAME = '__verify'
+export const SYSTEM_ALBUM_NAMES = [CHAT_ALBUM_NAME, VIDEO_ALBUM_NAME, STORE_ALBUM_NAME, VERIFY_ALBUM_NAME]
 
 export function isSystemAlbumName(name: string | null | undefined): boolean {
   return !!name && name.startsWith('__')
@@ -74,4 +76,15 @@ export function isSystemAlbumName(name: string | null | undefined): boolean {
  */
 export const GALLERY_PHOTO_WHERE = {
   OR: [{ albumId: null }, { album: { name: { notIn: SYSTEM_ALBUM_NAMES } } }],
+}
+
+/**
+ * Pick a lighter copy of a member photo for display: 'thumb' (480 px square,
+ * grids, cards, avatars) or 'medium' (1080 px, large cards). Other URLs
+ * (Cloudinary, data:, already sized) are returned unchanged. Client-safe.
+ */
+export function sizedMediaUrl(url: string | null | undefined, size: 'thumb' | 'medium'): string {
+  if (!url) return ''
+  if (!url.startsWith(MEDIA_PATH_PREFIX) || url.includes('?')) return url
+  return `${url}?size=${size}`
 }

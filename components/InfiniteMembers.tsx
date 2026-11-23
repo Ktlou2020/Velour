@@ -6,6 +6,7 @@ import { MapPin, Check, Navigation, MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import ProtectedImage from '@/components/ProtectedImage';
+import { sizedMediaUrl } from '@/lib/media';
 import type { MemberData } from '@/app/members/page';
 
 type FilterState = Record<string, string | undefined> & {
@@ -58,7 +59,7 @@ export function MemberTile({ member, watermark }: { member: MemberData; watermar
       <div className="aspect-[3/4] relative bg-gradient-to-br from-rose-950 to-[#0A0A0F] flex items-center justify-center overflow-hidden">
         {member.profilePhotoUrl ? (
           <ProtectedImage
-            src={member.profilePhotoUrl}
+            src={sizedMediaUrl(member.profilePhotoUrl, 'thumb')}
             alt={member.username}
             className="w-full h-full group-hover:scale-105 transition-transform duration-300"
             watermark={watermark}

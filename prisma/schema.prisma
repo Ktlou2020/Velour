@@ -272,6 +272,10 @@ model Photo {
 
   // Explore feed
   likeCount Int         @default(0)
+  // Admin photo review (lib/photo-review.ts): new public photos wait in the
+  // queue until an admin approves or removes them.
+  reviewedAt   DateTime?
+  reviewedById String?
   likes     PhotoLike[]
 }
 
@@ -336,6 +340,8 @@ model VerificationRequest {
   photoUrl  String
   status    String   @default("PENDING")
   notes     String?
+  // The pose the member was asked to make in the selfie (lib/verification.ts)
+  pose      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -498,6 +504,8 @@ model Notification {
   title     String
   body      String
   isRead    Boolean  @default(false)
+  // When it was marked read — for REPORT notifications, when the report was handled
+  readAt    DateTime?
   data      Json?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

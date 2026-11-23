@@ -16,6 +16,7 @@ import type { ProfilePrompt } from './prompts';
 import type { StrengthFacts } from './strength';
 import type { ActiveStatus } from '@/components/status/status';
 import ProfilePhotoPicker from './ProfilePhotoPicker';
+import { sizedMediaUrl } from '@/lib/media';
 
 interface Photo {
   id: string;
@@ -231,7 +232,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                 aria-label="Change profile photo"
               >
                 {photos.find((p) => p.isProfile)?.url ? (
-                  <ProtectedImage src={photos.find((p) => p.isProfile)!.url} alt="Profile" className="w-full h-full" />
+                  <ProtectedImage src={sizedMediaUrl(photos.find((p) => p.isProfile)!.url, 'thumb')} alt="Profile" className="w-full h-full" />
                 ) : (
                   <span className="text-white text-4xl font-bold font-serif">{name.slice(0, 2).toUpperCase()}</span>
                 )}
@@ -414,7 +415,7 @@ export default function ProfileClient({ session, initialProfile }: Props) {
             <div className="grid grid-cols-3 gap-3">
               {photos.filter(p => photoTab === 'public' ? !p.isPrivate : p.isPrivate).map((photo) => (
                 <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden group">
-                  <ProtectedImage src={photo.url} alt="Photo" className="w-full h-full" />
+                  <ProtectedImage src={sizedMediaUrl(photo.url, 'thumb')} alt="Photo" className="w-full h-full" />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-2">
                     {!photo.isPrivate && (
                       <button

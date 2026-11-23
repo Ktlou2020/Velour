@@ -106,7 +106,7 @@ export async function PUT(req: NextRequest) {
       const filter: Filter = body.filter === 'activity' || body.filter === 'messages' ? body.filter : 'all'
       const r = await db.notification.updateMany({
         where: { ...filterWhere(userId, filter, null), isRead: false },
-        data: { isRead: true },
+        data: { isRead: true, readAt: new Date() },
       })
       return NextResponse.json({ updated: true, count: r.count })
     }
@@ -114,7 +114,7 @@ export async function PUT(req: NextRequest) {
     if (Array.isArray(body.ids)) {
       const ids = body.ids.filter((x): x is string => typeof x === 'string').slice(0, 100)
       const r = ids.length
-        ? await db.notification.updateMany({ where: { id: { in: ids }, userId, isRead: false }, data: { isRead: true } })
+        ? await db.notification.updateMany({ where: { id: { in: ids }, userId, isRead: false }, data: { isRead: true, readAt: new Date() } })
         : { count: 0 }
       return NextResponse.json({ updated: true, count: r.count })
     }
@@ -135,7 +135,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     if (!notification.isRead) {
-      await db.notification.update({ where: { id: notificationId }, data: { isRead: true } })
+      await db.notification.update({ where: { id: notificationId }, data: { isRead: true, readAt: new Date() } })
     }
     return NextResponse.json({ updated: true })
   } catch (error) {

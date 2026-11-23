@@ -87,7 +87,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (viewOnce && viewer) return serveViewOnce(req, photo, viewer)
 
     const isImage = photo.mimeType.startsWith('image/')
-    const wantThumb = isImage && req.nextUrl.searchParams.get('size') === 'thumb'
+    const size = req.nextUrl.searchParams.get('size')
+    const wantThumb = isImage && size === 'thumb'
+    // Medium is rendered from the full image (watermarked copies only; owners get the original).
+    const wantMedium = isImage && size === 'medium'
     const key = wantThumb ? thumbKey(photo.storageKey) : photo.storageKey
     const st = await statObject(key)
     if (!st) return notFound()
@@ -100,7 +103,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         ? { kind: 'viewer', viewerId: viewer.id, username: username ?? viewer.id.slice(-8) }
         : { kind: 'anon' }
       return serveWatermarked(req, {
-        id, wantThumb, inputKey: key, fileTag: `${st.size}-${st.mtime.getTime()}`, spec,
+        id, wantThumb, wantMedium, inputKey: key, fileTag: `${st.size}-${st.mtime.getTime()}`, spec,
         cacheControl: viewer ? 'private, max-age=300' : CACHE.public,
       })
     }
@@ -163,6 +166,7 @@ async function viewerUsername(viewerId: string, user: unknown): Promise<string |
 async function serveWatermarked(req: NextRequest, o: {
   id: string
   wantThumb: boolean
+  wantMedium?: boolean
   inputKey: string
   fileTag: string
   spec: WatermarkSpec
@@ -170,7 +174,7 @@ async function serveWatermarked(req: NextRequest, o: {
 }) {
   const date = sastDate()
   const hash = watermarkHash(o.spec, date, o.fileTag)
-  const etag = `"${o.id}${o.wantThumb ? '-t' : ''}-w${hash.slice(0, 24)}"`
+  const etag = `"${o.id}${o.wantThumb ? '-t' : o.wantMedium ? '-m' : ''}-w${hash.slice(0, 24)}"`
   const headers: Record<string, string> = {
     'Content-Type': 'image/webp',
     'Cache-Control': o.cacheControl,
@@ -190,7 +194,7 @@ async function serveWatermarked(req: NextRequest, o: {
   }
   const { data } = await getWatermarked({
     photoId: o.id,
-    variant: o.wantThumb ? 'thumb' : 'full',
+    variant: o.wantThumb ? 'thumb' : o.wantMedium ? 'medium' : 'full',
     inputKey: o.inputKey,
     fileTag: o.fileTag,
     spec: o.spec,

@@ -9,6 +9,7 @@ import { Heart, MessageCircle, MapPin, User, ChevronDown, Users, Star, Sparkles 
 import BlurredPeople from '@/components/plans/BlurredPeople';
 import ExpiryCountdown from '@/components/chat/ExpiryCountdown';
 import MemberSafetyMenu from '@/components/safety/MemberSafetyMenu';
+import { sizedMediaUrl } from '@/lib/media';
 
 interface Match {
   id: string;
@@ -163,7 +164,7 @@ export default function MatchesPage() {
                 <Link href={`/members/${m.username}`} className="block aspect-[3/4] relative bg-gradient-to-br from-rose-950 to-[#0A0A0F]">
                   {m.profilePhotoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <ProtectedImage src={m.profilePhotoUrl} alt={name} className="w-full h-full" />
+                    <ProtectedImage src={sizedMediaUrl(m.profilePhotoUrl, 'thumb')} alt={name} className="w-full h-full" />
                   ) : (
                     <span className="absolute inset-0 flex items-center justify-center text-white/55 text-3xl font-bold font-serif">{name.slice(0, 2).toUpperCase()}</span>
                   )}
@@ -230,7 +231,7 @@ export default function MatchesPage() {
           {profile?.profilePhoto ? (
             // eslint-disable-next-line @next/next/no-img-element
             <ProtectedImage
-              src={profile.profilePhoto}
+              src={sizedMediaUrl(profile.profilePhoto, 'thumb')}
               alt={name}
               className="w-full h-full"
               imgClassName={`w-full h-full object-cover pointer-events-none group-hover:scale-105 transition-transform duration-300 ${expired ? 'grayscale' : ''}`}

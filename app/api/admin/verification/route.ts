@@ -3,6 +3,7 @@ import { requireAdmin } from '@/auth'
 import { isValidId } from '@/lib/security'
 import { db } from '@/lib/db'
 import { sendPushToUser } from '@/lib/push'
+import { audit } from '@/lib/admin-team'
 
 export async function GET() {
   try {
@@ -20,7 +21,15 @@ export async function GET() {
             username: true,
             email: true,
             verificationStatus: true,
-            profile: { select: { displayName: true, profilePhoto: true } },
+            createdAt: true,
+            profile: { select: { displayName: true, profilePhoto: true, dateOfBirth: true, city: true, isCouple: true } },
+            // Public photos to compare the selfie against.
+            photos: {
+              where: { isPrivate: false, album: null },
+              orderBy: [{ isProfile: 'desc' }, { createdAt: 'desc' }],
+              take: 6,
+              select: { id: true, url: true, isProfile: true },
+            },
           },
         },
       },
@@ -35,7 +44,8 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   try {
-    if (!(await requireAdmin())) {
+    const me = await requireAdmin()
+    if (!me) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -47,9 +57,12 @@ export async function PATCH(req: NextRequest) {
     if (!isValidId(requestId) || (action !== 'approve' && action !== 'reject')) {
       return NextResponse.json({ error: 'Valid requestId and action (approve|reject) are required' }, { status: 400 })
     }
-    const notes = typeof rawNotes === 'string' ? rawNotes.slice(0, 500) : undefined
+    const notes = typeof rawNotes === 'string' && rawNotes.trim() ? rawNotes.trim().slice(0, 500) : undefined
+    if (action === 'reject' && !notes) {
+      return NextResponse.json({ error: 'Tell the member why, so they can try again' }, { status: 400 })
+    }
 
-    const existing = await db.verificationRequest.findUnique({ where: { id: requestId }, select: { id: true } })
+    const existing = await db.verificationRequest.findUnique({ where: { id: requestId }, select: { id: true, status: true } })
     if (!existing) {
       return NextResponse.json({ error: 'Verification request not found' }, { status: 404 })
     }
@@ -77,9 +90,11 @@ export async function PATCH(req: NextRequest) {
         body: action === 'approve'
           ? 'Your profile has been verified. Your verified badge is now visible to other members.'
           : `Your verification was not approved.${notes ? ` Reason: ${notes}` : ''}`,
-        data: { url: '/profile', status: newStatus },
+        data: { url: action === 'approve' ? '/profile' : '/account', status: newStatus },
       },
     })
+
+    await audit(me.id, action === 'approve' ? 'VERIFICATION_APPROVED' : 'VERIFICATION_REJECTED', request.userId, notes ? { notes } : undefined)
 
     sendPushToUser(request.userId, {
       title: action === 'approve' ? '✓ Profile Verified — Unbound' : 'Verification Update — Unbound',

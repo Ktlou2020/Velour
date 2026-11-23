@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import ProtectedImage from '@/components/ProtectedImage';
+import { sizedMediaUrl } from '@/lib/media';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import EmptyState from '@/components/EmptyState';
@@ -172,7 +173,7 @@ function Face({ name, photo, seed, size, ring = false, grayscale = false, oneLet
   const ringCls = ring ? 'ring-2 ring-[#0A0A0F]' : '';
   if (photo) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <ProtectedImage src={photo} alt="" className={`rounded-full flex-shrink-0 ${ringCls} ${grayscale ? 'grayscale' : ''}`} style={{ width: size, height: size }} />;
+    return <ProtectedImage src={sizedMediaUrl(photo, 'thumb')} alt="" className={`rounded-full flex-shrink-0 ${ringCls} ${grayscale ? 'grayscale' : ''}`} style={{ width: size, height: size }} />;
   }
   return (
     <div style={style} className={`rounded-full bg-gradient-to-br ${gradientFor(seed)} flex items-center justify-center flex-shrink-0 ${ringCls}`}>

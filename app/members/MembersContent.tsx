@@ -60,7 +60,7 @@ const SHOW_OPTIONS = [
   { value: 'COUPLE', label: 'Couples' },
 ];
 const COUPLE_TYPES = ['MF', 'FF', 'MM', 'MX'];
-const ADV_KEYS = ['heightMin', 'heightMax', 'bodyType', 'intentions', 'languages', 'verified', 'photos', 'active'] as const;
+const ADV_KEYS = ['heightMin', 'heightMax', 'bodyType', 'intentions', 'languages', 'photos', 'active'] as const;
 // Most-spoken languages first; the rest are a tap away in the profile itself.
 const QUICK_LANGUAGES = LANGUAGE_OPTIONS.slice(0, 10);
 
@@ -150,13 +150,13 @@ export default function MembersContent({
     // Keep the default ordering unless a sort was actually chosen
     if (s && (overrides?.sort || searchParams.sort)) params.set('sort', s);
     if (rad && callerHasLocation) params.set('radius', rad);
+    if (overrides && 'verified' in overrides ? overrides.verified === '1' : verified) params.set('verified', '1');
     if (advancedFilters) {
       if (heightMin) params.set('heightMin', heightMin);
       if (heightMax) params.set('heightMax', heightMax);
       if (bodyTypes.length) params.set('bodyType', bodyTypes.join(','));
       if (intentions.length) params.set('intentions', intentions.join(','));
       if (languages.length) params.set('languages', languages.join(','));
-      if (verified) params.set('verified', '1');
       if (photos) params.set('photos', '1');
       if (active) params.set('active', '1');
     }
@@ -307,6 +307,20 @@ export default function MembersContent({
             <span className="text-white/70 text-sm">Online now</span>
           </label>
 
+          <label className="flex items-center gap-2 cursor-pointer">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={verified}
+                onChange={(e) => { setVerified(e.target.checked); applyFilters({ verified: e.target.checked ? '1' : undefined }); }}
+                className="sr-only peer"
+                aria-label="Verified members only"
+              />
+              <div className="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-[#DC143C] transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-all peer-checked:after:translate-x-4" />
+            </div>
+            <span className="text-white/70 text-sm">Verified only</span>
+          </label>
+
           {advancedFilters && (
           <button
             onClick={() => setShowAdvanced((v) => !v)}
@@ -410,7 +424,6 @@ export default function MembersContent({
             onClickCapture={advancedFilters ? undefined : (e) => { e.preventDefault(); e.stopPropagation(); setNudge('filters'); }}
           >
             {[
-              { label: 'Verified only', on: verified, set: setVerified },
               { label: 'Has photos', on: photos, set: setPhotos },
               { label: 'Active this week', on: active, set: setActive },
             ].map(({ label, on, set }) => (
@@ -455,7 +468,7 @@ export default function MembersContent({
           feature={nudge === 'filters' ? 'advanced-filters' : 'search-anywhere'}
           title={nudge === 'filters' ? 'Find exactly who you’re looking for' : 'Meet people beyond 250 km'}
           body={nudge === 'filters'
-            ? 'Gold adds height, body type, intentions, languages, verified-only, has-photos and active-this-week filters.'
+            ? 'Gold adds height, body type, intentions, languages, has-photos and active-this-week filters.'
             : 'Gold lets you search anywhere, pick a specific city and turn on travel mode before a trip.'}
           tier="GOLD"
           onDismiss={() => setNudge(null)}
@@ -506,6 +519,7 @@ export default function MembersContent({
             sort: searchParams.sort,
             radius: callerHasLocation ? (searchParams.radius ?? (radiusKm === null ? 'any' : String(radiusKm))) : undefined,
             anyCity: searchParams.anyCity,
+            verified: searchParams.verified,
             widen: widened ? '1' : undefined,
             ...(advancedFilters ? Object.fromEntries(ADV_KEYS.map((k) => [k, searchParams[k]])) : {}),
           }}

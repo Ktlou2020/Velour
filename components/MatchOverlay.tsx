@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import ProtectedImage from '@/components/ProtectedImage';
 import Link from 'next/link';
+import { sizedMediaUrl } from '@/lib/media';
 
 interface Props {
   show: boolean;
@@ -104,7 +105,7 @@ export default function MatchOverlay({ show, matchedUser, onMessage, onClose }: 
             >
               {matchedUser.photo ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <ProtectedImage src={matchedUser.photo} alt={matchedUser.name} className="w-full h-full" />
+                <ProtectedImage src={sizedMediaUrl(matchedUser.photo, 'thumb')} alt={matchedUser.name} className="w-full h-full" />
               ) : (
                 <span className="text-white text-xl font-bold font-serif">{initials}</span>
               )}

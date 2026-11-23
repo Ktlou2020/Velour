@@ -6,7 +6,7 @@ import { isPlatinum } from '@/lib/premium'
 import { getClientIp, rateLimit, TOO_MANY_REQUESTS_MESSAGE } from '@/lib/rate-limit'
 import { MAX_AUDIO_BYTES, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, MediaError, deleteFiles, photoFileKeys, saveAudio, saveImage, saveVideo, sniffVideo, videoDurationSec } from '@/lib/storage'
 import { CHAT_VIDEO_MAX_BYTES, chatVideoRules, getMessageAllowance, messageLimitError } from '@/lib/chat-priority'
-import { CHAT_ALBUM_NAME, STORE_ALBUM_NAME, VIDEO_ALBUM_NAME, isSystemAlbumName, mediaThumbUrl, mediaUrl } from '@/lib/media'
+import { CHAT_ALBUM_NAME, STORE_ALBUM_NAME, VERIFY_ALBUM_NAME, VIDEO_ALBUM_NAME, isSystemAlbumName, mediaThumbUrl, mediaUrl } from '@/lib/media'
 import { systemAlbumId } from '@/lib/media-access'
 import { isValidId } from '@/lib/security'
 
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
     if (!formData || !file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
     const rawPurpose = formData.get('purpose') ?? (formData.get('kind') === 'video' ? 'video' : 'gallery')
-    const purpose = rawPurpose === 'chat' || rawPurpose === 'video' || rawPurpose === 'voice' || rawPurpose === 'chatvideo' || rawPurpose === 'product' ? rawPurpose : 'gallery'
+    const purpose = rawPurpose === 'chat' || rawPurpose === 'video' || rawPurpose === 'voice' || rawPurpose === 'chatvideo' || rawPurpose === 'product' || rawPurpose === 'verification' ? rawPurpose : 'gallery'
 
     if (purpose === 'product') {
       // Role checked against the database, not just the session token.
@@ -179,6 +179,24 @@ export async function POST(req: NextRequest) {
         throw e
       }
       return NextResponse.json({ url, id, mimeType, durationSec: duration === null ? null : Math.round(duration * 10) / 10 }, { status: 201 })
+    }
+
+    if (purpose === 'verification') {
+      // Verification selfie: private system album, never in the member's gallery.
+      if (file.size > MAX_IMAGE_BYTES) return NextResponse.json({ error: 'Images must be under 10MB' }, { status: 413 })
+      const stored = await saveImage(Buffer.from(await file.arrayBuffer()))
+      const albumId = await systemAlbumId(userId, VERIFY_ALBUM_NAME)
+      const id = newMediaId()
+      const url = mediaUrl(id)
+      try {
+        await db.photo.create({
+          data: { id, userId, url, thumbnailUrl: mediaThumbUrl(id), albumId, isPrivate: true, storageKey: stored.key, mimeType: stored.mimeType, sizeBytes: stored.sizeBytes },
+        })
+      } catch (e) {
+        await deleteFiles([stored.key, stored.thumbKey])
+        throw e
+      }
+      return NextResponse.json({ url, id }, { status: 201 })
     }
 
     if (purpose === 'voice') {
