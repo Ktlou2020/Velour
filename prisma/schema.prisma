@@ -70,21 +70,21 @@ model VerificationToken {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id             String   @id @default(cuid())
+  email          String   @unique
   // Duplicate-detection key (lib/email-identity.ts canonicalEmail): lowercase,
   // no +tag, no dots for Gmail. One account per inbox.
-  emailCanonical String? @unique
-  passwordHash String?
-  username     String   @unique
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  isActive     Boolean  @default(true)
-  isVerified   Boolean  @default(false)
-  role         String   @default("USER")
+  emailCanonical String?  @unique
+  passwordHash   String?
+  username       String   @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  isActive       Boolean  @default(true)
+  isVerified     Boolean  @default(false)
+  role           String   @default("USER")
   // Seeded demo profile (lib/demo-profiles.ts). Excluded from founding spots,
   // analytics, emails and public counts; removable in one click (Admin team).
-  isDemo       Boolean  @default(false)
+  isDemo         Boolean  @default(false)
 
   // When the member clicked the link in their sign-up email (separate from
   // isVerified, which is the selfie/photo verification badge).
@@ -231,13 +231,15 @@ model Profile {
   // Founding members: the first N member sign-ups get Platinum free forever (lib/founding.ts).
   foundingMemberNumber Int? @unique
 
-  boostedUntil DateTime?
-  lastBoostAt  DateTime?
-  incognito    Boolean   @default(false)
+  boostedUntil   DateTime?
+  lastBoostAt    DateTime?
+  incognito      Boolean   @default(false)
   // Who can start a new conversation with this member (lib/message-policy.ts):
   // EVERYONE, VERIFIED (photo-verified members) or LIKED (people they've liked).
-  messagePolicy String   @default("EVERYONE")
-  videoUrl     String?
+  messagePolicy  String    @default("EVERYONE")
+  /// Phone alerts say only "New notification" — no names or message text on the lock screen.
+  discreetAlerts Boolean   @default(false)
+  videoUrl       String?
 
   // Profile prompts: [{ question: string, answer: string }]
   prompts Json?
@@ -271,12 +273,12 @@ model Photo {
   album      Album?  @relation(fields: [albumId], references: [id], onDelete: SetNull)
 
   // Explore feed
-  likeCount Int         @default(0)
+  likeCount    Int         @default(0)
   // Admin photo review (lib/photo-review.ts): new public photos wait in the
   // queue until an admin approves or removes them.
   reviewedAt   DateTime?
   reviewedById String?
-  likes     PhotoLike[]
+  likes        PhotoLike[]
 }
 
 // A member's photo album. Private albums are visible only to the owner and
@@ -498,17 +500,17 @@ model Block {
 }
 
 model Notification {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
   type      String
   title     String
   body      String
-  isRead    Boolean  @default(false)
+  isRead    Boolean   @default(false)
   // When it was marked read — for REPORT notifications, when the report was handled
   readAt    DateTime?
   data      Json?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead, type])
   @@index([userId, createdAt])

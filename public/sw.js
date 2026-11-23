@@ -9,7 +9,7 @@
  *    requests: not handled here at all — they always go straight to the network.
  *  - Bump VERSION to drop every old cache on activate.
  */
-const VERSION = 'v2';
+const VERSION = 'v3';
 const STATIC_CACHE = `unbound-static-${VERSION}`;
 const OFFLINE_CACHE = `unbound-offline-${VERSION}`;
 const CURRENT_CACHES = [STATIC_CACHE, OFFLINE_CACHE];
@@ -131,6 +131,8 @@ self.addEventListener('push', (event) => {
 
   event.waitUntil(Promise.all([
     self.registration.showNotification(title, options),
+    // Dot on the home-screen icon until the app is opened (it then sets the real count).
+    (self.navigator && self.navigator.setAppBadge ? self.navigator.setAppBadge().catch(() => {}) : Promise.resolve()),
     // Open tabs refresh their badges straight away
     self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((list) => list.forEach((c) => c.postMessage({ type: 'hush:push', tag: options.tag })))

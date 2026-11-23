@@ -49,8 +49,11 @@ export async function sendPushToUser(userId: string, payload: PushPayload) {
   const subs = await db.pushSubscription.findMany({ where: { userId } })
   if (subs.length === 0) return
 
+  // Discreet alerts: nothing on the lock screen says who or what.
+  const discreet = (await db.profile.findUnique({ where: { userId }, select: { discreetAlerts: true } }))?.discreetAlerts
   const data = JSON.stringify({
     ...payload,
+    ...(discreet ? { title: 'Unbound', body: 'You have a new notification' } : {}),
     icon: payload.icon ?? '/icon-192.png',
     badge: payload.badge ?? '/icon-192.png',
   })
@@ -75,5 +78,24 @@ export async function sendPushToUser(userId: string, payload: PushPayload) {
 
   if (failed.length > 0) {
     await db.pushSubscription.deleteMany({ where: { endpoint: { in: failed } } })
+  }
+}
+
+/** Sends to one saved device of a member (e.g. the "Send a test alert" button). False if it didn't arrive. */
+export async function sendPushToDevice(userId: string, endpoint: string, payload: PushPayload): Promise<boolean> {
+  if (!pushEnabled()) return false
+  const sub = await db.pushSubscription.findFirst({ where: { userId, endpoint } })
+  if (!sub) return false
+  try {
+    await webpush.sendNotification(
+      { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+      JSON.stringify({ ...payload, icon: payload.icon ?? '/icon-192.png', badge: payload.badge ?? '/icon-192.png' }),
+      { TTL: 60 * 10 }
+    )
+    return true
+  } catch (err: unknown) {
+    const status = (err as { statusCode?: number })?.statusCode
+    if (status === 410 || status === 404) await db.pushSubscription.deleteMany({ where: { endpoint } })
+    return false
   }
 }

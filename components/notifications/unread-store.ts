@@ -11,6 +11,7 @@
 //    service worker receives a push.
 
 import { useEffect, useState } from 'react';
+import { setAppBadge } from '@/lib/pwa-client';
 
 export interface UnreadCounts {
   notifications: number;
@@ -50,6 +51,8 @@ function setCounts(next: UnreadCounts) {
   loaded = true;
   if (next.notifications === counts.notifications && next.unreadConversations === counts.unreadConversations && next.unreadMessages === counts.unreadMessages) return;
   counts = next;
+  // Number on the home-screen icon (installed app): unread chats + other alerts.
+  setAppBadge(next.unreadConversations + next.notifications);
   countListeners.forEach((l) => l(counts));
 }
 

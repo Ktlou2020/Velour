@@ -20,6 +20,7 @@ import { useVoiceRecorder } from '@/components/chat/useVoiceRecorder';
 import { useReviewAsk, ReviewAskButton, ReviewPromptCard } from '@/components/chat/ReviewAsk';
 import { featureOn } from '@/lib/features';
 import MemberSafetyMenu from '@/components/safety/MemberSafetyMenu';
+import ReplyAlertNudge from '@/components/chat/ReplyAlertNudge';
 
 // Games, voice notes, view-once, priority messages, expiry timers, review asks and
 // icebreakers are switched off in the simple platform (lib/features.ts).
@@ -647,6 +648,8 @@ export default function MessagesPage() {
   // ── Send message ──────────────────────────────────────────────────────────
   const canSend = (!!input.trim() || !!pendingImage || !!pendingVideo) && !sending && !uploading && !expired && !blocked;
 
+  const [sentThisVisit, setSentThisVisit] = useState(0);
+
   async function handleSend() {
     if (!canSend || !activeConvId) return;
     const text = input.trim();
@@ -682,6 +685,7 @@ export default function MessagesPage() {
       ...(vo ? { viewOnce: true } : {}),
     }, tempId);
     if (err === null) {
+      setSentThisVisit((n) => n + 1);
       if (image) URL.revokeObjectURL(image.preview);
       if (video) URL.revokeObjectURL(video.preview);
     } else if (err !== 'network') {
@@ -1412,6 +1416,7 @@ export default function MessagesPage() {
             </button>
           </div>
         )}
+        {!blocked && !expired && name && <ReplyAlertNudge name={name} sentCount={sentThisVisit} />}
         {showWelcome && !blocked && !expired && (
           <div className="mb-2 rounded-xl border border-[#D4AF37]/25 bg-[#D4AF37]/[0.07] px-3 py-2 text-xs text-white/75 flex items-start gap-2" role="status">
             <span aria-hidden="true">✨</span>

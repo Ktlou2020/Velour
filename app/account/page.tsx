@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Shield, Download, Trash2, Camera, CheckCircle, Clock, XCircle, Moon, CreditCard, ChevronRight, Mail, HelpCircle } from 'lucide-react';
 import TravelModeCard from '@/components/plans/TravelModeCard';
 import MessagePolicyRow from '@/components/settings/MessagePolicyRow';
+import AppNotificationsRow from '@/components/settings/AppNotificationsRow';
 import type { Allowance } from '@/components/plans/AllowanceMeter';
 import { useToast } from '@/lib/toast-context';
 
@@ -223,6 +224,8 @@ export default function AccountPage() {
 
         {/* Who can message me */}
         <MessagePolicyRow />
+
+        <AppNotificationsRow />
 
         {/* Snooze */}
         <details className="group glass rounded-2xl">

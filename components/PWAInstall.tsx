@@ -5,6 +5,10 @@ import { LogoMark } from '@/components/Logo'
 import { Download, X, Bell, Share, PlusSquare } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
+import {
+  INSTALL_AVAILABLE_EVENT, canPromptInstall, enablePush as enableDevicePush, getPushKey, isIOS, isStandalone,
+  promptInstall, registerServiceWorker,
+} from '@/lib/pwa-client';
 
 /**
  * Install + push prompts for signed-in members.
@@ -34,10 +38,6 @@ const LEGACY_DISMISSED = 'velour_pwa_dismissed';
 /** Screens where a floating sheet would cover the composer / swipe buttons / form actions. */
 const QUIET_PATHS = ['/messages', '/discover', '/onboarding', '/auth', '/upgrade', '/subscription', '/admin'];
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
 
 function store(): Storage | null {
   try { return typeof window !== 'undefined' ? window.localStorage : null; } catch { return null; }
@@ -53,28 +53,6 @@ function dismissedRecently(key: string): boolean {
   return at > 0 && Date.now() - at < DISMISS_DAYS * 24 * 60 * 60 * 1000;
 }
 
-function isIOS() {
-  if (typeof navigator === 'undefined') return false;
-  const ua = navigator.userAgent;
-  // iPadOS 13+ reports itself as a Mac; touch support gives it away.
-  return /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
-}
-
-function isStandalone() {
-  if (typeof window === 'undefined') return false;
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    (window.navigator as { standalone?: boolean }).standalone === true
-  );
-}
-
-function urlBase64ToUint8Array(base64: string): Uint8Array {
-  const pad = '='.repeat((4 - (base64.length % 4)) % 4);
-  const b64 = (base64 + pad).replace(/-/g, '+').replace(/_/g, '/');
-  const raw = atob(b64);
-  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
-}
-
 const SHEET =
   'fixed z-40 left-3 right-3 md:left-auto md:right-4 md:w-96 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-4 ' +
   'glass border border-white/15 rounded-2xl p-4 shadow-2xl shadow-black/50';
@@ -82,7 +60,7 @@ const SHEET =
 export default function PWAInstall() {
   const { status } = useSession();
   const pathname = usePathname();
-  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [prompt, setPrompt] = useState(false);
   const [installDismissed, setInstallDismissed] = useState(true);
   const [pushDismissed, setPushDismissed] = useState(true);
   const [eligible, setEligible] = useState(false);
@@ -98,48 +76,29 @@ export default function PWAInstall() {
   useEffect(() => {
     if (status !== 'authenticated') return;
     let cancelled = false;
-    fetch('/api/push', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { enabled?: boolean; publicKey?: string } | null) => {
-        if (!cancelled) setPushKey(d?.enabled && d.publicKey ? d.publicKey : '');
-      })
-      .catch(() => { if (!cancelled) setPushKey(''); });
+    getPushKey().then((k) => { if (!cancelled) setPushKey(k); });
     return () => { cancelled = true; };
   }, [status]);
 
-  const doSubscribe = useCallback(async (publicKey: string) => {
-    if (!publicKey || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  const doSubscribe = useCallback(async () => {
     setPushBusy(true);
     try {
-      const reg = await navigator.serviceWorker.ready;
-      const sub = (await reg.pushManager.getSubscription()) ?? await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey) as unknown as BufferSource,
-      });
-      const res = await fetch('/api/push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sub.toJSON()),
-      });
-      setPushStatus('granted');
-      if (res.ok) setItem('velour_push_ok', '1');
-    } catch { /* denied or error */ }
-    finally { setPushBusy(false); }
+      const r = await enableDevicePush();
+      setPushStatus(r === 'on' ? 'granted' : r === 'denied' ? 'denied' : 'default');
+    } finally { setPushBusy(false); }
   }, []);
 
   // Already allowed in this browser but not saved yet → subscribe quietly
   useEffect(() => {
     if (!pushKey || typeof window === 'undefined' || !('Notification' in window)) return;
-    if (Notification.permission === 'granted' && !getItem('velour_push_ok')) doSubscribe(pushKey);
+    if (Notification.permission === 'granted' && !getItem('velour_push_ok')) doSubscribe();
   }, [pushKey, doSubscribe]);
 
   // Setup for signed-in members: SW, visit count, install event listeners.
   useEffect(() => {
     if (typeof window === 'undefined' || status !== 'authenticated') return;
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
-    }
+    registerServiceWorker();
     if ('Notification' in window) {
       setPushStatus(Notification.permission as 'default' | 'granted' | 'denied');
     }
@@ -162,15 +121,17 @@ export default function PWAInstall() {
     setPushDismissed(dismissedRecently(KEY_PUSH_DISMISSED));
     setEligible(!isStandalone() && (visits >= 2 || !!getItem(KEY_ENGAGED)));
 
-    const onPrompt = (e: Event) => { e.preventDefault(); setPrompt(e as BeforeInstallPromptEvent); };
-    const onInstalled = () => { setItem(KEY_INSTALLED, '1'); setPrompt(null); setInstallDismissed(true); };
+    // lib/pwa-client keeps the browser's install offer; it also handles `appinstalled`.
+    setPrompt(canPromptInstall());
+    const onAvailable = () => {
+      setPrompt(canPromptInstall());
+      if (getItem(KEY_INSTALLED)) setInstallDismissed(true);
+    };
     const onEngaged = () => { setItem(KEY_ENGAGED, '1'); if (!isStandalone()) setEligible(true); };
-    window.addEventListener('beforeinstallprompt', onPrompt);
-    window.addEventListener('appinstalled', onInstalled);
+    window.addEventListener(INSTALL_AVAILABLE_EVENT, onAvailable);
     window.addEventListener('unbound:engaged', onEngaged);
     return () => {
-      window.removeEventListener('beforeinstallprompt', onPrompt);
-      window.removeEventListener('appinstalled', onInstalled);
+      window.removeEventListener(INSTALL_AVAILABLE_EVENT, onAvailable);
       window.removeEventListener('unbound:engaged', onEngaged);
     };
   }, [status]);
@@ -195,7 +156,7 @@ export default function PWAInstall() {
   const dismissInstall = useCallback(() => {
     setItem(KEY_INSTALL_DISMISSED, String(Date.now()));
     setInstallDismissed(true);
-    setPrompt(null);
+    setPrompt(false);
   }, []);
 
   const dismissPush = useCallback(() => {
@@ -204,19 +165,15 @@ export default function PWAInstall() {
   }, []);
 
   async function install() {
-    if (!prompt) return;
-    await prompt.prompt();
-    const { outcome } = await prompt.userChoice;
-    setPrompt(null);
-    if (outcome === 'accepted') setItem(KEY_INSTALLED, '1');
-    else dismissInstall();
+    const outcome = await promptInstall();
+    setPrompt(false);
+    if (outcome === 'accepted') setInstallDismissed(true);
+    else if (outcome === 'dismissed') dismissInstall();
   }
 
   async function enablePush() {
     if (!pushKey) return;
-    const perm = await Notification.requestPermission();
-    if (perm === 'granted') await doSubscribe(pushKey);
-    else setPushStatus('denied');
+    await doSubscribe();
   }
 
   const quiet = QUIET_PATHS.some((p) => pathname.startsWith(p));
@@ -245,7 +202,9 @@ export default function PWAInstall() {
           <div className="flex-1 min-w-0">
             <h2 id="pwa-install-title" className="text-white text-sm font-semibold">Add Unbound to your home screen</h2>
             <p id="pwa-install-desc" className="text-white/65 text-xs mt-0.5 leading-relaxed">
-              Open it like an app, full-screen and one tap away — no app store needed.
+              {prompt
+                ? 'Open it like an app, full-screen and one tap away — no app store needed.'
+                : 'Open it like an app — and on iPhone it’s how you get message alerts. No app store needed.'}
             </p>
           </div>
           <button onClick={dismissInstall} className="-mr-1 -mt-1 p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors" aria-label="Not now — hide for 30 days">
