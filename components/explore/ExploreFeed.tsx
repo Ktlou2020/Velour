@@ -18,10 +18,10 @@ import { distribute, tileRatio, useColumns } from './useColumns';
 import { withLike, type CoupleTypeFilter, type ExplorePhoto, type ExploreSort, type ExploreWho, type FeedQuery, type FeedResponse, type LikeState } from './types';
 
 const SORTS: { key: ExploreSort; label: string; short: string; icon: typeof Flame; hint: string }[] = [
+  { key: 'new', label: 'Latest', short: 'Latest', icon: Sparkles, hint: 'Freshly posted' },
   { key: 'trending', label: 'Trending', short: 'Trending', icon: Flame, hint: 'Hot right now — recent likes count most' },
   { key: 'week', label: 'Top this week', short: 'Week', icon: Trophy, hint: 'Most liked since Monday' },
   { key: 'all', label: 'All time', short: 'All time', icon: Crown, hint: 'The most liked photos ever' },
-  { key: 'new', label: 'New', short: 'New', icon: Sparkles, hint: 'Freshly posted' },
 ];
 const WHO: { key: ExploreWho; label: string }[] = [
   { key: 'everyone', label: 'Everyone' },
@@ -39,7 +39,7 @@ const COUPLE_TYPES: { key: CoupleTypeFilter | null; label: string }[] = [
 ];
 
 function queryFrom(sp: URLSearchParams): FeedQuery {
-  const sort = SORTS.some((s) => s.key === sp.get('sort')) ? (sp.get('sort') as ExploreSort) : 'trending';
+  const sort = SORTS.some((s) => s.key === sp.get('sort')) ? (sp.get('sort') as ExploreSort) : 'new';
   const who = WHO.some((w) => w.key === sp.get('who')) ? (sp.get('who') as ExploreWho) : 'everyone';
   const ct = sp.get('coupleType');
   const coupleType = who === 'couples' && ['MF', 'FF', 'MM', 'MX'].includes(ct ?? '') ? (ct as CoupleTypeFilter) : null;
@@ -48,7 +48,7 @@ function queryFrom(sp: URLSearchParams): FeedQuery {
 
 function qs(q: FeedQuery, extra: Record<string, string> = {}): string {
   const p = new URLSearchParams();
-  if (q.sort !== 'trending') p.set('sort', q.sort);
+  if (q.sort !== 'new') p.set('sort', q.sort);
   if (q.who !== 'everyone') p.set('who', q.who);
   if (q.coupleType) p.set('coupleType', q.coupleType);
   if (q.near) p.set('near', '1');
@@ -76,6 +76,9 @@ export default function ExploreFeed() {
   const [topPeriod, setTopPeriod] = useState<'week' | 'rolling'>('week');
   const [me, setMe] = useState<{ username: string; hasLocation: boolean } | null>(null);
   const [likes, setLikes] = useState<Record<string, LikeState>>({});
+  // Comment totals changed in the viewer, applied over every list.
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+  const [openComments, setOpenComments] = useState(false);
   const [viewer, setViewer] = useState<ViewerCtx>(null);
   const [single, setSingle] = useState<ExplorePhoto | null>(null);
   const [reporting, setReporting] = useState<ExplorePhoto | null>(null);
@@ -104,7 +107,7 @@ export default function ExploreFeed() {
       const res = await fetch(`/api/gallery?${qs(q, { ...(after ? { cursor: after } : {}), ...(wantTop ? { top: '1' } : {}) })}`);
       const d = await res.json().catch(() => ({})) as FeedResponse & { error?: string };
       if (id !== reqId.current) return;
-      if (!res.ok) throw new Error(d.error || 'Could not load Explore');
+      if (!res.ok) throw new Error(d.error || 'Could not load the Gallery');
       setPhotos((cur) => {
         if (!after) return d.photos;
         const seen = new Set((cur ?? []).map((p) => p.id));
@@ -117,7 +120,7 @@ export default function ExploreFeed() {
       else if (wantTop) setTop([]);
     } catch (e) {
       if (id !== reqId.current) return;
-      setError(e instanceof Error ? e.message : 'Could not load Explore');
+      setError(e instanceof Error ? e.message : 'Could not load the Gallery');
       setPhotos((cur) => cur ?? []);
     } finally {
       if (id === reqId.current) { loadingRef.current = false; setLoadingMore(false); }
@@ -156,6 +159,7 @@ export default function ExploreFeed() {
         const d = await r.json().catch(() => ({}));
         if (!r.ok || !d.photo) throw new Error(d.error || 'This photo is no longer available');
         setSingle(d.photo);
+        setOpenComments(search.get('comments') === '1');
         setViewer({ list: 'single', id: d.photo.id });
       })
       .catch((e) => { showToast(e instanceof Error ? e.message : 'This photo is no longer available', 'info'); syncUrl(query, null); });
@@ -201,16 +205,21 @@ export default function ExploreFeed() {
   }, [showToast]);
 
   // ── Derived lists ─────────────────────────────────────────────────────
-  const feed = useMemo(() => (photos ?? []).map((p) => withLike(p, likes)), [photos, likes]);
-  const topList = useMemo(() => (top ? top.map((p) => withLike(p, likes)) : null), [top, likes]);
+  const apply = useCallback((p: ExplorePhoto) => {
+    const liked = withLike(p, likes);
+    return p.id in commentCounts ? { ...liked, commentCount: commentCounts[p.id] } : liked;
+  }, [likes, commentCounts]);
+  const feed = useMemo(() => (photos ?? []).map(apply), [photos, apply]);
+  const topList = useMemo(() => (top ? top.map(apply) : null), [top, apply]);
   const columns = useMemo(() => distribute(feed, cols), [feed, cols]);
 
-  const viewerList = viewer?.list === 'top' ? topList ?? [] : viewer?.list === 'single' ? (single ? [withLike(single, likes)] : []) : feed;
+  const viewerList = viewer?.list === 'top' ? topList ?? [] : viewer?.list === 'single' ? (single ? [apply(single)] : []) : feed;
   const viewerIndex = viewer ? viewerList.findIndex((p) => p.id === viewer.id) : -1;
 
   const openFeed = useCallback((p: ExplorePhoto) => { setViewer({ list: 'feed', id: p.id }); syncUrl(query, p.id); }, [query]);
   const openTop = useCallback((p: ExplorePhoto) => { setViewer({ list: 'top', id: p.id }); syncUrl(query, p.id); }, [query]);
-  const closeViewer = useCallback(() => { setViewer(null); syncUrl(query, null); }, [query]);
+  const closeViewer = useCallback(() => { setViewer(null); setOpenComments(false); syncUrl(query, null); }, [query]);
+  const onCommentCount = useCallback((p: ExplorePhoto, n: number) => setCommentCounts((c) => ({ ...c, [p.id]: n })), []);
   const onIndex = useCallback((i: number) => {
     const p = viewerList[i];
     if (p) { setViewer((v) => v && { ...v, id: p.id }); syncUrl(query, p.id); }
@@ -228,18 +237,18 @@ export default function ExploreFeed() {
       {/* Header */}
       <header className="pt-6 sm:pt-8 pb-4">
         <Link href="/gallery" className="inline-flex items-center gap-1.5 text-sm text-white/55 hover:text-white mb-3">
-          <ArrowLeft size={15} aria-hidden="true" /> My gallery
+          <ArrowLeft size={15} aria-hidden="true" /> My photos
         </Link>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
             <p className="eyebrow text-[#FF4D6D] mb-1">Community</p>
-            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-white">Explore</h1>
-            <p className="text-white/60 text-sm mt-1 max-w-xl">Discover photos members have shared. Double-tap to like — the most loved rise to the top.</p>
+            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-white">Gallery</h1>
+            <p className="text-white/60 text-sm mt-1 max-w-xl">Photos members have shared with the community. Double-tap to like, tap to comment.</p>
           </div>
         </div>
         <p className="mt-3 inline-flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/65">
           <ShieldCheck size={14} className="mt-px shrink-0 text-emerald-400" aria-hidden="true" />
-          <span>Only photos members chose to make public appear here. Private albums never do. <Link href="/gallery#explore-settings" className="text-[#D4AF37] hover:underline whitespace-nowrap">Your Explore settings</Link></span>
+          <span>Only photos members chose to make public appear here. Private albums never do. <Link href="/gallery#explore-settings" className="text-[#D4AF37] hover:underline whitespace-nowrap">Your Gallery settings</Link></span>
         </p>
         <ProtectionNote className="mt-3" />
       </header>
@@ -325,11 +334,11 @@ export default function ExploreFeed() {
             <button type="button" onClick={() => fetchPage(query, null)} className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm text-white"><RotateCcw size={14} aria-hidden="true" /> Try again</button>
           </div>
         ) : filtered ? (
-          <EmptyState icon={Images} title="No photos match these filters" description="Try a wider search — or check back soon, new photos are shared every day." action={{ label: 'Clear filters', href: query.sort === 'trending' ? '/gallery/explore' : `/gallery/explore?sort=${query.sort}` }} />
+          <EmptyState icon={Images} title="No photos match these filters" description="Try a wider search — or check back soon, new photos are shared every day." action={{ label: 'Clear filters', href: query.sort === 'new' ? '/gallery/explore' : `/gallery/explore?sort=${query.sort}` }} />
         ) : query.sort === 'week' ? (
-          <EmptyState icon={Trophy} title="No likes yet this week" description="The week resets every Monday. Like a photo you love — it could top the chart." action={{ label: 'See what’s trending', href: '/gallery/explore' }} />
+          <EmptyState icon={Trophy} title="No likes yet this week" description="The week resets every Monday. Like a photo you love — it could top the chart." action={{ label: 'See what’s trending', href: '/gallery/explore?sort=trending' }} />
         ) : (
-          <EmptyState icon={Images} title="Explore is waiting for its first photos" description="Share a public photo from your gallery and be the first to be discovered." action={{ label: 'Go to my gallery', href: '/gallery' }} />
+          <EmptyState icon={Images} title="The Gallery is waiting for its first photos" description="Share a public photo and be the first to be seen." action={{ label: 'Share a photo', href: '/gallery' }} />
         )
       ) : (
         <>
@@ -381,6 +390,8 @@ export default function ExploreFeed() {
           onNearEnd={loadMore}
           onReport={setReporting}
           onShowLikers={showLikers}
+          onCommentCount={onCommentCount}
+          openComments={openComments}
         />
       )}
       <ReportPhotoDialog photo={reporting} onClose={() => setReporting(null)} />

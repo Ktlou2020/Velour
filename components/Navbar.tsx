@@ -20,11 +20,11 @@ const NAV_LINKS: { href: string; label: string; showBadge?: boolean; sparkDot?: 
   { href: '/members', label: 'Members', tour: 'members' },
   { href: '/discover', label: 'Discover', tour: 'discover' },
   { href: '/matches', label: 'Matches', tour: 'matches' },
+  { href: '/gallery/explore', label: 'Gallery', tour: 'explore' },
   { href: '/messages', label: 'Messages', showBadge: true, tour: 'messages' },
   { href: '/events', label: 'Events' },
   { href: '/forums', label: 'Forums' },
   ...(featureOn('spark') ? [{ href: '/spark', label: 'Spark', sparkDot: true }] : []),
-  ...(featureOn('explore') ? [{ href: '/gallery/explore', label: 'Explore', tour: 'explore' }] : []),
   ...(featureOn('store') ? [{ href: '/store', label: STORE_NAME }] : []),
 ];
 

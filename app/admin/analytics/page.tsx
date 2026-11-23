@@ -123,7 +123,7 @@ export default async function AdminAnalyticsPage({ searchParams }: { searchParam
           <DailyBars title="Matches" series={a.series} metric="matches" color="#f472b6" />
           <DailyBars title="Likes" series={a.series} metric="likes" color="#fb7185" />
           <DailyBars title="Profile views" series={a.series} metric="profileViews" color="#60a5fa" />
-          <DailyBars title="Explore photo likes" series={a.series} metric="photoLikes" color="#34d399" />
+          <DailyBars title="Gallery photo likes" series={a.series} metric="photoLikes" color="#34d399" />
           <DailyBars title="Spark answers" series={a.series} metric="sparkAnswers" color="#fbbf24" />
           <DailyBars title="Reviews" series={a.series} metric="reviews" color="#2dd4bf" />
         </div>

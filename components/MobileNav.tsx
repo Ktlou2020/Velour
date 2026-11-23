@@ -3,16 +3,17 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Home, Compass, MessageCircle, Heart, User } from 'lucide-react';
+import { Home, Compass, MessageCircle, Heart, User, Images } from 'lucide-react';
 import { featureOn } from '@/lib/features';
 import { useSparkToday } from './spark/useSparkToday';
 import { useUnreadCounts } from './notifications/unread-store';
 
-// The simple platform: browse, swipe, chat, profile. Matches take the slot Explore had.
+// The simple platform: browse, swipe, the members' photo Gallery, matches, chat, profile.
 // `tour`: the data-tour anchor the first-run tour spotlights on mobile.
 const TABS: { href: string; label: string; icon: typeof Home; tour: string; showBadge?: boolean; sparkDot?: boolean }[] = [
   { href: '/members', tour: 'members', label: 'Home', icon: Home },
   { href: '/discover', tour: 'discover', label: 'Discover', icon: Compass },
+  { href: '/gallery/explore', tour: 'gallery', label: 'Gallery', icon: Images },
   { href: '/matches', tour: 'matches', label: 'Matches', icon: Heart },
   { href: '/messages', tour: 'messages', label: 'Messages', icon: MessageCircle, showBadge: true },
   { href: '/profile', tour: 'profile', label: 'Profile', icon: User },

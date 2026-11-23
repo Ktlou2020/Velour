@@ -245,7 +245,7 @@ export default function GalleryManager() {
           <p className="text-white/60 text-sm mt-1">Upload photos, choose your main photo and keep private albums for the people you trust.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/gallery/explore" className={btnGhost}><Compass size={15} aria-hidden="true" /> Explore</Link>
+          <Link href="/gallery/explore" className={btnGhost}><Compass size={15} aria-hidden="true" /> Gallery</Link>
           <button type="button" onClick={() => pickFiles(tab === 'albums' && openAlbumId ? openAlbumId : null)} className={btnPrimary}>
             <Upload size={15} aria-hidden="true" /> Upload photos
           </button>
@@ -502,7 +502,7 @@ export default function GalleryManager() {
       )}
 
       <Link href="/gallery/explore" className="sm:hidden mt-8 flex items-center justify-center gap-2 text-sm text-white/60 hover:text-white">
-        <Compass size={15} aria-hidden="true" /> Explore photos from other members
+        <Compass size={15} aria-hidden="true" /> See the members’ Gallery
       </Link>
 
       {dragging && (

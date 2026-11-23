@@ -5,7 +5,7 @@ import GalleryManager from '@/components/gallery/GalleryManager';
 import { GridSkeleton } from '@/components/gallery/ui';
 
 export const metadata: Metadata = {
-  title: 'My gallery',
+  title: 'My photos',
   robots: { index: false, follow: false },
 };
 

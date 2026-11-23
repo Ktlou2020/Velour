@@ -46,7 +46,7 @@ export default function ExploreCard({ photos, onOpenPhoto }: { photos: GalleryPh
     setS({ ...s, showInExplore: v });
     try {
       await api('/api/gallery/settings', { method: 'PATCH', json: { showInExplore: v } });
-      showToast(v ? 'Your public photos can appear in Explore' : 'Your photos are hidden from Explore', 'success');
+      showToast(v ? 'Your public photos can appear in the Gallery' : 'Your photos are hidden from the Gallery', 'success');
     } catch (e) {
       setS({ ...s, showInExplore: !v });
       showToast(e instanceof Error ? e.message : 'Could not save', 'error');
@@ -64,7 +64,7 @@ export default function ExploreCard({ photos, onOpenPhoto }: { photos: GalleryPh
           </span>
           <span className="min-w-0">
             <span id="explore-card-title" className="flex items-center gap-1 text-white font-semibold">
-              Explore <ChevronRight size={16} className="text-white/50 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              Gallery <ChevronRight size={16} className="text-white/50 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
             </span>
             <span className="block text-white/60 text-xs sm:text-sm">See the community’s most-liked photos and like your favourites.</span>
           </span>
@@ -87,12 +87,12 @@ export default function ExploreCard({ photos, onOpenPhoto }: { photos: GalleryPh
 
       <label className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-black/25 px-3.5 py-3 cursor-pointer">
         <span className="min-w-0">
-          <span className="block text-white text-sm font-medium">Show my public photos in Explore</span>
+          <span className="block text-white text-sm font-medium">Show my public photos in the Gallery</span>
           <span className="block text-white/55 text-xs mt-0.5">
             {best || total > 0 ? `${total} like${total === 1 ? '' : 's'} so far · ` : ''}Private photos and private albums never appear.
           </span>
         </span>
-        <Switch checked={s?.showInExplore ?? true} disabled={!s || saving} label="Show my public photos in Explore" onChange={toggle} />
+        <Switch checked={s?.showInExplore ?? true} disabled={!s || saving} label="Show my public photos in the Gallery" onChange={toggle} />
       </label>
     </section>
   );

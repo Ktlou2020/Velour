@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useState } from 'react';
-import { Heart, BadgeCheck, Plane } from 'lucide-react';
+import { Heart, BadgeCheck, Plane, MessageCircle } from 'lucide-react';
 import ProtectedImage from '@/components/ProtectedImage';
 import { Avatar } from '@/components/gallery/ui';
 import HeartBurst from './HeartBurst';
@@ -85,6 +85,11 @@ function ExploreTile({ photo, watermark, showRank, eager, onOpen, onLike, onShow
             <span className="truncate">{photo.isOwn ? p.name : posterLine(photo) || ' '}</span>
           </p>
         </div>
+        {photo.commentCount > 0 && (
+          <span className="flex items-center gap-1 text-white/60 text-xs font-semibold tabular-nums" aria-label={`${photo.commentCount} comment${photo.commentCount === 1 ? '' : 's'}`}>
+            <MessageCircle size={15} aria-hidden="true" />{compactCount(photo.commentCount)}
+          </span>
+        )}
         <button
           type="button"
           onClick={() => {

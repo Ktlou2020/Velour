@@ -4,8 +4,8 @@ import Navbar from '@/components/Navbar';
 import ExploreFeed from '@/components/explore/ExploreFeed';
 
 export const metadata: Metadata = {
-  title: 'Explore',
-  description: 'Discover and like photos members have chosen to share publicly.',
+  title: 'Gallery',
+  description: 'Photos members have shared with the community — like and comment.',
   robots: { index: false, follow: false },
 };
 

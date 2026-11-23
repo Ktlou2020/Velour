@@ -35,7 +35,7 @@ export const SERIES_LABELS: Record<SeriesKey, string> = {
   matches: 'Matches',
   likes: 'Likes',
   profileViews: 'Profile views',
-  photoLikes: 'Explore photo likes',
+  photoLikes: 'Gallery photo likes',
   reviews: 'Reviews',
   sparkAnswers: 'Spark answers',
   memberships: 'Membership payments',

@@ -61,6 +61,10 @@ export function buildFaq(): FaqSection[] {
           a: 'Saving is blocked across Unbound, and every photo carries a watermark with the viewer’s username, so a copy leads straight back to them. No website can fully stop a screenshot, though — read more in the [Safety Centre](/safety).',
         },
         {
+          q: 'What is the Gallery?',
+          a: 'The Gallery is where members’ public photos appear as soon as they’re posted. Any member can like and comment on them. Private albums never show there, and you can keep your public photos out of the Gallery in [My photos](/gallery). Comments are public to members, so phone numbers and contact details can’t be posted — send a private message instead. You can delete comments on your own photos and report any comment.',
+        },
+        {
           q: 'We’re a couple — can we have a joint profile?',
           a: 'Yes. If you each have your own account, use “Link with your partner” on [My Profile](/profile) so you appear together as a couple. Either of you can unlink at any time.',
         },

@@ -72,7 +72,7 @@ export function parseFilters(sp: URLSearchParams): { sort: ExploreSort; filters:
   const sortRaw = sp.get('sort')
   const whoRaw = sp.get('who')
   const ctRaw = sp.get('coupleType')
-  const sort = (EXPLORE_SORTS as readonly string[]).includes(sortRaw ?? '') ? (sortRaw as ExploreSort) : 'trending'
+  const sort = (EXPLORE_SORTS as readonly string[]).includes(sortRaw ?? '') ? (sortRaw as ExploreSort) : 'new'
   const who = (EXPLORE_WHO as readonly string[]).includes(whoRaw ?? '') ? (whoRaw as ExploreWho) : 'everyone'
   const coupleType = who === 'couples' && COUPLE_TYPES.includes(ctRaw as CoupleType) ? (ctRaw as CoupleType) : null
   return { sort, filters: { who, coupleType, near: sp.get('near') === '1', verified: sp.get('verified') === '1' } }
@@ -219,6 +219,7 @@ export const explorePhotoSelect = {
   caption: true,
   createdAt: true,
   likeCount: true,
+  commentCount: true,
   userId: true,
   user: { select: { id: true, username: true, isVerified: true, profile: { select: posterProfileSelect } } },
 } satisfies Prisma.PhotoSelect
@@ -245,6 +246,7 @@ export interface ExplorePhoto {
   caption: string | null
   createdAt: string
   likeCount: number
+  commentCount: number
   liked: boolean
   isOwn: boolean
   isNew: boolean
@@ -305,6 +307,7 @@ function serialize(
     caption: r.caption,
     createdAt: r.createdAt.toISOString(),
     likeCount: Math.max(0, r.likeCount),
+    commentCount: Math.max(0, r.commentCount),
     liked: ctx.likedIds.has(r.id),
     isOwn: r.userId === ctx.viewerId,
     isNew: ctx.now.getTime() - r.createdAt.getTime() < FRESH_HOURS * HOUR,
@@ -594,7 +597,7 @@ export async function notifyPhotoLike(opts: { ownerId: string; photoId: string; 
     where: { userId: ownerId, type: PHOTO_LIKE_TYPE, isRead: false, createdAt: { gte: since }, data: { path: ['photoId'], equals: photoId } },
     orderBy: { createdAt: 'desc' },
   })
-  const body = caption ? `“${caption.slice(0, 60)}${caption.length > 60 ? '…' : ''}” is getting love in Explore` : 'Your photo is getting love in Explore'
+  const body = caption ? `“${caption.slice(0, 60)}${caption.length > 60 ? '…' : ''}” is getting love in the Gallery` : 'Your photo is getting love in the Gallery'
   if (existing) {
     const data = (existing.data && typeof existing.data === 'object' ? existing.data : {}) as Record<string, unknown>
     const likerIds = Array.isArray(data.likerIds) ? (data.likerIds as unknown[]).filter((x): x is string => typeof x === 'string') : []
@@ -653,7 +656,7 @@ export async function notifyPhotoLike(opts: { ownerId: string; photoId: string; 
   }
   sendPushToUser(ownerId, {
     title: likeTitle(likerName, likers.size, unread.length),
-    body: 'See who’s loving your photos in Explore',
+    body: 'See who’s loving your photos in the Gallery',
     url: unread.length > 1 ? '/gallery' : url,
     tag: 'photo-like',
   }).catch(() => {})

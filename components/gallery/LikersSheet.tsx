@@ -58,7 +58,7 @@ export default function LikersSheet({ photoId, onClose }: { photoId: string | nu
       ) : likers.length === 0 ? (
         <div className="py-10 text-center">
           <Heart size={28} className="mx-auto mb-3 text-white/25" aria-hidden="true" />
-          <p className="text-white/70 text-sm">{error || 'No likes yet. Public photos appear in Explore for members to discover.'}</p>
+          <p className="text-white/70 text-sm">{error || 'No likes yet. Public photos appear in the Gallery for members to see.'}</p>
         </div>
       ) : (
         <>

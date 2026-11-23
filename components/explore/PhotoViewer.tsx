@@ -4,11 +4,12 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { X, ChevronLeft, ChevronRight, Heart, MessageCircle, BadgeCheck, Flag, Plane, UserRound, Users } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Heart, MessageCircle, Send, BadgeCheck, Flag, Plane, UserRound, Users } from 'lucide-react';
 import ProtectedImage from '@/components/ProtectedImage';
 import { Avatar, Spinner } from '@/components/gallery/ui';
 import { useToast } from '@/lib/toast-context';
 import HeartBurst from './HeartBurst';
+import CommentsSheet from './CommentsSheet';
 import { useDoubleTap } from './useDoubleTap';
 import { compactCount, posterLine, type ExplorePhoto } from './types';
 
@@ -23,6 +24,9 @@ interface Props {
   onNearEnd: () => void;
   onReport: (photo: ExplorePhoto) => void;
   onShowLikers: (photo: ExplorePhoto) => void;
+  onCommentCount: (photo: ExplorePhoto, count: number) => void;
+  /** Open the comments straight away (deep link from a comment notification). */
+  openComments?: boolean;
 }
 
 const ratios = new Map<string, number>();
@@ -35,7 +39,7 @@ function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-export default function PhotoViewer({ photos, index, watermark, hasMore, onIndex, onClose, onLike, onNearEnd, onReport, onShowLikers }: Props) {
+export default function PhotoViewer({ photos, index, watermark, hasMore, onIndex, onClose, onLike, onNearEnd, onReport, onShowLikers, onCommentCount, openComments = false }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
   const photo = photos[index];
@@ -46,6 +50,7 @@ export default function PhotoViewer({ photos, index, watermark, hasMore, onIndex
   const [loaded, setLoaded] = useState(false);
   const [burst, setBurst] = useState(0);
   const [replying, setReplying] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(openComments);
   const touch = useRef<{ x: number; y: number; t: number } | null>(null);
 
   const prev = useCallback(() => { if (index > 0) onIndex(index - 1); }, [index, onIndex]);
@@ -245,6 +250,15 @@ export default function PhotoViewer({ photos, index, watermark, hasMore, onIndex
                 </span>
               </span>
             </Link>
+            <button
+              type="button"
+              onClick={() => setCommentsOpen(true)}
+              aria-label={`Comments (${photo.commentCount})`}
+              className="flex items-center gap-1.5 rounded-full border border-white/20 px-4 h-11 text-sm font-semibold text-white hover:border-white/40"
+            >
+              <MessageCircle size={17} aria-hidden="true" />
+              <span className="tabular-nums">{compactCount(photo.commentCount)}</span>
+            </button>
             {photo.isOwn ? (
               <button type="button" onClick={() => onShowLikers(photo)} className="flex items-center gap-1.5 rounded-full border border-white/15 px-3.5 h-11 text-sm text-white/85 hover:text-white hover:border-white/30">
                 <Heart size={16} className="fill-[#DC143C] text-[#DC143C]" aria-hidden="true" />
@@ -266,6 +280,9 @@ export default function PhotoViewer({ photos, index, watermark, hasMore, onIndex
           </div>
 
           {photo.caption && <p className="text-white/85 text-sm mt-3 leading-relaxed break-words line-clamp-3">{photo.caption}</p>}
+          <button type="button" onClick={() => setCommentsOpen(true)} className="mt-2 text-white/55 hover:text-white text-sm">
+            {photo.commentCount > 0 ? `View ${photo.commentCount === 1 ? '1 comment' : `all ${photo.commentCount} comments`}` : 'Add a comment…'}
+          </button>
 
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Link href={`/members/${encodeURIComponent(p.username)}`} className="flex items-center justify-center gap-2 rounded-xl glass border border-white/10 hover:border-white/25 h-11 text-sm text-white/85 hover:text-white">
@@ -277,13 +294,23 @@ export default function PhotoViewer({ photos, index, watermark, hasMore, onIndex
               </Link>
             ) : (
               <button type="button" onClick={reply} disabled={replying} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#DC143C] to-[#8F0D25] hover:from-[#FF1744] hover:to-[#DC143C] h-11 text-sm font-semibold text-white disabled:opacity-60">
-                {replying ? <Spinner /> : <MessageCircle size={16} aria-hidden="true" />} Reply privately
+                {replying ? <Spinner /> : <Send size={15} aria-hidden="true" />} Message privately
               </button>
             )}
           </div>
           <p className="hidden sm:block text-center text-white/30 text-[11px] mt-3">← → to browse · double-click or L to like · Esc to close</p>
         </div>
       </div>
+      {commentsOpen && (
+        <CommentsSheet
+          key={photo.id}
+          photoId={photo.id}
+          ownerName={photo.isOwn ? 'yourself' : p.name}
+          count={photo.commentCount}
+          onCount={(n) => onCommentCount(photo, n)}
+          onClose={() => setCommentsOpen(false)}
+        />
+      )}
     </div>,
     document.body,
   );

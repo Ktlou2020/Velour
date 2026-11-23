@@ -113,6 +113,7 @@ model User {
   albums              Album[]
   sparkAnswers        SparkAnswer[]
   photoLikes          PhotoLike[]
+  photoComments       PhotoComment[]
   messageViews        MessageView[]
   orders              Order[]
   reviewsGiven        Review[]                  @relation("ReviewsGiven")
@@ -273,12 +274,14 @@ model Photo {
   album      Album?  @relation(fields: [albumId], references: [id], onDelete: SetNull)
 
   // Explore feed
-  likeCount    Int         @default(0)
+  likeCount    Int            @default(0)
+  commentCount Int            @default(0)
   // Admin photo review (lib/photo-review.ts): new public photos wait in the
   // queue until an admin approves or removes them.
   reviewedAt   DateTime?
   reviewedById String?
   likes        PhotoLike[]
+  comments     PhotoComment[]
 }
 
 // A member's photo album. Private albums are visible only to the owner and
@@ -569,6 +572,20 @@ model ProfileView {
 
   @@index([viewedId, createdAt])
   @@index([viewerId, viewedId, createdAt])
+}
+
+/// A comment on a public photo in the Gallery (lib/photo-comments.ts).
+model PhotoComment {
+  id        String   @id @default(cuid())
+  photoId   String
+  photo     Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([photoId, createdAt])
+  @@index([userId, createdAt])
 }
 
 model PhotoLike {

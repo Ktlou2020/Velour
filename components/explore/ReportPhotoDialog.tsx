@@ -35,7 +35,7 @@ export default function ReportPhotoDialog({ photo, onClose }: { photo: ExplorePh
         body: JSON.stringify({
           targetUsername: photo.poster.username,
           reason: `Photo: ${reason}`.slice(0, 100),
-          note: `Explore photo ${photo.id} (/gallery/explore?photo=${photo.id})${details.trim() ? ` — ${details.trim()}` : ''}`,
+          note: `Gallery photo ${photo.id} (/gallery/explore?photo=${photo.id})${details.trim() ? ` — ${details.trim()}` : ''}`,
         }),
       });
       const d = await res.json().catch(() => ({}));
