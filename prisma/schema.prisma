@@ -753,6 +753,29 @@ model AdminAuditLog {
   @@index([targetId, createdAt])
 }
 
+// Member / visitor support requests from /help/contact, answered in /admin/support.
+model SupportTicket {
+  id          String    @id @default(cuid())
+  // The signed-in member who sent it (null for visitors). No FK: a ticket
+  // outlives a deleted account so the support history stays intact.
+  userId      String?
+  email       String
+  // ACCOUNT | BILLING | SAFETY | BUG | FEEDBACK | OTHER
+  category    String
+  subject     String
+  message     String
+  // OPEN | ANSWERED | CLOSED
+  status      String    @default("OPEN")
+  adminReply  String?
+  repliedById String?
+  repliedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+}
+
 // Paid membership lifecycle (one row per provider subscription; a member can
 // have older EXPIRED rows). Members whose tier was set before this existed, or
 // by an admin, have no row and are never touched by the lifecycle cron.
