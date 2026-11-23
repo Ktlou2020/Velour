@@ -1,4 +1,5 @@
 import { db } from '@/lib/db'
+import { getUnmatchPairs, isUnmatchedBetween } from '@/lib/unmatch'
 
 /**
  * Couples & shared conversations.
@@ -112,6 +113,8 @@ export async function getBlockPairs(userIds: string[]): Promise<Set<string>> {
     select: { blockerId: true, blockedId: true },
   })
   for (const b of blocks) set.add(`${b.blockerId}|${b.blockedId}`)
+  // Unmatched pairs close their conversation the same way (lib/unmatch.ts).
+  for (const u of await getUnmatchPairs(ids)) set.add(`${u.userId}|${u.otherId}`)
   return set
 }
 
@@ -268,6 +271,7 @@ export async function getConversationAccess(conversationId: string, userId: stri
 export type FindOrCreateResult =
   | { ok: true; conversationId: string; created: boolean }
   | { ok: false; reason: 'blocked' }
+  | { ok: false; reason: 'unmatched' }
   | { ok: false; reason: 'policy'; message: string }
 
 /**
@@ -307,6 +311,7 @@ export async function findOrCreateConversation(
 
   const everyone = Array.from(new Set([...mySide, ...otherSide]))
   if (await isBlockedBetween(mySide, otherSide)) return { ok: false, reason: 'blocked' }
+  if (await isUnmatchedBetween(mySide, otherSide)) return { ok: false, reason: 'unmatched' }
 
   const candidates = await db.conversation.findMany({
     where: {

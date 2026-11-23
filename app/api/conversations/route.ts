@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
     const targetId = otherUserId
     const result = await findOrCreateConversation(meId, targetId, () => messagePolicyBlock(meId, targetId))
     if (!result.ok) {
-      const message = result.reason === 'policy' ? result.message : 'Cannot start a conversation with this user'
+      const message = result.reason === 'policy' ? result.message : result.reason === 'unmatched' ? 'You’re no longer matched with this member, so you can’t message each other.' : 'Cannot start a conversation with this user'
       return NextResponse.json({ error: message, code: result.reason === 'policy' ? 'MESSAGE_POLICY' : 'BLOCKED' }, { status: 403 })
     }
 

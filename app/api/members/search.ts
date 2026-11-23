@@ -13,6 +13,7 @@ import {
 } from '@/lib/identity'
 import { trustAdjustedCompat, trustAdjustedKm, trustScore } from '@/lib/reviews'
 import { rankScore, replyStats } from '@/lib/ranking'
+import { unmatchedIds } from '@/lib/unmatch'
 
 export interface ProfilePrompt {
   question: string
@@ -608,6 +609,8 @@ export async function searchMembers(caller: CallerContext, params: SearchParamsI
       select: { toUserId: true },
     })
     excludedIds.push(...existingActions.map((l) => l.toUserId))
+    // People you unmatched (or who unmatched you) don't come back in Discover.
+    excludedIds.push(...(await unmatchedIds(caller.userId)))
   }
 
   const userWhere: Prisma.UserWhereInput = {

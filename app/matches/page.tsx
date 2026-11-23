@@ -8,6 +8,7 @@ import EmptyState from '@/components/EmptyState';
 import { Heart, MessageCircle, MapPin, User, ChevronDown, Users, Star, Sparkles } from 'lucide-react';
 import BlurredPeople from '@/components/plans/BlurredPeople';
 import ExpiryCountdown from '@/components/chat/ExpiryCountdown';
+import MemberSafetyMenu from '@/components/safety/MemberSafetyMenu';
 
 interface Match {
   id: string;
@@ -223,9 +224,9 @@ export default function MatchesPage() {
     const location = [profile?.city, profile?.country].filter(Boolean).join(', ');
 
     return (
-      <div key={match.id} className={`glass rounded-2xl overflow-hidden group ${expired ? 'opacity-50' : ''}`}>
+      <div key={match.id} className={`glass rounded-2xl group ${expired ? 'opacity-50' : ''}`}>
         {/* Photo */}
-        <div className="aspect-[3/4] relative overflow-hidden">
+        <div className="aspect-[3/4] relative overflow-hidden rounded-t-2xl">
           {profile?.profilePhoto ? (
             // eslint-disable-next-line @next/next/no-img-element
             <ProtectedImage
@@ -294,6 +295,14 @@ export default function MatchesPage() {
             >
               <User size={14} aria-hidden="true" />
             </Link>
+            <MemberSafetyMenu
+              userId={other.id}
+              username={other.username}
+              name={name}
+              className="glass rounded-lg"
+              openUp
+              onDone={(action) => { if (action !== 'report') setMatches((prev) => prev.filter((x) => x.id !== match.id)); }}
+            />
           </div>
         </div>
       </div>

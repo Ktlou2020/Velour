@@ -18,6 +18,7 @@ import type { ViewOnceInfo } from '@/lib/view-once';
 import { useVoiceRecorder } from '@/components/chat/useVoiceRecorder';
 import { useReviewAsk, ReviewAskButton, ReviewPromptCard } from '@/components/chat/ReviewAsk';
 import { featureOn } from '@/lib/features';
+import MemberSafetyMenu from '@/components/safety/MemberSafetyMenu';
 
 // Games, voice notes, view-once, priority messages, expiry timers, review asks and
 // icebreakers are switched off in the simple platform (lib/features.ts).
@@ -1087,6 +1088,9 @@ export default function MessagesPage() {
   const headerIsCouple = sides.length ? sides.some(s => s.isCouple) : !!activeConv?.isCouple;
   // Header names as profile links: per side, each linked partner by name; a
   // shared couple account (one login) links its label to the account.
+  // Unmatch / block / report target: the first member on the other side.
+  const otherSide = sides.find(s => !s.userIds.includes(myId));
+  const safetyTarget = otherSide?.members[0] ?? null;
   const headerPeople: { label: string; username: string }[][] = sides.length
     ? sides.map(s => (s.kind === 'linked' && s.members.length > 1
         ? s.members.map(m => ({ label: m.name, username: m.username }))
@@ -1185,6 +1189,22 @@ export default function MessagesPage() {
           >
             {msgSearchOpen ? <X size={18} /> : <Search size={17} />}
           </button>
+        )}
+        {safetyTarget && !blocked && (
+          <MemberSafetyMenu
+            key={safetyTarget.id}
+            userId={safetyTarget.id}
+            username={safetyTarget.username}
+            name={safetyTarget.name}
+            onDone={(action) => {
+              if (action === 'report') return;
+              const closed = activeConvId;
+              setConversations(prev => prev.filter(c => c.id !== closed));
+              setActiveConvId(null);
+              setMobileView('list');
+              fetchConversations();
+            }}
+          />
         )}
       </div>
       {msgSearchOpen && (

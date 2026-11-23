@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { EMAIL_UNVERIFIED_ERROR, hasConfirmedEmail } from '@/lib/email-verification'
 import { PROFILE_NOT_READY_ERROR, userProfileReady } from '@/lib/profile-ready'
+import { isUnmatchedBetween } from '@/lib/unmatch'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { sendPushToUser } from '@/lib/push'
@@ -139,7 +140,9 @@ export async function POST(req: NextRequest) {
         type: { not: 'PASS' },
       },
     })
-    const blocked = mutualLike ? await isBlockedBetween(mySide, theirSide) : false
+    // Blocked or unmatched pairs never match again (lib/unmatch.ts).
+    const unmatched = await isUnmatchedBetween(mySide, theirSide)
+    const blocked = mutualLike ? unmatched || await isBlockedBetween(mySide, theirSide) : false
 
     let matched = false
 
@@ -210,7 +213,7 @@ export async function POST(req: NextRequest) {
     // In-app notification + push for a plain like / wink / super like (not for a
     // repeated tap, a match — that has its own — or across a block). Names are
     // only shown to members whose plan can see who liked them.
-    if (!matched && !repeat && !sameCouple && !(await isBlockedBetween(mySide, theirSide))) {
+    if (!matched && !repeat && !sameCouple && !unmatched && !(await isBlockedBetween(mySide, theirSide))) {
       try {
         const [liker, owner] = await Promise.all([
           db.user.findUnique({ where: { id: userId }, select: { username: true, profile: { select: { displayName: true } } } }),

@@ -869,3 +869,16 @@ model MessageFlag {
   @@index([reviewedAt, createdAt])
   @@index([senderId])
 }
+
+// One member unmatched another (lib/unmatch.ts): the match and their chat end
+// for both, neither can message the other again, and they leave each other's
+// Discover. Unlike a Block, profiles stay visible in Members.
+model Unmatch {
+  id        String   @id @default(cuid())
+  userId    String
+  otherId   String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, otherId])
+  @@index([otherId])
+}
