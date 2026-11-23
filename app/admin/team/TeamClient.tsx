@@ -10,6 +10,7 @@ interface Admin {
   email: string;
   isActive: boolean;
   isSuperAdmin: boolean;
+  twoStep: boolean;
   appointedAt: string | null;
   createdAt: string;
   profile: { displayName: string | null; profilePhoto: string | null; lastSeen: string | null } | null;
@@ -36,6 +37,9 @@ const ACTION_TEXT: Record<string, [string, string]> = {
   ADMIN_REMOVED: ['removed', 'as admin'],
   USER_BANNED: ['banned', ''],
   USER_UNBANNED: ['unbanned', ''],
+  ADMIN_2FA_ENABLED: ['turned on two-step login for', ''],
+  ADMIN_2FA_RESET: ['reset two-step login for', ''],
+  ADMIN_2FA_BACKUP_CODE_USED: ['used a backup code for', ''],
 };
 
 function when(d: string) {
@@ -111,6 +115,17 @@ export default function TeamClient() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  async function resetTwoStep(userId: string, label: string) {
+    if (!window.confirm(`Reset two-step login for ${label}? They'll set it up again next time they open admin (e.g. after losing their phone).`)) return;
+    setBusy(userId);
+    try {
+      const res = await fetch('/api/admin/2fa/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId }) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { window.alert(d.error || 'Couldn’t reset'); return; }
+      await load();
+    } finally { setBusy(null); }
+  }
 
   async function change(action: 'appoint' | 'remove', target: { identifier?: string; userId?: string }, label: string) {
     if (action === 'remove' && !window.confirm(`Remove admin access for ${label}?`)) return;
@@ -198,6 +213,9 @@ export default function TeamClient() {
                       <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#DC143C]/15 text-[#ff6b81] inline-flex items-center gap-1"><ShieldCheck size={10} aria-hidden="true" /> Admin</span>
                     )}
                     {!a.isActive && <span className="text-[11px] text-red-300">Banned</span>}
+                    {a.twoStep
+                      ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300">Two-step on</span>
+                      : <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300">Two-step not set up</span>}
                   </p>
                   <p className="text-white/40 text-xs truncate">
                     {a.email}
@@ -205,6 +223,15 @@ export default function TeamClient() {
                     {a.profile?.lastSeen ? ` · last seen ${when(a.profile.lastSeen)}` : ''}
                   </p>
                 </div>
+                {data.viewerIsSuperAdmin && a.twoStep && a.id !== data.viewerId && (
+                  <button
+                    onClick={() => resetTwoStep(a.id, `@${a.username}`)}
+                    disabled={busy === a.id}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-white/5 text-white/70 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50"
+                  >
+                    Reset two-step
+                  </button>
+                )}
                 {data.viewerIsSuperAdmin && !a.isSuperAdmin && a.id !== data.viewerId && (
                   <button
                     onClick={() => change('remove', { userId: a.id }, `@${a.username}`)}

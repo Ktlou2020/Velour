@@ -5,7 +5,7 @@ import { isSuperAdminEmail } from '@/lib/admin-roles'
 import { changeAdminRole } from '@/lib/admin-team'
 import { isValidId } from '@/lib/security'
 
-const ROLE_ACTIONS = ['ADMIN_APPOINTED', 'ADMIN_REMOVED', 'USER_BANNED', 'USER_UNBANNED', 'TIER_SET']
+const ROLE_ACTIONS = ['ADMIN_APPOINTED', 'ADMIN_REMOVED', 'USER_BANNED', 'USER_UNBANNED', 'TIER_SET', 'ADMIN_2FA_ENABLED', 'ADMIN_2FA_RESET', 'ADMIN_2FA_BACKUP_CODE_USED']
 
 /** The admin team and recent admin actions. Any admin may view; only super admins may change it. */
 export async function GET() {
@@ -17,7 +17,7 @@ export async function GET() {
         where: { role: 'ADMIN' },
         orderBy: { createdAt: 'asc' },
         select: {
-          id: true, username: true, email: true, isActive: true, createdAt: true,
+          id: true, username: true, email: true, isActive: true, createdAt: true, totpEnabledAt: true,
           profile: { select: { displayName: true, profilePhoto: true, lastSeen: true } },
         },
       }),
@@ -41,6 +41,8 @@ export async function GET() {
       admins: admins.map((a) => ({
         ...a,
         isSuperAdmin: isSuperAdminEmail(a.email),
+        twoStep: !!a.totpEnabledAt,
+        totpEnabledAt: undefined,
         appointedAt: appointedAt.get(a.id) ?? null,
       })),
       log: logs.map((l) => ({

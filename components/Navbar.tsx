@@ -45,6 +45,8 @@ export default function Navbar() {
   const username = (session?.user as { username?: string })?.username ?? session?.user?.email ?? '';
   const initials = username.slice(0, 2).toUpperCase() || 'U';
   const userRole = (session?.user as { role?: string })?.role;
+  // Admins who still need their two-step code keep the Admin link (it leads to the code screen).
+  const adminPending = (session?.user as { adminPending?: boolean } | undefined)?.adminPending === true;
 
   // Live counts (SSE + polling fallback) shared with the bell and the mobile tab bar.
   // Messages badge = unread messages (ConversationParticipant.unreadCount), not notifications.
@@ -167,7 +169,7 @@ export default function Navbar() {
                       >
                         <MapIcon size={14} />Take the tour
                       </button>
-                      {userRole === 'ADMIN' && (
+                      {(userRole === 'ADMIN' || adminPending) && (
                         <Link
                           href="/admin"
                           className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
@@ -325,7 +327,7 @@ export default function Navbar() {
                 >
                   <MapIcon size={14} />Take the tour
                 </button>
-                {userRole === 'ADMIN' && (
+                {(userRole === 'ADMIN' || adminPending) && (
                   <Link
                     href="/admin"
                     className="flex items-center gap-2 px-4 py-2 glass border border-white/10 rounded-lg text-white/70 text-sm"

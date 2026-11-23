@@ -6,6 +6,8 @@ import { isSuperAdminEmail } from '@/lib/admin-roles'
 import { getClientIp, rateLimit, resetRateLimit } from '@/lib/rate-limit'
 import { hashToken } from '@/lib/security'
 import { isProfileReady, profileReadySelect } from '@/lib/profile-ready'
+import { deviceHash, describeDevice, mfaRequired, redeemTicket } from '@/lib/admin-mfa'
+import { escapeHtml, sendBrandedEmail } from '@/lib/email'
 
 /**
  * How often (seconds) the JWT re-reads role / isActive / username from the
@@ -31,6 +33,31 @@ class RateLimitedSignin extends CredentialsSignin {
 /** Short fingerprint of the password hash: changes when the password changes. */
 function passwordVersion(passwordHash: string | null | undefined): string {
   return passwordHash ? hashToken(passwordHash).slice(0, 16) : ''
+}
+
+/**
+ * Admins: email them when their account signs in from a browser/device it
+ * hasn't used before (never blocks sign-in).
+ */
+async function alertNewAdminDevice(userId: string, email: string, ua: string, ip: string) {
+  try {
+    const h = deviceHash(userId, ua)
+    const u = await db.user.findUnique({ where: { id: userId }, select: { knownDeviceHashes: true } })
+    if (!u || u.knownDeviceHashes.includes(h)) return
+    await db.user.update({ where: { id: userId }, data: { knownDeviceHashes: [h, ...u.knownDeviceHashes].slice(0, 20) } })
+    const when = new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg', dateStyle: 'medium', timeStyle: 'short' })
+    const site = (process.env.NEXT_PUBLIC_APP_URL || 'https://unboundza.com').replace(/\/+$/, '')
+    await sendBrandedEmail(
+      email,
+      'New sign-in to your Unbound admin account',
+      'New admin sign-in',
+      `<p style="color:#ddd;font-size:15px;line-height:1.6;">Your admin account just signed in from a device it hasn’t used before:</p>
+       <p style="color:#fff;font-size:15px;line-height:1.6;"><strong>${escapeHtml(describeDevice(ua))}</strong><br>${escapeHtml(when)} (SAST)<br>IP address ${escapeHtml(ip)}</p>
+       <p style="color:#ddd;font-size:15px;line-height:1.6;">If this was you, there’s nothing to do. If it wasn’t, <a href="${escapeHtml(site)}/auth/forgot-password" style="color:#FF4D6D;">reset your password now</a> and tell the super admin.</p>`,
+    )
+  } catch (err) {
+    console.error('new-device alert failed:', err instanceof Error ? err.message : err)
+  }
 }
 
 async function updateLoginStreak(userId: string) {
@@ -118,6 +145,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (!isValid || !user.isActive) return null
 
           resetRateLimit(emailKey)
+          if (user.role === 'ADMIN') {
+            const ua = request?.headers?.get?.('user-agent') ?? ''
+            void alertNewAdminDevice(user.id, user.email, ua, ip)
+          }
           return {
             id: user.id,
             email: user.email,
@@ -136,8 +167,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       const now = Date.now()
+
+      // Admin two-step login: the browser passes the one-time ticket from
+      // /api/admin/2fa/verify through useSession().update({ mfaTicket }).
+      if (trigger === 'update' && token.id && (session as { mfaTicket?: unknown } | undefined)?.mfaTicket) {
+        if (await redeemTicket(token.id as string, (session as { mfaTicket: unknown }).mfaTicket)) token.mfaOk = true
+        return token
+      }
 
       if (user) {
         // Fresh sign-in
@@ -147,6 +185,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.pwv = (user as { pwv?: string }).pwv ?? ''
         token.emailConfirmed = (user as { emailConfirmed?: boolean }).emailConfirmed ?? false
         token.profileReady = (user as { profileReady?: boolean }).profileReady ?? false
+        token.mfaOk = false
         token.refreshedAt = now
         if (user.id) await updateLoginStreak(user.id)
         return token
@@ -195,7 +234,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token && session.user) {
         session.user.id = token.id as string
         ;(session.user as { username?: string }).username = token.username as string
-        ;(session.user as { role?: string }).role = token.role as string
+        // An admin who hasn't entered their two-step code yet is a normal member
+        // everywhere (fails closed) until they verify at /auth/admin-verify.
+        const pending = token.role === 'ADMIN' && mfaRequired() && token.mfaOk !== true
+        ;(session.user as { role?: string }).role = pending ? 'USER' : (token.role as string)
+        ;(session.user as { adminPending?: boolean }).adminPending = pending
         ;(session.user as { emailConfirmed?: boolean }).emailConfirmed = token.emailConfirmed !== false
         ;(session.user as { profileReady?: boolean }).profileReady = token.profileReady !== false
       }
@@ -213,6 +256,8 @@ export async function requireAdmin(): Promise<{ id: string; isSuperAdmin: boolea
   const session = await auth()
   const id = session?.user?.id
   if (!id) return null
+  // Two-step code not entered yet (see the session callback).
+  if ((session.user as { adminPending?: boolean }).adminPending) return null
   try {
     const user = await db.user.findUnique({ where: { id }, select: { role: true, isActive: true, email: true } })
     if (!user || !user.isActive || user.role !== 'ADMIN') return null

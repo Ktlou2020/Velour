@@ -86,6 +86,24 @@ model User {
   // analytics, emails and public counts; removable in one click (Admin team).
   isDemo         Boolean  @default(false)
 
+  // Admin two-step login (lib/admin-mfa.ts). Secrets are encrypted at rest;
+  // recovery codes and the sign-in ticket are stored hashed.
+  totpSecret         String?
+  totpPendingSecret  String?
+  totpEnabledAt      DateTime?
+  totpLastStep       Int?
+  totpRecoveryHashes String[]  @default([])
+  mfaTicketHash      String?
+  mfaTicketExpires   DateTime?
+  // Devices this admin signed in from (hashed), for "new sign-in" alerts.
+  knownDeviceHashes  String[]  @default([])
+
+  // Hidden pending review: 3+ different members reported them (lib/auto-protect.ts).
+  // Out of browse, Discover, the Gallery and profile pages; can't start chats
+  // or comment until an admin restores them or bans them.
+  underReviewAt     DateTime?
+  underReviewReason String?
+
   // When the member clicked the link in their sign-up email (separate from
   // isVerified, which is the selfie/photo verification badge).
   emailVerifiedAt      DateTime?

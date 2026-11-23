@@ -10,18 +10,20 @@ export default auth((req) => {
   const isProtected = protectedPaths.some(p => pathname.startsWith(p))
   const isAuthPage = pathname.startsWith('/auth/')
   // Pages a signed-in member must still reach (confirming their email, signing out).
-  const authPassThrough = ['/auth/signout', '/auth/verify-email', '/auth/confirm-email']
+  const authPassThrough = ['/auth/signout', '/auth/verify-email', '/auth/confirm-email', '/auth/admin-verify']
 
   if (isProtected && !isLoggedIn) {
     const signinUrl = new URL('/auth/signin', req.nextUrl.origin)
     return NextResponse.redirect(signinUrl)
   }
-  const user = req.auth?.user as { role?: string; emailConfirmed?: boolean; profileReady?: boolean } | undefined
+  const user = req.auth?.user as { role?: string; emailConfirmed?: boolean; profileReady?: boolean; adminPending?: boolean } | undefined
+  // Admins who still need to enter their two-step code keep their admin exemptions here.
+  const isAdminish = user?.role === 'ADMIN' || user?.adminPending === true
   // Members finish the basics and add a photo before browsing or messaging
   // (lib/profile-ready.ts). Profile, settings, plans and safety stay reachable.
   const needsProfile = ['/members', '/discover', '/matches', '/messages', '/events', '/forums', '/notifications', '/gallery']
   if (
-    isLoggedIn && user?.profileReady === false && user?.role !== 'ADMIN' &&
+    isLoggedIn && user?.profileReady === false && !isAdminish &&
     (pathname === '/' || needsProfile.some((p) => pathname === p || pathname.startsWith(p + '/')))
   ) {
     return NextResponse.redirect(new URL('/onboarding', req.nextUrl.origin))
@@ -32,7 +34,7 @@ export default auth((req) => {
   const beforeConfirm = ['/onboarding', '/profile', '/account']
   if (
     isLoggedIn && isProtected && process.env.REQUIRE_EMAIL_VERIFICATION === 'true' &&
-    user?.emailConfirmed === false && user?.role !== 'ADMIN' &&
+    user?.emailConfirmed === false && !isAdminish &&
     !beforeConfirm.some((p) => pathname === p || pathname.startsWith(p + '/'))
   ) {
     return NextResponse.redirect(new URL('/auth/confirm-email', req.nextUrl.origin))
@@ -49,6 +51,13 @@ export default auth((req) => {
   // Sections switched off in the simple platform (lib/features.ts). Admins can still preview them.
   if (isLoggedIn && hiddenRoute(pathname) && user?.role !== 'ADMIN') {
     return NextResponse.redirect(new URL('/members', req.nextUrl.origin))
+  }
+
+  // Admin two-step login: password done, code not entered yet.
+  if (pathname.startsWith('/admin') && user?.adminPending) {
+    const url = new URL('/auth/admin-verify', req.nextUrl.origin)
+    url.searchParams.set('next', pathname)
+    return NextResponse.redirect(url)
   }
 
   // Admin-only paths
