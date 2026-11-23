@@ -1,5 +1,6 @@
 'use client';
 
+import { installMoment } from '@/lib/pwa-client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ProtectedImage from '@/components/ProtectedImage';
 import { useRouter } from 'next/navigation';
@@ -251,6 +252,7 @@ export default function OnboardingPage() {
     if (uid) clearSaved(uid);
     const first = s.isCouple ? s.displayName.trim() : (s.displayName.trim().split(' ')[0] || '');
     showToast(`Welcome to Unbound${first ? `, ${first}` : ''}! Say hi to someone who catches your eye.`, 'success');
+    installMoment('welcome');
     router.push('/members');
     router.refresh();
   }

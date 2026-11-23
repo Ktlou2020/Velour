@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { isStandalone } from '@/lib/pwa-client';
 import { STORE_NAME } from '@/lib/store/config';
 import Logo from './Logo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Menu, X, ChevronDown, LogOut, User, Shield, CreditCard, Settings, ShieldCheck, Bell, Map as MapIcon, HelpCircle } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, Shield, CreditCard, Settings, ShieldCheck, Bell, Map as MapIcon, HelpCircle, Smartphone } from 'lucide-react';
 import { startTour } from './tour/events';
 import { featureOn } from '@/lib/features';
 import NotificationBell from './NotificationBell';
@@ -37,6 +38,9 @@ export default function Navbar() {
   const sparkPending = !!spark && !spark.answered;
 
   const isActive = (href: string) => pathname.startsWith(href);
+  // "Get the app" until they're using Unbound from the home screen.
+  const [inApp, setInApp] = useState(true);
+  useEffect(() => { setInApp(isStandalone()); }, []);
 
   const username = (session?.user as { username?: string })?.username ?? session?.user?.email ?? '';
   const initials = username.slice(0, 2).toUpperCase() || 'U';
@@ -140,6 +144,15 @@ export default function Navbar() {
                       >
                         <ShieldCheck size={14} />Safety Centre
                       </Link>
+                      {!inApp && (
+                        <Link
+                          href="/app"
+                          className="flex items-center gap-2 px-4 py-2 text-[#FF4D6D] hover:text-white hover:bg-white/5 text-sm font-medium transition-colors"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          <Smartphone size={14} />Get the app
+                        </Link>
+                      )}
                       <Link
                         href="/help"
                         className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
@@ -289,6 +302,15 @@ export default function Navbar() {
                 >
                   <ShieldCheck size={14} />Safety Centre
                 </Link>
+                {!inApp && (
+                  <Link
+                    href="/app"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#DC143C]/40 bg-[#DC143C]/10 text-white text-sm font-medium"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <Smartphone size={14} className="text-[#FF4D6D]" />Get the app
+                  </Link>
+                )}
                 <Link
                   href="/help"
                   className="flex items-center gap-2 px-4 py-2 glass border border-white/10 rounded-lg text-white/70 text-sm"

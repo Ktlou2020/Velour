@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { requireAdmin } from '@/auth';
 import { db } from '@/lib/db';
-import { Users, Activity, TrendingUp, MessageSquare, Heart, Flag } from 'lucide-react';
+import { Users, Activity, TrendingUp, MessageSquare, Heart, Flag, Smartphone, BellRing } from 'lucide-react';
 import AdminActions from './AdminActions';
 
 export default async function AdminDashboard() {
@@ -25,6 +25,13 @@ export default async function AdminDashboard() {
       db.match.count(),
       db.notification.count({ where: { type: 'REPORT', isRead: false } }),
     ]);
+
+  // Home-screen app adoption (lib/pwa-client.ts → /api/app/opened) and phone alerts.
+  const [appUsers, appWeekly, pushUsers] = await Promise.all([
+    db.profile.count({ where: { appInstalledAt: { not: null } } }),
+    db.profile.count({ where: { appLastOpenedAt: { gte: oneWeekAgo } } }),
+    db.pushSubscription.groupBy({ by: ['userId'] }).then((r) => r.length),
+  ]);
 
   const recentSignups = await db.user.findMany({
     orderBy: { createdAt: 'desc' },
@@ -60,6 +67,9 @@ export default async function AdminDashboard() {
     { icon: MessageSquare, label: 'Total Messages', value: totalMessages, color: 'text-purple-400', bg: 'bg-purple-500/10' },
     { icon: Heart, label: 'Total Matches', value: totalMatches, color: 'text-[#DC143C]', bg: 'bg-[#DC143C]/10' },
     { icon: Flag, label: 'Pending Reports', value: pendingReports, color: 'text-orange-400', bg: 'bg-orange-500/10' },
+    { icon: Smartphone, label: 'Using the app', value: appUsers, color: 'text-sky-400', bg: 'bg-sky-500/10' },
+    { icon: Smartphone, label: 'Opened app this week', value: appWeekly, color: 'text-sky-300', bg: 'bg-sky-500/10' },
+    { icon: BellRing, label: 'Phone alerts on', value: pushUsers, color: 'text-pink-300', bg: 'bg-pink-500/10' },
   ];
 
   return (

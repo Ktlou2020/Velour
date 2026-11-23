@@ -42,6 +42,7 @@ if (typeof window !== 'undefined') {
   window.addEventListener('appinstalled', () => {
     installPrompt = null;
     setLocal(KEY_INSTALLED, '1');
+    reportAppUse('installed');
     window.dispatchEvent(new Event(INSTALL_AVAILABLE_EVENT));
   });
 }
@@ -190,4 +191,58 @@ export async function sendTestPush(): Promise<string | null> {
   } catch {
     return 'Couldn’t send a test — please try again';
   }
+}
+
+// ── Device detection for install instructions ───────────────────────────────
+
+export function isAndroid(): boolean {
+  return typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+}
+
+export function isMobileDevice(): boolean {
+  return isIOS() || isAndroid() || (typeof navigator !== 'undefined' && /Mobi/i.test(navigator.userAgent));
+}
+
+/** Facebook / Instagram / TikTok etc. in-app browsers can't add to the home screen. */
+export function inAppBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /FBAN|FBAV|Instagram|Line\/|TikTok|Snapchat|Twitter|LinkedInApp|WhatsApp/i.test(navigator.userAgent);
+}
+
+/** Which install steps to show on this device. */
+export type InstallMethod = 'prompt' | 'ios-safari' | 'ios-other' | 'android-menu' | 'in-app' | 'desktop' | 'installed';
+
+export function installMethod(): InstallMethod {
+  if (isStandalone()) return 'installed';
+  if (inAppBrowser()) return 'in-app';
+  if (canPromptInstall()) return 'prompt';
+  if (isIOS()) return /CriOS|FxiOS|EdgiOS|OPiOS/i.test(navigator.userAgent) ? 'ios-other' : 'ios-safari';
+  if (isAndroid()) return 'android-menu';
+  return 'desktop';
+}
+
+// ── "Using the app" tracking (Profile.appInstalledAt / appLastOpenedAt) ──────
+
+let reported = false;
+/** Tells the server this member opened the installed app (once per session) or just installed it. */
+export function reportAppUse(event: 'opened' | 'installed') {
+  if (typeof window === 'undefined') return;
+  if (event === 'opened') {
+    if (reported) return;
+    try { if (sessionStorage.getItem('unbound_app_reported')) return; sessionStorage.setItem('unbound_app_reported', '1'); } catch { /* ignore */ }
+    reported = true;
+  }
+  fetch('/api/app/opened', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event }), keepalive: true }).catch(() => {});
+}
+
+// ── Install-prompt moments ───────────────────────────────────────────────────
+
+export const INSTALL_MOMENT_EVENT = 'unbound:install-moment';
+export type InstallMoment = 'welcome' | 'match';
+
+/** Ask the install sheet to show now (e.g. just after sign-up or a match), if it may. */
+export function installMoment(m: InstallMoment) {
+  if (typeof window === 'undefined') return;
+  try { sessionStorage.setItem('unbound_install_moment', m); } catch { /* ignore */ }
+  window.dispatchEvent(new CustomEvent(INSTALL_MOMENT_EVENT, { detail: m }));
 }

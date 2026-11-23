@@ -21,6 +21,7 @@ const COLUMNS = [
     heading: 'Help',
     links: [
       { label: 'Help Centre', href: '/help' },
+      { label: 'Get the app', href: '/app' },
       { label: 'Contact us', href: '/contact' },
       { label: 'Safety Centre', href: '/safety' },
       { label: 'Shipping & delivery', href: '/shipping' },

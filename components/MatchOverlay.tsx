@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import ProtectedImage from '@/components/ProtectedImage';
 import Link from 'next/link';
 import { sizedMediaUrl } from '@/lib/media';
+import { installMoment } from '@/lib/pwa-client';
 
 interface Props {
   show: boolean;
@@ -15,6 +16,12 @@ interface Props {
 const HEART_POSITIONS = [5, 12, 22, 33, 44, 55, 65, 74, 83, 92];
 
 export default function MatchOverlay({ show, matchedUser, onMessage, onClose }: Props) {
+  // After the celebration closes, offer the app ("Don't miss their reply") if it isn't installed.
+  const wasShown = useRef(false);
+  useEffect(() => {
+    if (show) wasShown.current = true;
+    else if (wasShown.current) { wasShown.current = false; installMoment('match'); }
+  }, [show]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {

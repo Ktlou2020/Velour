@@ -232,15 +232,18 @@ model Profile {
   // Founding members: the first N member sign-ups get Platinum free forever (lib/founding.ts).
   foundingMemberNumber Int? @unique
 
-  boostedUntil   DateTime?
-  lastBoostAt    DateTime?
-  incognito      Boolean   @default(false)
+  boostedUntil    DateTime?
+  lastBoostAt     DateTime?
+  incognito       Boolean   @default(false)
   // Who can start a new conversation with this member (lib/message-policy.ts):
   // EVERYONE, VERIFIED (photo-verified members) or LIKED (people they've liked).
-  messagePolicy  String    @default("EVERYONE")
+  messagePolicy   String    @default("EVERYONE")
   /// Phone alerts say only "New notification" — no names or message text on the lock screen.
-  discreetAlerts Boolean   @default(false)
-  videoUrl       String?
+  discreetAlerts  Boolean   @default(false)
+  /// First time this member installed / opened Unbound from the home screen (lib/pwa-client.ts).
+  appInstalledAt  DateTime?
+  appLastOpenedAt DateTime?
+  videoUrl        String?
 
   // Profile prompts: [{ question: string, answer: string }]
   prompts Json?

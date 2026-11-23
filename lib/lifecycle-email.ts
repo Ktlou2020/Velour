@@ -241,11 +241,12 @@ function welcomeEmail(u: Member): BuiltEmail {
     bodyHtml:
       H('You’re in. Welcome to Unbound.') +
       hi(u) +
-      P('Three small steps make all the difference:') +
+      P('A few small steps make all the difference:') +
       LIST([
         '<strong style="color:#fff;">Add a photo</strong> — profiles with a photo get far more attention.',
         '<strong style="color:#fff;">Tell your story</strong> — a few lines and what you’re open to.',
         '<strong style="color:#fff;">Explore Discover</strong> — like, wink, and see who’s nearby.',
+        `<strong style="color:#fff;">Get the app</strong> — add Unbound to your phone’s home screen for message alerts (free, no app store): <a href="${escapeHtml(SITE_URL + '/app')}" style="color:#FF4D6D;">unboundza.com/app</a>.`,
       ]) +
       (founding ? GOLD(`As Founding Member #${founding}, you’re part of the circle that shapes Unbound. Thank you.`) : '') +
       P('Your privacy comes first — you choose what to share, and with whom.') +
