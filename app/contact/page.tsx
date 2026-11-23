@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { LegalShell, Intro, Section, Strong, A, Mail, BusinessDetails } from '@/components/LegalPage'
 import { BUSINESS } from '@/lib/business'
 import { ORDER_NUMBER_PREFIX, STORE_NAME } from '@/lib/store/config'
@@ -14,29 +15,38 @@ const POLICIES = [
   { href: '/refunds', label: 'Refund & Cancellation Policy' },
   { href: '/shipping', label: 'Shipping & Delivery Policy' },
   { href: '/safety', label: 'Safety Centre' },
+  { href: '/help', label: 'Help Centre' },
 ]
 
 export default function ContactPage() {
   return (
-    <LegalShell eyebrow="Support" title="Contact us" lastUpdated="15 October 2026">
+    <LegalShell eyebrow="Support" title="Contact us" lastUpdated="23 November 2026">
       <Intro>
         <p>
-          We&apos;re a small South African team and a real person reads every message. The quickest way to reach us is by email at <Mail />.
+          We&apos;re a small South African team and a real person reads every message. The quickest way to reach us is our <A href="/help/contact">contact form</A> — you&apos;ll get a reference number and an email when we reply. You can also email us at <Mail />.
           {BUSINESS.phone ? <> You can also call us on <a href={`tel:${BUSINESS.phone.replace(/[^\d+]/g, '')}`} className="text-[#DC143C] hover:underline">{BUSINESS.phone}</a> during business hours.</> : null}
         </p>
         <p>
           <Strong>Response times:</Strong> we reply to most messages within <Strong>1 business day</Strong>, and always within 2 business days (Monday to Friday, excluding South African public holidays).
         </p>
+        <div className="flex flex-wrap gap-3 pt-1">
+          <Link href="/help/contact" className="inline-flex items-center rounded-xl bg-[#DC143C] hover:bg-[#FF1744] text-white px-5 py-2.5 text-sm font-semibold transition-colors">
+            Send us a message
+          </Link>
+          <Link href="/help" className="inline-flex items-center rounded-xl border border-white/15 hover:border-white/30 text-white/85 px-5 py-2.5 text-sm font-semibold transition-colors">
+            Browse the Help Centre
+          </Link>
+        </div>
       </Intro>
 
       <BusinessDetails heading="Business details" showInfoOfficer />
 
       <Section title="How we can help">
         <ul className="list-disc list-inside space-y-1.5 pl-4">
-          <li><Strong>Account &amp; membership:</Strong> sign-in problems, billing questions or cancelling a plan — email <Mail subject="Account help" /> from your account&apos;s email address and include your username.</li>
+          <li><Strong>Account &amp; membership:</Strong> sign-in problems, billing questions or cancelling a plan — many answers are in the <A href="/help">Help Centre</A>, or <A href="/help/contact">send us a message</A> (or email <Mail subject="Account help" /> from your account&apos;s email address and include your username).</li>
           <li><Strong>{STORE_NAME} orders:</Strong> deliveries, returns and refunds — email <Mail subject="Order query" /> and quote your order number (it starts with &quot;{ORDER_NUMBER_PREFIX}-&quot;).</li>
           <li><Strong>Privacy &amp; your data (POPIA):</Strong> requests to access, correct or delete your personal information — email <Mail subject="POPIA request" />{BUSINESS.informationOfficer ? <>, for the attention of our Information Officer, {BUSINESS.informationOfficer}</> : null}.</li>
-          <li><Strong>Safety concerns:</Strong> use the Report button on any profile or message for the fastest response, or email <Mail subject="Safety report" />. If you are in immediate danger, call SAPS on <Strong>10111</Strong> or <Strong>112</Strong> from a mobile phone.</li>
+          <li><Strong>Safety concerns:</Strong> use the Report button on any profile or message for the fastest response, or <A href="/help/contact">send us a message</A> and choose &quot;Safety concern&quot;. If you are in immediate danger, call SAPS on <Strong>10111</Strong> or <Strong>112</Strong> from a mobile phone.</li>
           <li><Strong>Leaked photos or videos:</Strong> report them from the member&apos;s profile (&quot;Shared my photos/videos outside Unbound&quot;) or email us — we act on these urgently.</li>
         </ul>
         <p>
