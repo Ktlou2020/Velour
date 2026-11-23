@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
-import { Shield, Download, Trash2, Camera, CheckCircle, Clock, XCircle, Moon, CreditCard, ChevronRight, Mail } from 'lucide-react';
+import { Shield, Download, Trash2, Camera, CheckCircle, Clock, XCircle, Moon, CreditCard, ChevronRight, Mail, HelpCircle } from 'lucide-react';
 import TravelModeCard from '@/components/plans/TravelModeCard';
 import MessagePolicyRow from '@/components/settings/MessagePolicyRow';
 import type { Allowance } from '@/components/plans/AllowanceMeter';
@@ -308,6 +308,16 @@ export default function AccountPage() {
           </a>
           </div>
         </details>
+
+        {/* Help & support */}
+        <Link href="/help" className="glass rounded-2xl p-5 flex items-center gap-3 hover:bg-white/[0.07] transition-colors">
+          <HelpCircle size={18} className="text-[#D4AF37] flex-shrink-0" aria-hidden="true" />
+          <span className="min-w-0">
+            <span className="block text-white font-semibold text-sm">Help &amp; support</span>
+            <span className="block text-white/55 text-xs truncate">FAQs and contact our team</span>
+          </span>
+          <ChevronRight size={16} className="text-white/40 ml-auto flex-shrink-0" aria-hidden="true" />
+        </Link>
 
         {/* Delete Account */}
         <details className="group glass rounded-2xl border border-red-500/20">
