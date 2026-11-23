@@ -81,7 +81,7 @@ export default function ConfirmEmailPage() {
             </button>
           </div>
 
-          <p className="text-gray-500 text-xs mt-6">
+          <p className="text-gray-400 text-xs mt-6">
             Wrong address? <Link href="/auth/signout" className="text-[#FF6B81] hover:underline">Sign out</Link> and join again with the right one.
           </p>
         </div>

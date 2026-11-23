@@ -53,12 +53,12 @@ function Summary({ person, title }: { person: PersonDetails; title?: string }) {
             <div key={label} className="flex justify-between gap-3 text-sm">
               <dt className="text-white/55 flex-shrink-0">{label}</dt>
               <dd className="text-white/85 text-right min-w-0 break-words flex items-center gap-1 justify-end">
-                {hidden && <EyeOff size={11} className="text-white/45" aria-label="Hidden from others" />}{value}
+                {hidden && <EyeOff size={11} className="text-white/60" aria-label="Hidden from others" />}{value}
               </dd>
             </div>
           ))}
         </dl>
-      ) : <p className="text-white/45 text-xs italic">Nothing added yet</p>}
+      ) : <p className="text-white/60 text-xs italic">Nothing added yet</p>}
     </div>
   );
 }

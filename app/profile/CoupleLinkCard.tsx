@@ -133,7 +133,7 @@ export default function CoupleLinkCard() {
           {state.outgoing.map((inv) => (
             <div key={inv.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 p-3">
               <p className="text-white/75 text-sm flex items-center gap-2 min-w-0">
-                <Clock size={14} className="text-white/45 flex-shrink-0" aria-hidden="true" />
+                <Clock size={14} className="text-white/60 flex-shrink-0" aria-hidden="true" />
                 <span className="truncate">Waiting for @{inv.username} to accept</span>
               </p>
               <button onClick={() => call(`cancel-${inv.id}`, '/api/couple/invite', 'DELETE', { inviteId: inv.id }, 'Invitation cancelled')} disabled={!!busy} className="min-h-[36px] text-xs text-white/60 hover:text-red-400 px-2 flex-shrink-0">

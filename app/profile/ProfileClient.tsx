@@ -315,8 +315,8 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                 ) : (
                   <div className="flex items-center gap-2">
                     <p className="text-white/65 text-sm">@{username} · {city || 'Add city'}, {country || 'Add country'}</p>
-                    <button onClick={() => setEditingFields(true)} className="text-white/55 hover:text-white/60 transition-colors" aria-label="Edit profile fields">
-                      <Edit2 size={12} />
+                    <button onClick={() => setEditingFields(true)} className="p-1.5 -m-1.5 rounded-md text-white/55 hover:text-white/60 transition-colors" aria-label="Edit profile fields">
+                      <Edit2 size={12} aria-hidden="true" />
                     </button>
                   </div>
                 )}
@@ -335,8 +335,8 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                 {profile.isCouple ? 'Our bio' : 'My bio'}
               </h2>
               {!editingBio && (
-                <button onClick={() => setEditingBio(true)} className="text-white/55 hover:text-white/60 transition-colors" aria-label="Edit bio">
-                  <Edit2 size={14} />
+                <button onClick={() => setEditingBio(true)} className="p-1.5 -m-1.5 rounded-md text-white/55 hover:text-white/60 transition-colors" aria-label="Edit bio">
+                  <Edit2 size={14} aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -451,14 +451,14 @@ export default function ProfileClient({ session, initialProfile }: Props) {
                   onClick={() => photoTab === 'private' ? privateFileInputRef.current?.click() : fileInputRef.current?.click()}
                   disabled={uploadingPhoto}
                   className="aspect-square rounded-xl border-2 border-dashed border-white/10 hover:border-[#DC143C]/40 flex flex-col items-center justify-center gap-2 transition-all hover:bg-white/5"
-                  aria-label={`Add ${photoTab} photo`}
+                  aria-label={`Add to ${photoTab === 'private' ? 'Private' : 'Public'} photos`}
                 >
                   {uploadingPhoto ? (
                     <div className="w-6 h-6 border-2 border-[#DC143C] border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      <Upload size={20} className="text-white/45" />
-                      <span className="text-white/45 text-xs">Add to {photoTab === 'private' ? 'Private' : 'Public'}</span>
+                      <Upload size={20} className="text-white/60" />
+                      <span className="text-white/60 text-xs">Add to {photoTab === 'private' ? 'Private' : 'Public'}</span>
                     </>
                   )}
                 </button>

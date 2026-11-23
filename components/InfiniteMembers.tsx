@@ -263,7 +263,7 @@ export default function InfiniteMembers({ initialMembers, filters }: Props) {
         </div>
       )}
       {!hasMore && members.length > 0 && (
-        <p className="text-center text-white/45 text-sm py-8">No more members to show</p>
+        <p className="text-center text-white/60 text-sm py-8">No more members to show</p>
       )}
     </div>
   );

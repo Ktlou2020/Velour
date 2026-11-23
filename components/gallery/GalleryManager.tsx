@@ -275,7 +275,7 @@ export default function GalleryManager() {
           >
             <Icon size={15} aria-hidden="true" className="shrink-0" />
             <span className="sm:hidden">{short}</span><span className="hidden sm:inline">{label}</span>
-            {!loading && <span className={`text-xs ${tab === key ? 'text-white/80' : 'text-white/40'}`}>{n}</span>}
+            {!loading && <span className={`text-xs ${tab === key ? 'text-white/80' : 'text-white/60'}`}>{n}</span>}
             {key === 'albums' && pending > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#D4AF37] text-[#0A0A0F] text-[10px] font-bold flex items-center justify-center" aria-hidden="true">{pending}</span>
             )}
@@ -391,7 +391,7 @@ export default function GalleryManager() {
                   </li>
                 </ul>
               )}
-              <p className="text-white/40 text-xs mt-4 hidden sm:block">Tip: drag photos from your computer anywhere on this page to upload.</p>
+              <p className="text-white/60 text-xs mt-4 hidden sm:block">Tip: drag photos from your computer anywhere on this page to upload.</p>
             </>
           )}
         </section>
@@ -417,7 +417,7 @@ export default function GalleryManager() {
                       {openAlbum.name}
                     </h2>
                     {openAlbum.description && <p className="text-white/60 text-sm mt-1">{openAlbum.description}</p>}
-                    <p className="text-white/45 text-xs mt-1">
+                    <p className="text-white/60 text-xs mt-1">
                       {openAlbum.photoCount} photo{openAlbum.photoCount === 1 ? '' : 's'}
                       {openAlbum.isPrivate && ` · shared with ${openAlbum.grantedCount ?? 0}`}
                     </p>
@@ -598,8 +598,8 @@ function DropZone({ onPick, dragging }: { onPick: () => void; dragging: boolean 
       <EmptyState icon={Images} title="Add your first photos" description="Members with photos get far more likes. Your first visible photo becomes your main profile photo — you can change it any time." />
       <div className="flex flex-col items-center gap-2 -mt-4 pb-10 px-4 text-center">
         <button type="button" onClick={onPick} className={btnPrimary}><Upload size={15} aria-hidden="true" /> Choose photos</button>
-        <p className="text-white/40 text-xs">JPG, PNG, WebP or HEIC · up to 10MB each<span className="hidden sm:inline"> · or drag &amp; drop here</span></p>
-        <p className="text-white/40 text-xs">Location and camera details are removed from every photo.</p>
+        <p className="text-white/60 text-xs">JPG, PNG, WebP or HEIC · up to 10MB each<span className="hidden sm:inline"> · or drag &amp; drop here</span></p>
+        <p className="text-white/60 text-xs">Location and camera details are removed from every photo.</p>
       </div>
     </div>
   );
@@ -627,7 +627,7 @@ function AlbumCard({ album, onOpen, owner }: { album: AlbumSummary; onOpen: () =
         {owner && <Avatar url={owner.avatarUrl} name={owner.displayName} size={22} />}
         <div className="min-w-0">
           <p className="text-white text-sm font-medium truncate">{album.name}</p>
-          <p className="text-white/45 text-xs truncate">
+          <p className="text-white/60 text-xs truncate">
             {owner ? `by ${owner.displayName}` : album.isPrivate ? `Shared with ${album.grantedCount ?? 0}` : 'Visible to members'}
           </p>
         </div>
@@ -686,7 +686,7 @@ function AlbumFormDialog({ state, onClose, onSaved }: {
           <input id="album-name" data-autofocus value={name} onChange={(e) => setName(e.target.value)} maxLength={60} required placeholder="e.g. Weekend away" className="input-dark w-full" />
         </div>
         <div>
-          <label htmlFor="album-desc" className="block text-white/70 text-xs font-medium mb-1.5">Description <span className="text-white/40">(optional)</span></label>
+          <label htmlFor="album-desc" className="block text-white/70 text-xs font-medium mb-1.5">Description <span className="text-white/60">(optional)</span></label>
           <textarea id="album-desc" value={description} onChange={(e) => setDescription(e.target.value.slice(0, 300))} rows={2} className="input-dark w-full resize-none" />
         </div>
         {state?.mode === 'create' && (

@@ -411,7 +411,7 @@ export default function MembersContent({
                   <option value="">Any city</option>
                   {availableCities.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <span className="text-white/45 text-xs">Overrides the radius — handy before a trip.</span>
+                <span className="text-white/60 text-xs">Overrides the radius — handy before a trip.</span>
               </div>
             ) : (
               <button type="button" onClick={() => setNudge('city')} className="flex items-center gap-2 glass px-3 py-1.5 rounded-lg hover:bg-white/10 text-white/60 text-sm">
@@ -455,7 +455,7 @@ export default function MembersContent({
             )}
           </div>
           {!advancedFilters && (
-            <p className="text-white/45 text-[11px] mt-4">We never filter or rank by ethnicity.</p>
+            <p className="text-white/60 text-[11px] mt-4">We never filter or rank by ethnicity.</p>
           )}
         </div>
       )}

@@ -73,7 +73,7 @@ export default function ProfileStrength({ facts }: { facts: StrengthFacts }) {
                     {s.gain > 0 ? (
                       <span className="text-[#D4AF37] text-xs font-semibold">+{s.gain}%</span>
                     ) : (
-                      <span className="text-white/45 text-xs">Daily</span>
+                      <span className="text-white/60 text-xs">Daily</span>
                     )}
                     <ChevronRight size={14} className="text-white/35 group-hover:text-white/70 transition-colors" />
                   </span>

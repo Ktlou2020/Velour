@@ -22,14 +22,14 @@ export default function CartLines({ items, onNavigate, compact = false, readOnly
               <Link href={`/store/p/${i.slug}`} onClick={onNavigate} className="text-white text-sm font-medium leading-snug line-clamp-2 hover:text-[#FF85A1]">{i.name}</Link>
               <span className="text-white text-sm font-semibold tabular-nums whitespace-nowrap">{formatRand(i.priceCents * i.quantity)}</span>
             </div>
-            <p className="text-white/45 text-xs mt-0.5 tabular-nums">{formatRand(i.priceCents)} each</p>
+            <p className="text-white/60 text-xs mt-0.5 tabular-nums">{formatRand(i.priceCents)} each</p>
             {readOnly ? (
               <p className="text-white/60 text-xs mt-1">Qty {i.quantity}</p>
             ) : (
               <div className="flex items-center gap-3 mt-2">
                 <QuantityStepper size="sm" value={i.quantity} max={Math.max(1, Math.min(i.stock, MAX_QTY_PER_LINE))} label={`Quantity of ${i.name}`}
                   onChange={(n) => cart.setQuantity(i.productId, n)} />
-                <button type="button" onClick={() => cart.remove(i.productId)} className="text-white/45 hover:text-[#FF4D6D] p-1.5 rounded-lg" aria-label={`Remove ${i.name}`}>
+                <button type="button" onClick={() => cart.remove(i.productId)} className="text-white/60 hover:text-[#FF4D6D] p-1.5 rounded-lg" aria-label={`Remove ${i.name}`}>
                   <Trash2 size={15} />
                 </button>
                 {i.stock > 0 && i.quantity >= i.stock && <span className="text-[11px] text-[#F5D77A]">Max available</span>}

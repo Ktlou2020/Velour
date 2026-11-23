@@ -171,7 +171,7 @@ export default function AccountPage() {
                   : 'Allowances & billing'}
               </span>
             </span>
-            <ChevronRight size={16} className="text-white/40 ml-auto flex-shrink-0" aria-hidden="true" />
+            <ChevronRight size={16} className="text-white/60 ml-auto flex-shrink-0" aria-hidden="true" />
           </Link>
         </div>
 
@@ -183,7 +183,7 @@ export default function AccountPage() {
           <summary className="flex items-center gap-3 p-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
             <Shield size={18} className="text-[#DC143C]" />
             <span className="text-white font-semibold text-sm">Profile Verification</span>
-            <ChevronRight size={16} className="text-white/40 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
+            <ChevronRight size={16} className="text-white/60 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
           </summary>
           <div className="px-5 pb-5">
           <p className="text-white/65 text-sm mb-4 leading-relaxed">
@@ -232,7 +232,7 @@ export default function AccountPage() {
           <summary className="flex items-center gap-3 p-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
             <Moon size={18} className="text-indigo-300" />
             <span className="text-white font-semibold text-sm">Snooze Profile</span>
-            <ChevronRight size={16} className="text-white/40 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
+            <ChevronRight size={16} className="text-white/60 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
           </summary>
           <div className="px-5 pb-5">
           <p className="text-white/65 text-sm mb-4 leading-relaxed">
@@ -286,7 +286,7 @@ export default function AccountPage() {
           <summary className="flex items-center gap-3 p-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
             <Mail size={18} className="text-[#D4AF37]" />
             <span className="text-white font-semibold text-sm">Email</span>
-            <ChevronRight size={16} className="text-white/40 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
+            <ChevronRight size={16} className="text-white/60 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
           </summary>
           <div className="px-5 pb-5">
           <div className="flex items-center justify-between gap-4">
@@ -314,7 +314,7 @@ export default function AccountPage() {
           <summary className="flex items-center gap-3 p-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
             <Download size={18} className="text-blue-400" />
             <span className="text-white font-semibold text-sm">Your Data (POPIA)</span>
-            <ChevronRight size={16} className="text-white/40 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
+            <ChevronRight size={16} className="text-white/60 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
           </summary>
           <div className="px-5 pb-5">
           <p className="text-white/65 text-sm mb-4 leading-relaxed">
@@ -338,7 +338,7 @@ export default function AccountPage() {
             <span className="block text-white font-semibold text-sm">Help &amp; support</span>
             <span className="block text-white/55 text-xs truncate">FAQs and contact our team</span>
           </span>
-          <ChevronRight size={16} className="text-white/40 ml-auto flex-shrink-0" aria-hidden="true" />
+          <ChevronRight size={16} className="text-white/60 ml-auto flex-shrink-0" aria-hidden="true" />
         </Link>
 
         {/* Delete Account */}
@@ -346,7 +346,7 @@ export default function AccountPage() {
           <summary className="flex items-center gap-3 p-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
             <Trash2 size={18} className="text-red-400" />
             <span className="text-white font-semibold text-sm">Delete Account</span>
-            <ChevronRight size={16} className="text-white/40 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
+            <ChevronRight size={16} className="text-white/60 ml-auto transition-transform group-open:rotate-90" aria-hidden="true" />
           </summary>
           <div className="px-5 pb-5">
           <p className="text-white/65 text-sm mb-4 leading-relaxed">

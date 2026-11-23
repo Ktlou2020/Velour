@@ -98,7 +98,7 @@ function ExploreTile({ photo, watermark, showRank, eager, onOpen, onLike, onShow
             onLike(photo, !photo.liked);
           }}
           aria-pressed={photo.isOwn ? undefined : photo.liked}
-          aria-label={photo.isOwn ? `See who liked your photo (${photo.likeCount})` : photo.liked ? `Unlike (${photo.likeCount} likes)` : `Like (${photo.likeCount} likes)`}
+          aria-label={photo.isOwn ? `See who liked your photo, ${compactCount(photo.likeCount)}` : photo.liked ? `Unlike, ${compactCount(photo.likeCount)} likes` : `Like, ${compactCount(photo.likeCount)} likes`}
           className="relative z-10 -mr-1 flex min-w-[44px] h-11 items-center justify-center gap-1 rounded-full px-2 text-white/80 hover:text-white hover:bg-white/5 transition-colors"
         >
           <span key={pop} className={pop ? 'hush-pop inline-flex' : 'inline-flex'}>

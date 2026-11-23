@@ -104,14 +104,14 @@ export default function Navbar() {
                     className="flex items-center gap-2 glass px-3 py-1.5 rounded-lg hover:border-white/20 transition-all"
                     aria-expanded={userMenuOpen}
                     aria-haspopup="menu"
-                    aria-label="Account menu"
                     data-tour="profile"
                   >
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#8F0D25] to-[#DC143C] flex items-center justify-center text-white text-xs font-bold">
+                    <div aria-hidden="true" className="w-7 h-7 rounded-full bg-gradient-to-br from-[#8F0D25] to-[#DC143C] flex items-center justify-center text-white text-xs font-bold">
                       {initials}
                     </div>
                     <span className="text-white text-sm font-medium max-w-24 truncate">{username}</span>
-                    <ChevronDown size={14} className={`text-white/65 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+                    <span className="sr-only">, account menu</span>
+                    <ChevronDown size={14} aria-hidden="true" className={`text-white/65 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                   </button>
 
                   {userMenuOpen && (
@@ -178,7 +178,7 @@ export default function Navbar() {
                       )}
                       <div className="my-1 border-t border-white/10" />
                       <button
-                        className="w-full flex items-center gap-2 px-4 py-2 text-[#DC143C] hover:bg-[#DC143C]/10 text-sm transition-colors"
+                        className="w-full flex items-center gap-2 px-4 py-2 text-[#FF4D6D] hover:bg-[#DC143C]/10 text-sm transition-colors"
                         onClick={() => { setUserMenuOpen(false); window.location.href = '/api/logout' }}
                       >
                         <LogOut size={14} />Sign Out
@@ -211,7 +211,7 @@ export default function Navbar() {
               href="/notifications"
               data-tour="notifications"
               className="md:hidden relative w-10 h-10 ml-auto flex items-center justify-center rounded-lg text-white/70 hover:text-white"
-              aria-label={`Notifications${unreadNotifications > 0 ? ` (${unreadNotifications} unread)` : ''}`}
+              aria-label={`Notifications${unreadNotifications > 0 ? `, ${unreadNotifications} unread` : ''}`}
               aria-current={pathname.startsWith('/notifications') ? 'page' : undefined}
             >
               <Bell size={20} aria-hidden="true" />
@@ -335,7 +335,7 @@ export default function Navbar() {
                   </Link>
                 )}
                 <button
-                  className="text-[#DC143C] text-sm py-2 text-center w-full"
+                  className="text-[#FF4D6D] text-sm py-2 text-center w-full"
                   onClick={() => { setMobileOpen(false); signOut({ callbackUrl: '/' }) }}
                 >
                   Sign Out

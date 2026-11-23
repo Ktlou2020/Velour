@@ -97,11 +97,12 @@ function SigninContent() {
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <Link href="/" aria-label="Unbound — home" className="inline-flex items-center gap-2 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center shadow-lg shadow-[#DC143C]/25">
+          <Link href="/" className="inline-flex items-center gap-2 mb-4">
+            <div aria-hidden="true" className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#DC143C] to-[#8F0D25] flex items-center justify-center shadow-lg shadow-[#DC143C]/25">
               <span className="text-white font-serif font-bold text-2xl">U</span>
             </div>
-            <span className="text-3xl font-serif font-bold tracking-wide text-white">UNBOUND</span>
+            <span className="text-3xl font-serif font-bold tracking-wide text-white uppercase">Unbound</span>
+            <span className="sr-only"> home</span>
           </Link>
           <h1 className="text-3xl font-serif font-bold text-white mb-2">Welcome back</h1>
           <p className="text-gray-400">Sign in to pick up where you left off.</p>
@@ -140,7 +141,7 @@ function SigninContent() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label htmlFor="signin-password" className="text-sm text-gray-300">Password</label>
-                <Link href="/auth/forgot-password" className="text-xs text-[#DC143C] hover:underline">Forgot password?</Link>
+                <Link href="/auth/forgot-password" className="text-xs text-[#FF4D6D] hover:underline">Forgot password?</Link>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" aria-hidden="true" />
@@ -203,7 +204,7 @@ function SigninContent() {
         <div className="text-center mt-6 space-y-3">
           <p className="text-gray-400 text-sm">
             Don&apos;t have an account?{' '}
-            <Link href="/auth/signup" className="text-[#DC143C] hover:underline font-medium">Join Unbound Free</Link>
+            <Link href="/auth/signup" className="text-[#FF4D6D] hover:underline font-medium">Join Unbound Free</Link>
           </p>
           <p className="text-gray-400 text-xs">
             Your details are private and never sold to third parties.

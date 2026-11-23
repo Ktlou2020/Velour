@@ -98,7 +98,7 @@ export default async function OrderDetailPage({ params, searchParams }: { params
               </div>
               <div className="flex-1 min-w-0">
                 {i.product?.isActive ? <Link href={`/store/p/${i.product.slug}`} className="text-white text-sm hover:text-[#FF85A1]">{i.name}</Link> : <span className="text-white text-sm">{i.name}</span>}
-                <p className="text-white/45 text-xs">{i.quantity} × {formatRand(i.priceCents)}</p>
+                <p className="text-white/60 text-xs">{i.quantity} × {formatRand(i.priceCents)}</p>
               </div>
               <span className="text-white text-sm font-medium tabular-nums">{formatRand(i.priceCents * i.quantity)}</span>
             </li>
@@ -107,7 +107,7 @@ export default async function OrderDetailPage({ params, searchParams }: { params
         <dl className="border-t border-white/10 pt-3 space-y-1.5 text-sm">
           <div className="flex justify-between text-white/65"><dt>Subtotal</dt><dd className="tabular-nums">{formatRand(order.subtotalCents)}</dd></div>
           <div className="flex justify-between text-white/65"><dt>Delivery</dt><dd className="tabular-nums">{order.shippingCents ? formatRand(order.shippingCents) : 'Free'}</dd></div>
-          <div className="flex justify-between text-white font-semibold pt-1"><dt>Total <span className="text-white/45 font-normal text-xs">incl. VAT</span></dt><dd className="tabular-nums">{formatRand(order.totalCents)}</dd></div>
+          <div className="flex justify-between text-white font-semibold pt-1"><dt>Total <span className="text-white/60 font-normal text-xs">incl. VAT</span></dt><dd className="tabular-nums">{formatRand(order.totalCents)}</dd></div>
         </dl>
       </section>
 
@@ -118,7 +118,7 @@ export default async function OrderDetailPage({ params, searchParams }: { params
             {order.recipientName}<br />{order.addressLine1}<br />{order.addressLine2 && <>{order.addressLine2}<br /></>}
             {order.suburb && <>{order.suburb}<br /></>}{order.city}, {order.postalCode}<br />{order.province}
           </address>
-          <p className="text-white/45 text-xs mt-2">{order.phone} · {order.email}</p>
+          <p className="text-white/60 text-xs mt-2">{order.phone} · {order.email}</p>
         </div>
         <div>
           <h2 className="text-white font-semibold mb-2 text-sm flex items-center gap-1.5"><Package size={14} className="text-[#D4AF37]" aria-hidden="true" />Packaging</h2>
@@ -127,7 +127,7 @@ export default async function OrderDetailPage({ params, searchParams }: { params
         </div>
       </section>
 
-      <p className="text-white/45 text-xs mt-5">
+      <p className="text-white/60 text-xs mt-5">
         Need help? Email <a href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Order ${order.number}`)}`} className="text-[#FF4D6D] hover:underline">{SUPPORT_EMAIL}</a> with your order number. Returns are covered by our <Link href={STORE_TERMS_HREF} className="text-[#FF4D6D] hover:underline">store terms</Link>.
       </p>
     </div>

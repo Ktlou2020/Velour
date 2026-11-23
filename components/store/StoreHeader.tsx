@@ -36,9 +36,9 @@ export default function StoreHeader() {
         <form onSubmit={submit} role="search" className="flex-1 min-w-0 max-w-md ml-auto sm:ml-4">
           <label htmlFor="store-search" className="sr-only">Search {STORE_NAME}</label>
           <div className="relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" aria-hidden="true" />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 pointer-events-none" aria-hidden="true" />
             <input id="store-search" type="search" value={q} onChange={(e) => setQ(e.target.value.slice(0, 80))} placeholder="Search products"
-              className="w-full bg-white/5 border border-white/10 focus:border-[#DC143C] focus:outline-none rounded-xl pl-9 pr-3 h-9 text-sm text-white placeholder:text-white/40" />
+              className="w-full bg-white/5 border border-white/10 focus:border-[#DC143C] focus:outline-none rounded-xl pl-9 pr-3 h-9 text-sm text-white placeholder:text-white/60" />
           </div>
         </form>
         <Link href="/store/orders" className="hidden sm:inline-flex items-center gap-1.5 text-sm text-white/65 hover:text-white px-2 py-1.5 rounded-lg hover:bg-white/5" aria-label="My orders">

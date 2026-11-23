@@ -29,7 +29,7 @@ export default function ProtectionNote({ className = '' }: { className?: string 
       <ShieldCheck size={18} className="text-[#D4AF37] shrink-0 mt-0.5" aria-hidden="true" />
       <p className="text-sm text-white/80 leading-relaxed">
         Your photos are watermarked with each viewer’s username, and saving is blocked. No website can fully stop screenshots, but every copy traces back to who took it.{' '}
-        <a href="/safety#content-protection" className="text-[#D4AF37] hover:underline whitespace-nowrap">How it works</a>
+        <a href="/safety#content-protection" className="text-[#D4AF37] underline whitespace-nowrap">How it works</a>
       </p>
       <button type="button" onClick={dismiss} aria-label="Dismiss" className="absolute top-2 right-2 p-1.5 rounded-full text-white/50 hover:text-white hover:bg-white/10">
         <X size={15} />

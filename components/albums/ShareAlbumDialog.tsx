@@ -124,7 +124,7 @@ export default function ShareAlbumDialog({ open, onClose, album, onChanged }: Pr
           <label htmlFor={inputId} className="block text-white/70 text-xs font-medium mb-1.5">Add a member by username</label>
           <div className="flex gap-2">
             <div className="relative flex-1 min-w-0">
-              <span aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">@</span>
+              <span aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 text-sm">@</span>
               <input
                 id={inputId}
                 data-autofocus

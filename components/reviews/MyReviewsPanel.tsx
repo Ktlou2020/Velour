@@ -141,7 +141,7 @@ export default function MyReviewsPanel({ initial, compact = false, className = '
                   <PersonAvatar name={s.reviewer.name} photo={s.reviewer.photo} seed={s.reviewer.username} size={36} />
                   <div className="min-w-0 flex-1">
                     <p className="text-white text-sm truncate">{s.reviewer.name}</p>
-                    <p className={`text-xs ${s.status === 'EXPIRED' ? 'text-white/40' : 'text-white/55'}`}>
+                    <p className={`text-xs ${s.status === 'EXPIRED' ? 'text-white/60' : 'text-white/55'}`}>
                       {s.status === 'EXPIRED' ? `Expired ${shortDate(s.expiresAt)}` : `Waiting for a reply · asked ${shortDate(s.createdAt)}`}
                     </p>
                   </div>

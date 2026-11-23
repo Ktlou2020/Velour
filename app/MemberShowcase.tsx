@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import ProtectedImage from '@/components/ProtectedImage';
+import { sizedMediaUrl } from '@/lib/media';
 import Link from 'next/link';
 import { MapPin, ArrowRight, Lock } from 'lucide-react';
 
@@ -84,7 +85,7 @@ export default async function MemberShowcase() {
                 <div className="relative aspect-[4/5] bg-white/5 overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <ProtectedImage
-                    src={photo}
+                    src={sizedMediaUrl(photo, 'thumb')}
                     alt=""
                     className="w-full h-full"
                     imgClassName="w-full h-full object-cover blur-md scale-110 pointer-events-none"

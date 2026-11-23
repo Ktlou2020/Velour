@@ -21,7 +21,7 @@ export default function CartSummary({ subtotalCents, shippingCents, totalCents }
       <div className="flex justify-between text-white font-semibold text-base pt-2 border-t border-white/10">
         <span>Total</span><span className="tabular-nums">{formatRand(total)}</span>
       </div>
-      <p className="text-[11px] text-white/45">All prices include 15% VAT. Delivery within South Africa only.</p>
+      <p className="text-[11px] text-white/60">All prices include 15% VAT. Delivery within South Africa only.</p>
     </div>
   );
 }

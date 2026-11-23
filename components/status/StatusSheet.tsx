@@ -115,7 +115,7 @@ export default function StatusSheet({ open, current, onClose, onSaved }: Props) 
             className="input-dark flex-1 min-w-0"
           />
         </div>
-        <p className="text-white/45 text-xs text-right mb-3">{text.length}/{STATUS_TEXT_MAX}</p>
+        <p className="text-white/60 text-xs text-right mb-3">{text.length}/{STATUS_TEXT_MAX}</p>
         <div className="flex flex-wrap gap-1.5 mb-5" role="group" aria-label="Emoji">
           {STATUS_EMOJIS.map((e) => (
             <button

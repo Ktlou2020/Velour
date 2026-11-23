@@ -79,7 +79,7 @@ export default function CheckoutClient({ prefill, paymentsEnabled, hasPending }:
 
   const field = (k: keyof DeliveryInput, label: string, props: React.InputHTMLAttributes<HTMLInputElement> = {}, optional = false) => (
     <div>
-      <label htmlFor={`co-${k}`} className="block text-sm text-white/75 mb-1.5">{label}{optional && <span className="text-white/40"> (optional)</span>}</label>
+      <label htmlFor={`co-${k}`} className="block text-sm text-white/75 mb-1.5">{label}{optional && <span className="text-white/60"> (optional)</span>}</label>
       <input id={`co-${k}`} value={String(form[k] ?? '')} onChange={(e) => set(k, e.target.value as never)}
         aria-invalid={!!errors[k]} aria-describedby={errors[k] ? `co-${k}-err` : undefined}
         className={`input-dark w-full ${errors[k] ? '!border-red-400/70' : ''}`} {...props} />
@@ -114,12 +114,12 @@ export default function CheckoutClient({ prefill, paymentsEnabled, hasPending }:
             </div>
             {field('postalCode', 'Postal code', { inputMode: 'numeric', autoComplete: 'postal-code', maxLength: 4, pattern: '[0-9]{4}', placeholder: '0000' })}
             <div className="sm:col-span-2">
-              <label htmlFor="co-deliveryNotes" className="block text-sm text-white/75 mb-1.5">Delivery notes <span className="text-white/40">(optional)</span></label>
+              <label htmlFor="co-deliveryNotes" className="block text-sm text-white/75 mb-1.5">Delivery notes <span className="text-white/60">(optional)</span></label>
               <textarea id="co-deliveryNotes" rows={2} maxLength={500} value={form.deliveryNotes} onChange={(e) => set('deliveryNotes', e.target.value)}
                 placeholder="Gate code, best time to deliver…" className="input-dark w-full resize-none" />
             </div>
           </div>
-          <p className="text-xs text-white/45 mt-3">We deliver within South Africa only.</p>
+          <p className="text-xs text-white/60 mt-3">We deliver within South Africa only.</p>
         </section>
 
         <section className="glass rounded-2xl p-5 sm:p-6" aria-labelledby="co-discreet">
@@ -148,7 +148,7 @@ export default function CheckoutClient({ prefill, paymentsEnabled, hasPending }:
           {submitting ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Lock size={15} aria-hidden="true" />}
           {submitting ? 'Redirecting to secure checkout…' : 'Pay securely'}
         </button>
-        <p className="text-[11px] text-white/45 mt-3 leading-relaxed">
+        <p className="text-[11px] text-white/60 mt-3 leading-relaxed">
           You’ll pay on our payment provider’s secure page. Items are reserved for 30 minutes while you pay. By ordering you confirm you’re 18 or older and accept the <Link href={STORE_TERMS_HREF} className="text-[#FF4D6D] hover:underline">store terms</Link>.
         </p>
       </aside>

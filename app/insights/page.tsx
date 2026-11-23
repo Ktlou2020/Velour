@@ -187,7 +187,7 @@ export default async function InsightsPage() {
                   </table>
                 </div>
               </details>
-              <p className="text-white/40 text-[11px] mt-4 flex items-center gap-1.5">
+              <p className="text-white/60 text-[11px] mt-4 flex items-center gap-1.5">
                 <MapPin size={10} aria-hidden="true" /> Views from incognito or blocked members aren&apos;t counted. Times are South African time.
               </p>
             </>

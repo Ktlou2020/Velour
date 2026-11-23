@@ -50,7 +50,7 @@ export default function ReplyAlertNudge({ name, sentCount }: { name: string; sen
       ) : (
         <Link href="/account#app" className="bg-[#DC143C] hover:bg-[#FF1744] text-white font-semibold px-3 py-1.5 rounded-lg flex-shrink-0">Show me</Link>
       )}
-      <button type="button" onClick={dismiss} className="text-white/45 hover:text-white flex-shrink-0" aria-label="Not now"><X size={13} /></button>
+      <button type="button" onClick={dismiss} className="text-white/60 hover:text-white flex-shrink-0" aria-label="Not now"><X size={13} /></button>
     </div>
   );
 }

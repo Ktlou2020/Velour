@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: 'Invite friends', robots: { index: fa
 const STATUS: Record<'PENDING' | 'REWARDED' | 'REJECTED', { label: string; cls: string }> = {
   PENDING: { label: 'Setting up', cls: 'bg-white/10 text-white/70 border-white/15' },
   REWARDED: { label: 'Gold unlocked', cls: 'bg-[#D4AF37]/15 text-[#F5D77A] border-[#D4AF37]/30' },
-  REJECTED: { label: 'Not eligible', cls: 'bg-white/5 text-white/45 border-white/10' },
+  REJECTED: { label: 'Not eligible', cls: 'bg-white/5 text-white/60 border-white/10' },
 };
 
 export default async function InvitePage() {
@@ -67,7 +67,7 @@ export default async function InvitePage() {
                 <li key={r.id} className="flex items-center justify-between gap-3 py-3">
                   <div className="min-w-0">
                     <p className="text-white text-sm truncate">{r.name}</p>
-                    <p className="text-white/45 text-xs">Joined {formatDate(r.createdAt)}</p>
+                    <p className="text-white/60 text-xs">Joined {formatDate(r.createdAt)}</p>
                   </div>
                   <span className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS[r.status].cls}`}>{STATUS[r.status].label}</span>
                 </li>

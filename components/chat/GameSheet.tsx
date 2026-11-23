@@ -140,13 +140,13 @@ export default function GameSheet({ open, name, onClose, onSend }: Props) {
                 <div className="text-white/55 text-xs mt-0.5 leading-snug">{GAME_INFO[g].blurb}</div>
               </button>
             ))}
-            <p className="col-span-2 text-center text-[11px] text-white/45 mt-1">Free for everyone · answers stay hidden until they play</p>
+            <p className="col-span-2 text-center text-[11px] text-white/60 mt-1">Free for everyone · answers stay hidden until they play</p>
           </div>
         )}
 
         {(game === 'this_or_that' || game === 'would_you_rather') && choicePrompt && (
           <div>
-            <p className="text-white/70 text-sm mb-3">{game === 'this_or_that' ? 'This or that?' : 'Would you rather…'} <span className="text-white/45">Make your pick — {name} sees it after choosing.</span></p>
+            <p className="text-white/70 text-sm mb-3">{game === 'this_or_that' ? 'This or that?' : 'Would you rather…'} <span className="text-white/60">Make your pick — {name} sees it after choosing.</span></p>
             <div className="flex flex-col gap-2">
               {[choicePrompt.a, choicePrompt.b].map((o, i) => (
                 <button

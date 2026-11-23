@@ -102,7 +102,7 @@ export default function UnsubscribeContent() {
               <button
                 onClick={() => update(false)}
                 disabled={busy}
-                className="text-white/45 hover:text-white/70 text-sm transition-colors disabled:opacity-60"
+                className="text-white/60 hover:text-white/70 text-sm transition-colors disabled:opacity-60"
               >
                 Unsubscribe again
               </button>
@@ -125,7 +125,7 @@ export default function UnsubscribeContent() {
           )}
 
           <div className="mt-6">
-            <Link href="/members" className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-sm transition-colors">
+            <Link href="/members" className="inline-flex items-center gap-1.5 text-white/60 hover:text-white/70 text-sm transition-colors">
               <ArrowLeft size={12} />
               Back to Unbound
             </Link>

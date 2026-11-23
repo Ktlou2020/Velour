@@ -98,7 +98,7 @@ export default function LocationPrompt({
           <p className="text-white/65 text-sm mt-0.5">
             {denied ?? 'Share your location once and we’ll show members by distance — with an estimate like “≈ 12 km away”.'}
           </p>
-          <p className="text-white/45 text-xs mt-1.5 flex items-center gap-1">
+          <p className="text-white/60 text-xs mt-1.5 flex items-center gap-1">
             <ShieldCheck size={12} aria-hidden="true" /> We only show approximate distance, never your exact location.
           </p>
         </div>

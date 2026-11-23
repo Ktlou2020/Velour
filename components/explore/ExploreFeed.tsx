@@ -248,7 +248,7 @@ export default function ExploreFeed() {
         </div>
         <p className="mt-3 inline-flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/65">
           <ShieldCheck size={14} className="mt-px shrink-0 text-emerald-400" aria-hidden="true" />
-          <span>Only photos members chose to make public appear here. Private albums never do. <Link href="/gallery#explore-settings" className="text-[#D4AF37] hover:underline whitespace-nowrap">Your Gallery settings</Link></span>
+          <span>Only photos members chose to make public appear here. Private albums never do. <Link href="/gallery#explore-settings" className="text-[#D4AF37] underline whitespace-nowrap">Your Gallery settings</Link></span>
         </p>
         <ProtectionNote className="mt-3" />
       </header>

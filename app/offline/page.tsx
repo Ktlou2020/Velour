@@ -8,7 +8,7 @@ export default function OfflinePage() {
           <span className="text-white font-bold text-4xl font-serif">U</span>
         </div>
         <h1 className="text-white text-2xl font-bold font-serif mb-3">You&apos;re Offline</h1>
-        <p className="text-white/40 text-sm max-w-xs mx-auto mb-8 leading-relaxed">
+        <p className="text-white/60 text-sm max-w-xs mx-auto mb-8 leading-relaxed">
           It looks like you&apos;ve lost your connection. Check your internet and try again.
         </p>
         <button

@@ -163,7 +163,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
               <Link href="/forums" className="text-white/60 hover:text-white transition-colors">Forums</Link>
               {thread?.forumSlug && (
                 <>
-                  <span className="text-white/45">/</span>
+                  <span className="text-white/60">/</span>
                   <Link href={`/forums/${thread.forumSlug}`} className="text-white/60 hover:text-white transition-colors">
                     {thread.forumName || thread.forumSlug}
                   </Link>

@@ -57,7 +57,7 @@ export default function CookieBanner() {
             </div>
             <p className="text-gray-300 text-sm leading-relaxed">
               We use essential cookies to keep you signed in and secure, and optional ones to improve Unbound. See our{' '}
-              <Link href="/privacy" className="text-[#DC143C] hover:underline font-medium">
+              <Link href="/privacy" className="text-[#FF4D6D] underline font-medium">
                 Privacy Policy
               </Link>
               .

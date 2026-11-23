@@ -177,7 +177,7 @@ export default function ViewOnceViewer({ open, onClose }: Props) {
         {failed ? (
           <div className="text-center px-8">
             <p className="text-white/80 text-sm">This view-once {open.kind} couldn’t be loaded.</p>
-            <p className="text-white/45 text-xs mt-1">It may have expired. View-once media can’t be opened again.</p>
+            <p className="text-white/60 text-xs mt-1">It may have expired. View-once media can’t be opened again.</p>
             <button type="button" onClick={close} className="mt-4 px-4 py-2 rounded-full bg-white/10 text-white text-sm hover:bg-white/20">Close</button>
           </div>
         ) : !blobUrl ? (
@@ -238,7 +238,7 @@ export default function ViewOnceViewer({ open, onClose }: Props) {
           View once · {mark ? mark.replace(' · unbound', '') : 'your'} watermark · Screenshots of members’ content aren’t allowed
         </p>
         {open.kind === 'video' && ready && (
-          <p className="text-center text-[11px] text-white/40 mt-0.5">Tap to pause · plays once</p>
+          <p className="text-center text-[11px] text-white/60 mt-0.5">Tap to pause · plays once</p>
         )}
       </div>
     </div>,

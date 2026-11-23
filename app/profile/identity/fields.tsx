@@ -17,7 +17,7 @@ const chipOff = 'border-white/15 text-white/75 hover:text-white hover:border-whi
 export function Label({ children, htmlFor, optional }: { children: React.ReactNode; htmlFor?: string; optional?: boolean }) {
   return (
     <label htmlFor={htmlFor} className="block text-white/80 text-sm font-medium mb-2">
-      {children}{optional && <span className="text-white/45 font-normal"> · optional</span>}
+      {children}{optional && <span className="text-white/60 font-normal"> · optional</span>}
     </label>
   );
 }
@@ -57,8 +57,8 @@ export function ChipGroup<T extends string>({
   return (
     <fieldset aria-describedby={[hint ? `${id}-hint` : '', error ? `${id}-err` : ''].filter(Boolean).join(' ') || undefined}>
       <legend className="block text-white/80 text-sm font-medium mb-2">
-        {legend}{optional && <span className="text-white/45 font-normal"> · optional</span>}
-        {multiple && <span className="text-white/45 font-normal"> · choose any</span>}
+        {legend}{optional && <span className="text-white/60 font-normal"> · optional</span>}
+        {multiple && <span className="text-white/60 font-normal"> · choose any</span>}
       </legend>
       {hint && <p id={`${id}-hint`} className="text-white/55 text-xs -mt-1 mb-2">{hint}</p>}
       <div className={`grid gap-2 ${cols === 3 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'}`}>
@@ -237,7 +237,7 @@ export function PersonIdentityFields({ value: v, onChange, withName, nameLabel =
         />
         {!basic && <div className="mt-2">
           <label htmlFor={`${idPrefix}-glabel`} className="block text-white/60 text-xs mb-1.5">
-            Add more about {they ? 'their' : 'your'} gender <span className="text-white/40">· optional</span>
+            Add more about {they ? 'their' : 'your'} gender <span className="text-white/60">· optional</span>
           </label>
           <input
             id={`${idPrefix}-glabel`}
@@ -289,7 +289,7 @@ export function PersonIdentityFields({ value: v, onChange, withName, nameLabel =
           label={`Show ${they ? 'their' : 'my'} orientation on the profile`}
         />
         <p className="text-white/55 text-xs leading-relaxed flex gap-2">
-          <EyeOff size={13} className="flex-shrink-0 mt-0.5 text-white/45" aria-hidden="true" />
+          <EyeOff size={13} className="flex-shrink-0 mt-0.5 text-white/60" aria-hidden="true" />
           Hidden details still help us match you with the right people, but are never shown to anyone.
           Some people hide them for safety or privacy, or because they&apos;re still exploring — that&apos;s completely fine.
         </p>
@@ -352,7 +352,7 @@ export function PersonDetailsFields({ value: v, onChange, idPrefix, they }: {
               className="input-dark w-full pr-10"
               aria-describedby={`${idPrefix}-height-ft`}
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/45 text-sm pointer-events-none">cm</span>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 text-sm pointer-events-none">cm</span>
           </div>
           <span id={`${idPrefix}-height-ft`} className="text-white/60 text-sm" aria-live="polite">
             {ft && v.heightCm && v.heightCm >= 120 && v.heightCm <= 230 ? `≈ ${ft}` : ''}

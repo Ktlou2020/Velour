@@ -376,13 +376,12 @@ export default function DiscoverPage() {
                       onClick={() => !acted && showPick(pick)}
                       disabled={acted}
                       className={`shrink-0 w-24 text-left group ${acted ? 'opacity-35 cursor-default' : ''}`}
-                      aria-label={`Show ${pick.displayName || pick.username}`}
                     >
                       <div className="relative w-24 h-32 rounded-2xl overflow-hidden bg-gradient-to-br from-rose-950 to-[#0A0A0F] flex items-center justify-center border border-white/10 group-hover:border-[#D4AF37]/50 transition-colors">
                         {pick.profilePhotoUrl ? (
-                          <ProtectedImage src={sizedMediaUrl(pick.profilePhotoUrl, 'thumb')} alt={pick.username} className="w-full h-full" watermark={watermark} />
+                          <ProtectedImage src={sizedMediaUrl(pick.profilePhotoUrl, 'thumb')} alt="" className="w-full h-full" watermark={watermark} />
                         ) : (
-                          <span className="text-white/60 text-2xl font-bold font-serif">{pickInitials}</span>
+                          <span aria-hidden="true" className="text-white/60 text-2xl font-bold font-serif">{pickInitials}</span>
                         )}
                         <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
                         {typeof pick.compatibility === 'number' && (
@@ -665,7 +664,7 @@ export default function DiscoverPage() {
                 <p className="hidden md:block text-white/50 text-xs tracking-wide" aria-hidden="true">
                   ← Pass &nbsp;&nbsp; ❤ Like →
                 </p>
-                <p className="md:hidden text-white/45 text-xs">Swipe or tap to decide</p>
+                <p className="md:hidden text-white/60 text-xs">Swipe or tap to decide</p>
               </div>
 
               {nudge && (

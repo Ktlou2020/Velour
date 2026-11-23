@@ -122,7 +122,7 @@ export default function PhotoSheet({ photo, albums, albumContext, onClose, onUpd
               className="input-dark w-full resize-none"
             />
             <div className="flex items-center justify-between mt-1.5">
-              <span className="text-white/35 text-[11px]">{caption.length}/300</span>
+              <span className="text-white/60 text-[11px]">{caption.length}/300</span>
               {captionChanged && (
                 <button type="submit" disabled={busy === 'caption'} className="text-xs font-semibold text-[#D4AF37] hover:text-[#e8c547] disabled:opacity-50">
                   {busy === 'caption' ? 'Saving…' : 'Save caption'}
@@ -148,7 +148,7 @@ export default function PhotoSheet({ photo, albums, albumContext, onClose, onUpd
               ))}
             </select>
             {photo.isProfile && albums.some((a) => a.isPrivate) && (
-              <p className="text-white/45 text-[11px] mt-1">Your main photo can’t go in a private album.</p>
+              <p className="text-white/60 text-[11px] mt-1">Your main photo can’t go in a private album.</p>
             )}
           </div>
 
@@ -195,7 +195,7 @@ export default function PhotoSheet({ photo, albums, albumContext, onClose, onUpd
             )}
           </div>
           {photo.isPrivate && !photo.isProfile && (
-            <p className="text-white/45 text-[11px] -mt-2">Main photos must be visible to members.</p>
+            <p className="text-white/60 text-[11px] -mt-2">Main photos must be visible to members.</p>
           )}
 
           <div className="mt-auto pt-3 border-t border-white/10">

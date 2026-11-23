@@ -90,7 +90,7 @@ export default function UpgradeNudge({ feature, title, body, tier = 'GOLD', ctaL
           <button onClick={dismiss} className="text-white/55 hover:text-white/80 text-xs">Not now</button>
         </div>
       </div>
-      <button onClick={dismiss} aria-label="Dismiss" className="absolute top-3 right-3 text-white/40 hover:text-white/80 p-1">
+      <button onClick={dismiss} aria-label="Dismiss" className="absolute top-3 right-3 text-white/60 hover:text-white/80 p-1">
         <X size={14} />
       </button>
     </aside>

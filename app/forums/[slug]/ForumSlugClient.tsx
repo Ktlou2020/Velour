@@ -182,7 +182,7 @@ export default function ForumSlugClient({ slug, category, threads, total, curren
                     {thread.lastReplyAt && (
                       <div className="text-center hidden sm:block">
                         <div className="text-white/55 text-xs">{formatTime(thread.lastReplyAt)}</div>
-                        <div className="text-white/45 text-xs">last reply</div>
+                        <div className="text-white/60 text-xs">last reply</div>
                       </div>
                     )}
                   </div>

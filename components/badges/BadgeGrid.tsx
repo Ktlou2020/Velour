@@ -43,7 +43,7 @@ export default function BadgeGrid({ badges, className = '' }: { badges: Badge[];
                   </div>
                 </div>
               ) : (
-                <p className="text-white/40 text-[11px] mt-3">Not yet</p>
+                <p className="text-white/60 text-[11px] mt-3">Not yet</p>
               )}
             </>
           );
