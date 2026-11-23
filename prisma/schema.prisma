@@ -72,6 +72,9 @@ model VerificationToken {
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
+  // Duplicate-detection key (lib/email-identity.ts canonicalEmail): lowercase,
+  // no +tag, no dots for Gmail. One account per inbox.
+  emailCanonical String? @unique
   passwordHash String?
   username     String   @unique
   createdAt    DateTime @default(now())

@@ -49,6 +49,37 @@ async function main() {
     return out
   })
   if (granted.length) console.log(`[backfill] founding members: granted #${granted[0]}–#${granted[granted.length - 1]}`)
+
+  // One account per email (lib/email-identity.ts): store emails lowercase and
+  // fill in the duplicate-detection key. Existing duplicates are left as they
+  // are (never merged automatically) and reported for an admin to resolve.
+  const pending = await db.user.findMany({ where: { emailCanonical: null }, select: { id: true, email: true }, orderBy: { createdAt: 'asc' } })
+  let keyed = 0
+  const clashes = []
+  for (const u of pending) {
+    const lower = u.email.trim().toLowerCase()
+    const key = canonicalEmail(lower)
+    const taken = await db.user.findFirst({ where: { emailCanonical: key, NOT: { id: u.id } }, select: { id: true } })
+    if (taken) { clashes.push(u.email); continue }
+    const lowerTaken = lower !== u.email
+      ? await db.user.findFirst({ where: { email: lower, NOT: { id: u.id } }, select: { id: true } })
+      : null
+    await db.user.update({ where: { id: u.id }, data: { emailCanonical: key, ...(lowerTaken ? {} : { email: lower }) } })
+    keyed++
+  }
+  if (keyed) console.log(`[backfill] email keys: set for ${keyed} account(s)`)
+  if (clashes.length) console.warn(`[backfill] ${clashes.length} account(s) share an inbox with an older account and were left unchanged: ${clashes.join(', ')}`)
+}
+
+// Keep in sync with lib/email-identity.ts canonicalEmail.
+function canonicalEmail(email) {
+  const e = email.trim().toLowerCase()
+  const at = e.lastIndexOf('@')
+  if (at < 1) return e
+  let local = e.slice(0, at).split('+')[0]
+  let domain = e.slice(at + 1)
+  if (domain === 'gmail.com' || domain === 'googlemail.com') { local = local.replace(/\./g, ''); domain = 'gmail.com' }
+  return `${local}@${domain}`
 }
 
 main()

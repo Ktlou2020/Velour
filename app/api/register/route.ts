@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { maybeClaimFounding } from '@/lib/founding'
 import { REFERRAL_COOKIE, linkReferral } from '@/lib/referrals'
 import bcrypt from 'bcryptjs'
+import { Prisma } from '@prisma/client'
 import { db } from '@/lib/db'
+import { canonicalEmail, normalizeEmail } from '@/lib/email-identity'
 import { sendVerificationEmail } from '@/lib/email'
 import { getClientIp, rateLimit } from '@/lib/rate-limit'
 import { BCRYPT_COST, generateToken, hashToken, validatePassword } from '@/lib/security'
@@ -32,7 +34,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
     }
     const username = typeof body.username === 'string' ? body.username.trim() : ''
-    const email = typeof body.email === 'string' ? body.email.trim() : ''
+    // Stored lowercase; duplicates are detected on the canonical form (lib/email-identity.ts).
+    const email = typeof body.email === 'string' ? normalizeEmail(body.email) : ''
     const password = typeof body.password === 'string' ? body.password : ''
     const dateOfBirth = typeof body.dateOfBirth === 'string' ? body.dateOfBirth : ''
     // "I'm joining as": a single person or a couple sharing one account.
@@ -80,8 +83,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const emailCanonical = canonicalEmail(email)
     const existingEmail = await db.user.findFirst({
-      where: { email: { equals: email, mode: 'insensitive' } },
+      where: { OR: [{ email: { equals: email, mode: 'insensitive' } }, { emailCanonical }] },
       select: { id: true },
     })
     if (existingEmail) {
@@ -101,16 +105,29 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_COST)
 
-    const user = await db.user.create({
-      data: {
-        email,
-        username,
-        passwordHash,
-        isActive: true,
-        isVerified: false,
-        role: 'USER',
-      },
-    })
+    let user
+    try {
+      user = await db.user.create({
+        data: {
+          email,
+          emailCanonical,
+          username,
+          passwordHash,
+          isActive: true,
+          isVerified: false,
+          role: 'USER',
+        },
+      })
+    } catch (e) {
+      // Two sign-ups racing with the same address (or username): the unique indexes decide.
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        const target = String((e.meta as { target?: unknown } | undefined)?.target ?? '')
+        return target.includes('username')
+          ? NextResponse.json({ error: 'This username is already taken' }, { status: 409 })
+          : NextResponse.json({ error: 'An account with this email already exists' }, { status: 409 })
+      }
+      throw e
+    }
 
     await db.profile.create({
       data: {
