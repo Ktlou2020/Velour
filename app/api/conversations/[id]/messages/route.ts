@@ -1,3 +1,4 @@
+import { UNDER_REVIEW_ERROR, isUnderReview, messageVelocityProblem } from '@/lib/auto-protect'
 import { NextRequest, NextResponse } from 'next/server'
 import { EMAIL_UNVERIFIED_ERROR, hasConfirmedEmail } from '@/lib/email-verification'
 import { PROFILE_NOT_READY_ERROR, userProfileReady } from '@/lib/profile-ready'
@@ -245,6 +246,12 @@ export async function POST(
     const userId = session.user.id
 
     const { id: conversationId } = await params
+    // Hidden pending review: existing conversations only. New accounts: speed limit on new people.
+    if (await isUnderReview(userId) && !(await db.message.findFirst({ where: { conversationId }, select: { id: true } }))) {
+      return NextResponse.json({ error: UNDER_REVIEW_ERROR, code: 'UNDER_REVIEW' }, { status: 403 })
+    }
+    const slow = await messageVelocityProblem(userId, conversationId)
+    if (slow) return NextResponse.json({ error: slow, code: 'SLOW_DOWN' }, { status: 429 })
     const body = (await req.json().catch(() => ({}))) as Body
     const { content: rawContent, imageUrl: rawImageUrl, senderPartnerName: rawPartnerName } = body
     const kind = body.kind === 'VOICE' || body.kind === 'GAME' || body.kind === 'VIDEO' ? body.kind : 'TEXT'

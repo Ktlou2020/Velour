@@ -617,6 +617,7 @@ export async function searchMembers(caller: CallerContext, params: SearchParamsI
   const userWhere: Prisma.UserWhereInput = {
     id: { not: caller.userId, notIn: excludedIds },
     isActive: true,
+    underReviewAt: null,
     profile: profileWhere,
     ...(userAnd.length ? { AND: userAnd } : {}),
   }
@@ -824,6 +825,7 @@ export async function getSpotlight(
     where: {
       id: { not: caller.userId, notIn: excluded },
       isActive: true,
+      underReviewAt: null,
       profile: {
         AND: [
           notSnoozed(now),

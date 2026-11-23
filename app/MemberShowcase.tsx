@@ -35,6 +35,7 @@ export default async function MemberShowcase() {
   try {
     const visible = {
       isActive: true,
+      underReviewAt: null,
       profile: { profilePhoto: { not: null }, incognito: false, isSnoozed: false },
     };
     [users, memberCount] = await Promise.all([

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Flag, CheckCircle, Ban, Clock, AlertTriangle } from 'lucide-react';
+import { Flag, CheckCircle, Ban, Clock, AlertTriangle, EyeOff } from 'lucide-react';
 import type { ReportStats } from '@/lib/report-stats';
 
 type Report = {
@@ -10,7 +10,9 @@ type Report = {
   reporterId: string | null; reporter: string | null;
   reportedUserId: string | null; reported: string | null;
   reason: string | null; details: string | null; kind: string | null;
+  automatic: boolean; underReview: string | null;
 };
+type Hidden = { id: string; username: string; since: string; reason: string };
 
 const TARGET_HOURS = 24;
 const ageHours = (d: string) => (Date.now() - new Date(d).getTime()) / 3600000;
@@ -22,7 +24,8 @@ function UserLink({ id, username }: { id: string | null; username: string | null
   return <Link href={`/admin/users/${id}`} className="text-white font-medium hover:underline">@{username ?? 'deleted'}</Link>;
 }
 
-export default function AdminReportsClient({ pending: initialPending, resolved: initialResolved, stats }: { pending: Report[]; resolved: Report[]; stats: ReportStats }) {
+export default function AdminReportsClient({ pending: initialPending, resolved: initialResolved, stats, hidden: initialHidden }: { pending: Report[]; resolved: Report[]; stats: ReportStats; hidden: Hidden[] }) {
+  const [hidden, setHidden] = useState(initialHidden);
   const [pending, setPending] = useState(initialPending);
   const [resolved, setResolved] = useState(initialResolved);
   const [loading, setLoading] = useState<string | null>(null);
@@ -39,6 +42,16 @@ export default function AdminReportsClient({ pending: initialPending, resolved: 
     setLoading(key); setError('');
     try { await fn(); } catch (e) { setError(e instanceof Error ? e.message : 'Something went wrong'); } finally { setLoading(null); }
   }
+
+  const restore = (userId: string, username: string) => run(`restore-${userId}`, async () => {
+    if (!confirm(`Make @${username} visible again? Their open reports will be marked resolved.`)) return;
+    const res = await fetch('/api/admin/reports', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'restore', userId }) });
+    if (!res.ok) throw new Error('Could not restore the member');
+    setHidden((h) => h.filter((x) => x.id !== userId));
+    const done = pending.filter((r) => r.reportedUserId === userId);
+    setPending((p) => p.filter((r) => r.reportedUserId !== userId));
+    setResolved((p) => [...done.map((r) => ({ ...r, isRead: true, readAt: new Date().toISOString(), underReview: null })), ...p]);
+  });
 
   const ban = (r: Report) => run(`ban-${r.id}`, async () => {
     if (!confirm(`Ban @${r.reported ?? 'this member'}? They'll be signed out and can't sign in.`)) return;
@@ -77,6 +90,21 @@ export default function AdminReportsClient({ pending: initialPending, resolved: 
 
       {error && <p role="alert" className="text-red-300 text-sm mb-4">{error}</p>}
 
+      {hidden.length > 0 && (
+        <section aria-labelledby="hidden-h" className="glass rounded-2xl p-5 mb-8 border border-amber-500/30" data-testid="hidden-review">
+          <h2 id="hidden-h" className="text-amber-200 font-semibold text-sm flex items-center gap-2"><EyeOff size={15} aria-hidden="true" /> Hidden pending review ({hidden.length})</h2>
+          <p className="text-white/50 text-xs mt-1 mb-3">Reported by 3 or more different members, so hidden automatically. Restore them, or ban them from their reports below.</p>
+          <ul className="space-y-2">
+            {hidden.map((h) => (
+              <li key={h.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="text-white/75"><UserLink id={h.id} username={h.username} /> <span className="text-white/40">· {h.reason} · {fmtDate(h.since)}</span></span>
+                <button onClick={() => restore(h.id, h.username)} disabled={!!loading} className="text-xs bg-white/10 hover:bg-white/15 text-white px-3 py-1.5 rounded-lg disabled:opacity-50">Restore</button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <div className="space-y-3 mb-8">
         <h2 className="text-white/60 text-xs uppercase tracking-wider font-semibold">Open</h2>
         {pending.length === 0 ? (
@@ -99,7 +127,8 @@ export default function AdminReportsClient({ pending: initialPending, resolved: 
                       <span className="text-white/35 text-xs">{fmtDate(r.createdAt)}</span>
                     </div>
                     <p className="text-white/60 text-sm">Reported: <UserLink id={r.reportedUserId} username={r.reported} /></p>
-                    <p className="text-white/60 text-sm">By: <UserLink id={r.reporterId} username={r.reporter} /></p>
+                    {r.underReview && <p className="text-amber-300 text-xs mb-1 flex items-center gap-1"><EyeOff size={12} aria-hidden="true" /> Hidden pending review</p>}
+                    <p className="text-white/60 text-sm">By: {r.automatic ? <span className="text-white">Unbound (automatic)</span> : <UserLink id={r.reporterId} username={r.reporter} />}</p>
                     {r.reason && <p className="text-white/80 text-sm mt-1.5">{r.reason}</p>}
                     {r.details && <p className="text-white/50 text-sm mt-1 italic whitespace-pre-wrap break-words">&ldquo;{r.details}&rdquo;</p>}
                     {r.kind === 'REVIEW' && <Link href="/admin/reviews" className="inline-block text-xs text-[#D4AF37] hover:underline mt-1">Review report — moderate in Reviews →</Link>}

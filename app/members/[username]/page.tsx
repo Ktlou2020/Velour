@@ -40,6 +40,7 @@ export default async function MemberProfilePage({ params }: PageProps) {
       createdAt: true,
       isVerified: true,
       isActive: true,
+      underReviewAt: true,
       profile: {
         select: {
           ...PERSON_FIELDS,
@@ -70,7 +71,9 @@ export default async function MemberProfilePage({ params }: PageProps) {
     : null;
 
   // Deactivated accounts are hidden like blocked ones.
-  if (!user || blocked || !user.isActive) return (
+  // Hidden pending review: only admins can still open the profile.
+  const hiddenForReview = !!user?.underReviewAt && (session?.user as { role?: string } | undefined)?.role !== 'ADMIN';
+  if (!user || blocked || !user.isActive || hiddenForReview) return (
     <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
       <p className="text-white/65">Member not found.</p>
     </div>

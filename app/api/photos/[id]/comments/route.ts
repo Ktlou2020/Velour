@@ -4,6 +4,7 @@ import { isValidId } from '@/lib/security'
 import { rateLimit } from '@/lib/rate-limit'
 import { PROFILE_NOT_READY_ERROR, userProfileReady } from '@/lib/profile-ready'
 import { addComment, commentProblem, findCommentablePhoto, listComments } from '@/lib/photo-comments'
+import { UNDER_REVIEW_ERROR, commentVelocityProblem, isUnderReview } from '@/lib/auto-protect'
 
 /**
  * GET  /api/photos/<id>/comments?before=<iso>  → { comments, hasMore, before, count }
@@ -36,6 +37,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!(await userProfileReady(userId))) {
       return NextResponse.json({ error: PROFILE_NOT_READY_ERROR.replace('messaging', 'commenting'), code: 'PROFILE_INCOMPLETE' }, { status: 403 })
     }
+    if (await isUnderReview(userId)) return NextResponse.json({ error: UNDER_REVIEW_ERROR, code: 'UNDER_REVIEW' }, { status: 403 })
+    const slow = await commentVelocityProblem(userId)
+    if (slow) return NextResponse.json({ error: slow, code: 'SLOW_DOWN' }, { status: 429 })
     const { body } = await req.json().catch(() => ({})) as { body?: unknown }
     const problem = commentProblem(body)
     if (problem) return NextResponse.json({ error: problem }, { status: 400 })

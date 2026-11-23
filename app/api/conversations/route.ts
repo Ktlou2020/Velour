@@ -1,3 +1,4 @@
+import { UNDER_REVIEW_ERROR, isUnderReview } from '@/lib/auto-protect'
 import { NextRequest, NextResponse } from 'next/server'
 import { EMAIL_UNVERIFIED_ERROR, hasConfirmedEmail } from '@/lib/email-verification'
 import { PROFILE_NOT_READY_ERROR, userProfileReady } from '@/lib/profile-ready'
@@ -214,6 +215,12 @@ export async function POST(req: NextRequest) {
     // Block check covers both partners on either side
     const meId = session.user.id
     const targetId = otherUserId
+    if (await isUnderReview(meId)) {
+      return NextResponse.json({ error: UNDER_REVIEW_ERROR, code: 'UNDER_REVIEW' }, { status: 403 })
+    }
+    if (await isUnderReview(targetId)) {
+      return NextResponse.json({ error: 'This member isn’t available right now', code: 'UNAVAILABLE' }, { status: 403 })
+    }
     const result = await findOrCreateConversation(meId, targetId, () => messagePolicyBlock(meId, targetId))
     if (!result.ok) {
       const message = result.reason === 'policy' ? result.message : result.reason === 'unmatched' ? 'You’re no longer matched with this member, so you can’t message each other.' : 'Cannot start a conversation with this user'

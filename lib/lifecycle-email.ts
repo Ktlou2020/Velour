@@ -1,6 +1,6 @@
 /**
  * Lifecycle email (welcome, profile nudge, likes digest, unread messages,
- * win-back). Run by /api/cron/lifecycle every 15 minutes; idempotent.
+ * win-back, match nudge, weekly new members). Run by /api/cron/lifecycle every 15 minutes; idempotent.
  *
  *  - Only to active members with a confirmed email who haven't opted out
  *    (User.emailMarketingOptOut) and aren't snoozed.
@@ -18,8 +18,9 @@ import { db } from '@/lib/db'
 import { escapeHtml, sendBrandedEmail } from '@/lib/email'
 import { entitlements } from '@/lib/plans'
 import { SITE_URL } from '@/app/site'
+import { sendPushToUser } from '@/lib/push'
 
-export type LifecycleKind = 'WELCOME_1' | 'PROFILE_NUDGE' | 'LIKES_DIGEST' | 'UNREAD_MESSAGES' | 'WIN_BACK'
+export type LifecycleKind = 'WELCOME_1' | 'PROFILE_NUDGE' | 'LIKES_DIGEST' | 'UNREAD_MESSAGES' | 'WIN_BACK' | 'MATCH_NUDGE' | 'WEEKLY_NEW_MEMBERS'
 
 const MIN = 60_000
 const HOUR = 60 * MIN
@@ -536,6 +537,151 @@ async function winBackEmail(u: Member): Promise<BuiltEmail> {
   }
 }
 
+/**
+ * MATCH_NUDGE: once per match, 24–72 hours after matching, when neither of
+ * them has written yet. Both members get it (email, plus a phone alert if
+ * they've turned alerts on). Never for a blocked, banned or under-review pair.
+ */
+async function matchNudge(now: Date, budget: Budget): Promise<Counts> {
+  const c = zero()
+  if (budget.done) return c
+  const matches = await db.match.findMany({
+    where: { createdAt: { gte: new Date(now.getTime() - 72 * HOUR), lte: new Date(now.getTime() - 24 * HOUR) } },
+    orderBy: { createdAt: 'asc' },
+    take: 500,
+    select: { id: true, user1Id: true, user2Id: true },
+  })
+  for (const m of matches) {
+    if (budget.done) break
+    const spoken = await db.message.findFirst({
+      where: { conversation: { AND: [{ participants: { some: { userId: m.user1Id } } }, { participants: { some: { userId: m.user2Id } } }] } },
+      select: { id: true },
+    })
+    if (spoken) continue
+    const pair = await db.user.findMany({
+      where: { id: { in: [m.user1Id, m.user2Id] }, isActive: true, underReviewAt: null },
+      select: { ...memberSelect, emailMarketingOptOut: true, emailVerifiedAt: true, isDemo: true },
+    })
+    if (pair.length !== 2) continue
+    const blocked = await db.block.findFirst({
+      where: { OR: [{ blockerId: m.user1Id, blockedId: m.user2Id }, { blockerId: m.user2Id, blockedId: m.user1Id }] },
+      select: { id: true },
+    })
+    if (blocked) continue
+    for (const [me, other] of [[pair[0], pair[1]], [pair[1], pair[0]]] as const) {
+      if (budget.done) break
+      if (me.isDemo || me.emailMarketingOptOut || !me.emailVerifiedAt) continue
+      const r = await sendOnce(me.id, 'MATCH_NUDGE', m.id, () => matchNudgeEmail(me, other), now)
+      if (r === 'sent') {
+        sendPushToUser(me.id, {
+          title: `Say hi to ${firstName(other)}`,
+          body: 'You matched yesterday — a quick hello is all it takes.',
+          url: '/matches',
+          tag: `match-nudge-${m.id}`,
+        }).catch(() => {})
+      }
+      c[r]++
+      if (r === 'sent') budget.left--
+    }
+  }
+  return c
+}
+
+function matchNudgeEmail(u: Member, other: Member): BuiltEmail {
+  const name = escapeHtml(firstName(other))
+  return {
+    to: u.email,
+    subject: `Say hi to ${firstName(other)} 👋`,
+    title: 'Say hi',
+    bodyHtml:
+      H(`You and ${name} matched`) +
+      hi(u) +
+      P(`You liked each other, but nobody has said hello yet. Most great conversations start with something simple — ask about something on ${name}’s profile.`) +
+      BUTTON(`Message ${firstName(other)}`, '/matches'),
+  }
+}
+
+/** Profile where-clause for one "interested in" value (MAN, WOMAN, COUPLE, NON_BINARY…). */
+function interestWhere(v: string): Prisma.ProfileWhereInput | null {
+  if (v === 'MAN' || v === 'WOMAN') return { isCouple: false, gender: v }
+  if (v === 'COUPLE') return { isCouple: true }
+  if (v === 'NON_BINARY' || v === 'OTHER') return { isCouple: false, gender: { in: ['NON_BINARY', 'OTHER'] } }
+  return null
+}
+
+/**
+ * WEEKLY_NEW_MEMBERS: once a week (Monday key) for members away 7–90 days,
+ * when at least 3 people they're interested in joined in their city in the
+ * last 7 days. Skipped the week a win-back email went out. Names and ages
+ * only — never photos in email.
+ */
+async function weeklyNewMembers(now: Date, budget: Budget): Promise<Counts> {
+  const c = zero()
+  if (budget.done) return c
+  const local = new Date(now.getTime() + SAST_OFFSET)
+  const monday = new Date(local); monday.setUTCDate(local.getUTCDate() - ((local.getUTCDay() + 6) % 7))
+  const week = monday.toISOString().slice(0, 10)
+  const users = await db.user.findMany({
+    where: {
+      AND: [
+        reachable(now),
+        { profile: { is: { lastSeen: { gte: new Date(now.getTime() - 90 * DAY), lte: new Date(now.getTime() - 7 * DAY) }, city: { not: null } } } },
+        { emailLogs: { none: { OR: [{ kind: { in: ['WEEKLY_NEW_MEMBERS', 'WEEKLY_NEW_MEMBERS_NONE'] }, key: week }, { kind: 'WIN_BACK', createdAt: { gte: new Date(now.getTime() - 7 * DAY) } }] } } },
+      ],
+    },
+    orderBy: { profile: { lastSeen: 'desc' } },
+    take: budget.left * 3,
+    select: { ...memberSelect, profile: { select: { ...memberSelect.profile.select, interestedIn: true } } },
+  })
+  for (const u of users) {
+    if (budget.done) break
+    const email = await weeklyEmail(u, now)
+    if (!email) {
+      // Nothing new near them: mark the week done (no email) so later runs don't re-check.
+      await db.emailLog.create({ data: { userId: u.id, kind: 'WEEKLY_NEW_MEMBERS_NONE', key: week, createdAt: now } }).catch(() => {})
+      c.skipped++
+      continue
+    }
+    await tally(c, budget, sendOnce(u.id, 'WEEKLY_NEW_MEMBERS', week, () => email, now))
+  }
+  return c
+}
+
+async function weeklyEmail(u: Member & { profile: (Member['profile'] & { interestedIn: string[] }) | null }, now: Date): Promise<BuiltEmail | null> {
+  const city = u.profile?.city?.trim()
+  if (!city) return null
+  const wants = (u.profile?.interestedIn ?? []).map(interestWhere).filter((w): w is Prisma.ProfileWhereInput => !!w)
+  const blocked = await blockedWith(u.id)
+  const where: Prisma.UserWhereInput = {
+    id: { not: u.id, notIn: blocked },
+    isActive: true, isDemo: false, underReviewAt: null,
+    createdAt: { gte: new Date(now.getTime() - 7 * DAY) },
+    profile: { is: { city: { equals: city, mode: 'insensitive' }, profilePhoto: { not: null }, incognito: false, isSnoozed: false, ...(wants.length ? { OR: wants } : {}) } },
+  }
+  const [count, some] = await Promise.all([
+    db.user.count({ where }),
+    db.user.findMany({ where, orderBy: { createdAt: 'desc' }, take: 3, select: { username: true, profile: { select: { displayName: true, dateOfBirth: true, isCouple: true } } } }),
+  ])
+  if (count < 3) return null
+  const age = (d: Date | null | undefined) => (d ? Math.floor((now.getTime() - d.getTime()) / (365.25 * DAY)) : null)
+  const names = some.map((m) => {
+    const n = escapeHtml(m.profile?.displayName?.split(' ')[0] || m.username)
+    const a = m.profile?.isCouple ? null : age(m.profile?.dateOfBirth)
+    return `<strong style="color:#fff;">${n}</strong>${a ? `, ${a}` : ''}${m.profile?.isCouple ? ' (couple)' : ''}`
+  })
+  return {
+    to: u.email,
+    subject: `${count} new members near you this week`,
+    title: 'New this week',
+    bodyHtml:
+      H(`${count} new members in ${escapeHtml(city)}`) +
+      hi(u) +
+      P(`This week ${names.join(', ')}${count > 3 ? ` and ${count - 3} more` : ''} joined Unbound near you.`) +
+      BUTTON('See who’s new', '/members') +
+      P('<span style="font-size:13px;color:#9a9aa5;">You get this when there’s something new near you and you haven’t visited in a while. Turn it off any time with the link below.</span>'),
+  }
+}
+
 // ─── Runner ────────────────────────────────────────────────────────────────
 
 export interface LifecycleRunResult {
@@ -559,6 +705,8 @@ export async function runLifecycleEmails(now = new Date(), limit = batchLimit())
     LIKES_DIGEST: zero(),
     UNREAD_MESSAGES: zero(),
     WIN_BACK: zero(),
+    MATCH_NUDGE: zero(),
+    WEEKLY_NEW_MEMBERS: zero(),
   }
   if (!inSendWindow(now)) return { ok: true, skipped: 'quiet-hours', limit, sent: 0, kinds }
   unsubscribeSecret() // fail loudly before claiming anything
@@ -567,8 +715,10 @@ export async function runLifecycleEmails(now = new Date(), limit = batchLimit())
   // Most time-sensitive first; the budget carries over between kinds.
   kinds.WELCOME_1 = await welcome(now, budget)
   kinds.UNREAD_MESSAGES = await unreadMessages(now, budget)
+  kinds.MATCH_NUDGE = await matchNudge(now, budget)
   kinds.LIKES_DIGEST = await likesDigest(now, budget)
   kinds.PROFILE_NUDGE = await profileNudge(now, budget)
   kinds.WIN_BACK = await winBack(now, budget)
+  kinds.WEEKLY_NEW_MEMBERS = await weeklyNewMembers(now, budget)
   return { ok: true, limit, sent: limit - budget.left, kinds }
 }

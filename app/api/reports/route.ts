@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { rateLimit, TOO_MANY_REQUESTS_MESSAGE } from '@/lib/rate-limit'
 import { isValidId } from '@/lib/security'
+import { reviewAfterReport } from '@/lib/auto-protect'
 
 /**
  * Submit a report about another member. Also served at /api/report.
@@ -69,6 +70,8 @@ export async function POST(req: NextRequest) {
           data: { reportedBy: session.user.id, reportedUserId: reported.id, reason, details },
         },
       })
+      // 3+ different members → hidden pending review (lib/auto-protect.ts).
+      await reviewAfterReport(reported.id).catch((e) => console.error('reviewAfterReport failed:', e))
     } else {
       console.warn(`REPORT not delivered (no admin account): reportedUserId=${reported.id} reportedBy=${session.user.id} reason=${reason}`)
     }

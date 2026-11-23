@@ -139,6 +139,8 @@ export function exploreEligibleWhere(viewerId: string, now = new Date()): Prisma
     ],
     user: {
       isActive: true,
+      // Hidden pending review (lib/auto-protect.ts).
+      underReviewAt: null,
       // No block in either direction with the viewer.
       blocksGiven: { none: { blockedId: viewerId } },
       blocksReceived: { none: { blockerId: viewerId } },
