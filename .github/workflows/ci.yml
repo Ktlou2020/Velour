@@ -1,0 +1,63 @@
+# Runs on every push and pull request: type check, production build, and the
+# end-to-end tests (tests/e2e) against a throwaway Postgres. Railway waits for
+# this to pass before deploying main (service setting "Wait for CI").
+name: CI
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Type check, build and end-to-end tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: unbound_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      E2E_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/unbound_test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/unbound_test
+      NEXT_TELEMETRY_DISABLED: '1'
+      E2E_SERVER_LOG: ${{ github.workspace }}/e2e-server.log
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Type check
+        run: npx prisma generate && npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Chromium for browser tests
+        run: npx playwright-core install --with-deps chromium
+
+      - name: End-to-end tests
+        run: npm run test:e2e
+
+      - name: Upload server log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-server-log
+          path: e2e-server.log
+          retention-days: 7

@@ -72,8 +72,13 @@ function sast(now: Date) {
   return { hour: local.getUTCHours(), date: iso.slice(0, 10), month: iso.slice(0, 7) }
 }
 
-/** True between 08:00 and 21:00 Africa/Johannesburg. */
+/**
+ * True between 08:00 and 21:00 Africa/Johannesburg. The automated tests
+ * (tests/e2e) set LIFECYCLE_SEND_ANY_HOUR=true so they can run at any time;
+ * never set it in production.
+ */
 export function inSendWindow(now = new Date()): boolean {
+  if (process.env.LIFECYCLE_SEND_ANY_HOUR === 'true') return true
   const h = sast(now).hour
   return h >= 8 && h < 21
 }

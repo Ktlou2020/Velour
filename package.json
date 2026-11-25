@@ -10,7 +10,9 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "test:e2e": "bash scripts/test-e2e.sh",
+    "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -43,6 +45,7 @@
     "@types/web-push": "^3.6.4",
     "eslint": "^8",
     "eslint-config-next": "15.0.4",
+    "playwright-core": "1.48.2",
     "typescript": "^5"
   },
   "engines": {
