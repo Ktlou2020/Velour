@@ -13,7 +13,7 @@ export type Feature =
   | 'views' // who viewed me
   | 'reviews' // member reviews
   | 'invite' // invite-a-friend referrals
-  | 'chatExtras' // chat games, voice notes, view-once, priority messages, expiry timers
+  | 'chatExtras' // chat games, voice notes, priority messages, expiry timers (View once is always on)
 
 const ENABLED = new Set(
   (process.env.NEXT_PUBLIC_ENABLED_FEATURES ?? '')

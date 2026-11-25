@@ -1361,7 +1361,7 @@ export default function MessagesPage() {
             <span className="text-white/60 text-xs flex-1 min-w-0">
               Video attached{pendingVideo.durationSec != null ? ` · ${Math.max(1, Math.round(pendingVideo.durationSec))}s` : ''} — add a caption or send
             </span>
-            {CHAT_EXTRAS && viewOnceToggle}
+            {viewOnceToggle}
           </div>
         )}
         {(pendingImage || uploading) && (
@@ -1385,7 +1385,7 @@ export default function MessagesPage() {
               )}
             </div>
             <span className="text-white/60 text-xs flex-1 min-w-0">{uploading ? 'Uploading…' : 'Photo attached'}</span>
-            {CHAT_EXTRAS && pendingImage && !uploading && viewOnceToggle}
+            {pendingImage && !uploading && viewOnceToggle}
           </div>
         )}
         {priority && (priorityOn || priorityNudge) && (
